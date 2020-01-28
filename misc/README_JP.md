@@ -1,9 +1,9 @@
 # miniogenotype
 A simple, rapid, scalable whole-allelic profile of genome editing aminals using ONT MinION
 
-# Installation
+# インストール (OS別)
 ## Linux
-The latest [Anaconda](https://docs.anaconda.com/anaconda/install/) or [Miniconda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) installation is highly recommended.  
+[Anaconda](https://docs.anaconda.com/anaconda/install/)または[Miniconda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)をインストールした後に、下記のコマンドを実行してください。
 
 ```
 conda create -y -n miniogenotype python=3.6 anaconda git tensorflow-gpu keras tqdm nodejs
@@ -11,9 +11,13 @@ conda install -y -n miniogenotype -c bioconda nanosim samtools htslib fasta3 clu
 conda activate miniogenotype
 git clone https://github.com/akikuno/miniogenotype.git
 ```
+
 ## Windows10
-WSLとAnaconda Promptの設定が必要です。  
+Windows Subsystem for LinuxとAnaconda Promptの設定が必要です。    
 [こちらのページ](https://github.com/akikuno/miniogenotype/blob/master/misc/WindowsOS_Setting_JP.md)をご覧ください。  
+
+## macOS
+macOSはCPUでの実行は出来ますが、計算時間がかかるため推奨できません。
 
 # Usuage
 ```
