@@ -21,7 +21,7 @@ Get [Miniconda3 Windows 64-bit](https://docs.conda.io/en/latest/miniconda.html#w
 "Registar Anaconda as my default Python XX".**  
 
 
-<img src="https://github.com/akikuno/miniogenotype/blob/images/anaconda-install.png" width="50%">  
+<img src="https://github.com/akikuno/miniogenotype/blob/master/misc/images/anaconda-install.png" width="50%">  
 
 ## Set-up environment
 Type `Anaconda Prompt` in the search window and open it.  

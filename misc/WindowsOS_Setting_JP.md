@@ -20,7 +20,7 @@ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 "Registar Anaconda as my default Python XX"の２項目にチェックをつけてください。（下図）**  
 
 
-<img src="https://github.com/akikuno/miniogenotype/blob/images/anaconda-install.png" width="50%">  
+<img src="https://github.com/akikuno/miniogenotype/blob/master/misc/images/anaconda-install.png" width="50%">  
 
 ## 必要なソフトウェアのインストール
 Anaconda/Minicondaをインストールした後、スタートメニューから`Anaconda Prompt`を検索して起動します。  

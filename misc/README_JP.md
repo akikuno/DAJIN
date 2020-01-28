@@ -54,7 +54,7 @@ Options :
 `results` directory contains a figure of whole-allelic profile.  
 This is an example result of three mice.  
 
-<img src="https://github.com/akikuno/miniogenotype/blob/images/sequence_MIDS_prediction_result.png" width="50%">  
+<img src="https://github.com/akikuno/miniogenotype/blob/master/misc/images/sequence_MIDS_prediction_result.png" width="50%">  
 
 Barcode14 and 19 are a founder mice, whose target allele is flox. Barcode21 is a wild-type mice as a control.   
 This result shows ~80% of reads from Barcode14 are labeled as "target" (flox), and indicates Barcode14 is the desired mouse that has homozygous floxed allele.
@@ -66,11 +66,11 @@ npx live-server results/igvjs/
 ```
 The browser will pop-up the following page:  
 
-<img src="https://github.com/akikuno/miniogenotype/blob/images/igvjs_localhost.png" width="50%">  
+<img src="https://github.com/akikuno/miniogenotype/blob/master/misc/images/igvjs_localhost.png" width="50%">  
 
 Click `igvjs.html` and you can see the alignment views:  
 
-<img src="https://github.com/akikuno/miniogenotype/blob/images/igvjs_alignment.png" width="50%">
+<img src="https://github.com/akikuno/miniogenotype/blob/master/misc/images/igvjs_alignment.png" width="50%">
 
 The barcode14 has two purple sites, where **insertion** occurs.
 
