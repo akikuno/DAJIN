@@ -362,6 +362,13 @@ if [ $? -eq 0 ]; then
 fi
 set -e
 
+# ======================================
+# Alignment viewing
+# ======================================
+
+printf "Browser will be launched. Click 'igvjs.html'.\n"
+{ npx live-server results/igvjs/ & } 1>/dev/null 2>/dev/null
+
 rm -rf .tmp_
 printf "Completed\n"
 
