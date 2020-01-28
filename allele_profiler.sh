@@ -187,12 +187,12 @@ cp fasta/target.fa .tmp_/
 # right flanking than left flanking,   reverse complementにする。
 # convert a sequence into its reverse-complement
 
-ref_seqlength=$(cat fasta/wt.fa | sed 1d | awk '{print length($0)}')
-minimap2 -ax splice fasta/wt.fa fasta/target.fa --cs 2>/dev/null |
+ref_seqlength=$(cat .tmp_/wt.fa | sed 1d | awk '{print length($0)}')
+minimap2 -ax splice .tmp_/wt.fa .tmp_/target.fa --cs 2>/dev/null |
 awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-sed -e "s/cs:Z:://g" -e "s/:/\t/g" |
-tr -d "\*\-\+atgc" |
-awk '{print $1,$1+$2}' |
+sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
+tr -d "\~\*\-\+atgc" |
+awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
 awk -v ref_seqlength="$ref_seqlength" \
 '{if(ref_seqlength-$2>$1) print 0; else print 1}' \
 > .tmp_/revcomp
@@ -298,18 +298,27 @@ Converting ACGT into MIDS format
 reference=fasta/wt.fa
 query=fasta/target.fa
 
-minimap2 -a ${reference} ${query} --cs 2>/dev/null |
+minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
 awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-sed -e "s/cs:Z:://g" -e "s/:/\t/g" |
-tr -d "\*\-\+atgc" |
-awk '{print $1,$1+$2}' > .tmp_/mutation_points
+sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
+tr -d "\~\*\-\+atgc" |
+awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' \
+> .tmp_/mutation_points
 
-reflength=$(cat ${reference} | grep -v "^>" | awk '{print length($0)}')
+# minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
+# awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
+# sed -e "s/cs:Z:://g" -e "s/:/\t/g" |
+# tr -d "\*\-\+atgc" |
+# awk '{if(NF==2) print $1,$1+$2
+#     else if (NF==3) print $1,$1+$3
+#     else print $1}' > .tmp_/mutation_points
+
+ref_length=$(cat ${reference} | grep -v "^>" | awk '{print length($0)}')
 ext=${ext:=100}
 first_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{print $1-ext}')
 second_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{if(NF==2) print $2+ext; else print $1+ext}')
 if [ "$first_flank" -lt 1 ]; then first_flank=1; fi
-if [ "$second_flank" -gt "$reflength" ]; then second_flank=$(($reflength)); fi
+if [ "$second_flank" -gt "$ref_length" ]; then second_flank=$(($ref_length)); fi
 # echo $first_flank $second_flank
 
 true > data_for_ml/${output_file:=sequence_MIDS}.txt
@@ -352,6 +361,7 @@ if [ $? -eq 0 ]; then
 fi
 set -e
 
+rm -rf .tmp_
 printf "Completed\n"
 
 exit 0
