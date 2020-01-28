@@ -165,7 +165,8 @@ mkdir -p $dirs
 
 # CRLF to LF
 cat ${fasta} |
-sed "s/\r$//" \
+sed -e "s/\r$//" |
+grep -v "^$" \
 > .tmp_/fasta
 fasta=.tmp_/fasta
 
