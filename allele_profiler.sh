@@ -269,7 +269,8 @@ for input in $(ls fasta/* | grep -v igv); do
     rm fasta_ont/*_error_* # fasta_ont/*_unaligned_*
 done
 
-rm NanoSim/training*
+rm -rf NanoSim/training* \
+    miniogenotype/NanoSim/src/__pycache__
 
 printf 'Success!!\nSimulation is finished\n'
 
