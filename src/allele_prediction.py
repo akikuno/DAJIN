@@ -113,7 +113,7 @@ else:
     # print("MIDS")
 
 df_sim = df[df[0].str.endswith(
-    "simulated") * ~df[0].str.startswith("anormal")].reset_index(drop=True)
+    "simulated") * ~df[0].str.startswith("abnormal")].reset_index(drop=True)
 df_real = df[~df[0].str.endswith("simulated")].reset_index(drop=True)
 
 # print(df_sim.head())
@@ -464,13 +464,13 @@ df_all["label"] = df_all.barcode.apply(
 
 optimal_threshold = df_all[df_all.label == 1].cos_similarity.quantile(0.001)
 
-df_all["anormal_prediction"] = df_all.cos_similarity.apply(
+df_all["abnormal_prediction"] = df_all.cos_similarity.apply(
     lambda x: 1 if x > optimal_threshold else -1)
 
 df_expected = df_all[df_all.label == 1]
 df_unexpected = df_all[df_all.label == -1]
-df_unexpected["anormal_prediction"] = df_unexpected.cos_similarity.apply(
-    lambda x: "normal" if x > optimal_threshold else "anormal")
+df_unexpected["abnormal_prediction"] = df_unexpected.cos_similarity.apply(
+    lambda x: "normal" if x > optimal_threshold else "abnormal")
 df_unexpected = df_unexpected.reset_index()
 # #? ----------------------------------------
 # cos_all, normal_vector, predict_vector = get_score_cosine(
@@ -496,10 +496,10 @@ df_unexpected = df_unexpected.reset_index()
 
 # optimal_threshold = df_expected.cos_similarity.quantile(0.001)
 
-# df_all["anormal_prediction"] = df_all.cos_similarity.apply(
+# df_all["abnormal_prediction"] = df_all.cos_similarity.apply(
 #     lambda x: 1 if x > optimal_threshold else -1)
-# df_unexpected["anormal_prediction"] = df_unexpected.cos_similarity.apply(
-#     lambda x: "normal" if x > optimal_threshold else "anormal")
+# df_unexpected["abnormal_prediction"] = df_unexpected.cos_similarity.apply(
+#     lambda x: "normal" if x > optimal_threshold else "abnormal")
 
 # +
 plt.figure(figsize=(6, 10))
@@ -540,10 +540,10 @@ for i, j in enumerate(pd.Series(id).str.replace("_simulated", "")):
 df_result = pd.DataFrame({"barcodeID": df_real.iloc[:, 0],
                           "seqID": df_real.iloc[:, 2],
                           "predict": df_predict,
-                          "anomaly": df_unexpected.anormal_prediction})
+                          "anomaly": df_unexpected.abnormal_prediction})
 
 df_result.predict = df_result.predict.where(
-    df_result.anomaly == "normal", "anormal")
+    df_result.anomaly == "normal", "abnormal")
 
 del df_result["anomaly"]
 
@@ -566,8 +566,8 @@ colorlist.extend(list(sns.color_palette("Accent", 24).as_hex()))
 
 counts = df_stacked.apply(lambda x: x.dropna(
 ).value_counts() / len(x.dropna())).transpose()
-tmp1 = counts.loc[:, ["target", "wt", "anormal"]].columns.values
-tmp2 = counts.drop(["target", "wt", "anormal"], axis=1).columns.values
+tmp1 = counts.loc[:, ["target", "wt", "abnormal"]].columns.values
+tmp2 = counts.drop(["target", "wt", "abnormal"], axis=1).columns.values
 counts = counts.loc[:, np.concatenate([tmp1, tmp2])]
 
 sns.set_style("ticks", {"font": "Arial"})
