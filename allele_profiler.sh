@@ -187,7 +187,7 @@ cp fasta/target.fa .tmp_/
 # convert a sequence into its reverse-complement
 
 ref_seqlength=$(cat fasta/wt.fa | sed 1d | awk '{print length($0)}')
-minimap2 -a fasta/wt.fa fasta/target.fa --cs 2>/dev/null |
+minimap2 -ax splice fasta/wt.fa fasta/target.fa --cs 2>/dev/null |
 awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
 sed -e "s/cs:Z:://g" -e "s/:/\t/g" |
 tr -d "\*\-\+atgc" |
