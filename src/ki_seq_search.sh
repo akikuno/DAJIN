@@ -62,12 +62,19 @@ sed -e "s/^/@ /g" -e "s/-/ /g" -e "s/)//g" \
 
 cat .tmp_/gggenome_location | sed "s/^/@ /g" |
 join - .tmp_/lalign_mut_location |
-awk 'BEGIN{OFS="\t"}{print $2,$3+$6-20,$3+$7+20}' |
+awk 'BEGIN{OFS="\t"}{print $2,$3+$6-0,$3+$7+0}' |
 sort -k1,1 -k2,2n |
 awk 'BEGIN{OFS="\t"}{print $0, NR}' \
 > .tmp_/mut_location.bed
 
+cat .tmp_/gggenome_location | sed "s/^/@ /g" |
+join - .tmp_/lalign_mut_location |
+awk '{print $3+$6-200,$3+$7+200}' |
+sort -k1,1 -k2,2n \
+> .tmp_/mut_location_ext200
 
+left_flank=$(cat .tmp_/mut_location_ext200 | head -n 1)
+right_flank=$(cat .tmp_/mut_location_ext200 | tail -n 1)
 # ======================================
 # Pairwise alignment between KI sequence and reads
 # ======================================
@@ -75,7 +82,7 @@ awk 'BEGIN{OFS="\t"}{print $0, NR}' \
 # barcode=barcode14
 for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     bam=bam/${barcode}.bam
-    printf "${bam} is processing..."
+    printf "${bam} is processing...\n"
     #
     samtools view ${bam} |
     sort |
@@ -83,6 +90,24 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     cut -d " " -f 1-5,10 \
     > .tmp_/sorted_bam
     #
+    cat .tmp_/sorted_bam |
+    cut -d " " -f 4 \
+    > .tmp_/sorted_bam_start
+
+    for start in "$left_flank" "$right_flank"; do
+        left_start=$(echo $start | cut -d " " -f 1)
+        right_start=$(echo $start | cut -d " " -f 2)
+        echo $left_start
+        echo $right_start
+        cat .tmp_/sorted_bam_start |
+        awk -v ls="$left_start" '{print ls-$1}' |
+        head
+        cat .tmp_/sorted_bam_start |
+        awk -v rs="$right_start" '{print rs-$1}' |
+        sort | uniq -c
+
+    done
+
     rm -rf .tmp_/tmp_bam 2>/dev/null 1>/dev/null
     mkdir -p .tmp_/tmp_bam
     #
@@ -145,12 +170,14 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     
     printf "Output sequence logo at loxP loci..."
     # Multiple alignment by clustal omega
-    clustalo -i .tmp_/mut_bestscore_1.fa \
-    --dealign --iter 5 --threads=${threads:-4} \
+    clustalo --auto \
+    -i .tmp_/mut_bestscore_1.fa \
+    --threads=${threads:-4} \
     > .tmp_/clustalo_1.fa 2>/dev/null
     #
-    clustalo -i .tmp_/mut_bestscore_2.fa \
-    --dealign --iter 5 --threads=${threads:-4} \
+    clustalo --auto \
+    -i .tmp_/mut_bestscore_2.fa \
+    --threads=${threads:-4} \
     > .tmp_/clustalo_2.fa 2>/dev/null
     # Sequence logo
     ## PNG
