@@ -11,32 +11,6 @@ type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 # ======================================
-# Prepare sorted file
-# ======================================
-
-cat .tmp_/prediction_result.txt |
-grep target |
-sort -k 2,2 \
-> .tmp_/sorted_prediction_result
-
-# ======================================
-# Detect Mutation type
-# ======================================
-
-reference=fasta/wt.fa
-query=fasta/target.fa
-
-minimap2 -a ${reference} ${query} --cs 2>/dev/null |
-awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-sed -e "s/cs:Z:://g" -e "s/:/\t/g" > .tmp_/mutation_profile
-
-grep "+" .tmp_/mutation_profile 1>/dev/null 2>/dev/null
-if test "$?" -eq 1; then
-    printf "The target mutation is not knock-in.\nfinished.\n"
-    exit 0
-fi
-
-# ======================================
 # Extract mutation matched sequence
 # ======================================
 

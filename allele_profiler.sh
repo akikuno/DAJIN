@@ -355,9 +355,12 @@ sed -e "s/cs:Z:://g" -e "s/:/\t/g" |
 grep -q -i -e "ATAACTTCGTATAATGTATGCTATACGAAGTTAT" \
     -e "ATAACTTCGTATAGCATACATTATACGAAGTTAT"
 if [ $? -eq 0 ]; then
-    printf "Check the intactness of loxP sequence loci...\n"
-    ./miniogenotype/src/ki_seq_search.sh
-    ./miniogenotype/src/fullmatch_search.sh
+    printf "Checking the intactness of loxP sequence loci...\n"
+    ./miniogenotype/src/intact_preparation.sh
+    printf "Generate sequence logo at loxP sites...\n"
+    ./miniogenotype/src/intact_seqlogo.sh
+    printf "Search loxP full-matched reads...\n"
+    ./miniogenotype/src/intact_fullmatch.sh
     printf "Finished!...\n"
 fi
 set -e
