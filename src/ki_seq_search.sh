@@ -11,7 +11,7 @@ type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 # ======================================
-# Extract barcodes which have more than 10% target reads.
+# Extract barcodes which have more than 1% target reads.
 # ======================================
 
 cat .tmp_/prediction_result.txt |
@@ -19,8 +19,8 @@ sed 1d |
 awk '{barcode[$1]++
     if($3 ~ "target") barcode_target[$1]++}
     END{for(key in barcode)
-print key, barcode_target[key]/barcode[key]*100}' |
-awk '{if($2 > 10) print $1"@@@"}' |
+    print key, barcode_target[key]/barcode[key]*100}' |
+awk '{if($2 > 1) print $1"@@@"}' |
 sort -t " " \
 > .tmp_/prediction_barcodelist
 
@@ -44,9 +44,8 @@ sort -k 2,2 > .tmp_/sorted_prediction_result
 #  mutation_profile_for=$1
 mutation_profile="ATAACTTCGTATAATGTATGCTATACGAAGTTAT"
 
-printf ">mut
-${mutation_profile}
-" > .tmp_/mutation.fa
+printf ">mut\n${mutation_profile}\n" \
+> .tmp_/mutation.fa
 
 reference=.tmp_/mutation.fa
 query=.tmp_/target.fa
@@ -57,32 +56,26 @@ fi
 lalign36 -m 3 ${reference} ${query} |
 grep "100.0%" |
 cut -d ":" -f 2 |
-sed -e "s/^/@ /g" -e "s/-/ /g" -e "s/)//g" \
+sed -e "s/^/@ /g" -e "s/-/ /g" -e "s/)//g" |
+sort -t " " -k2,2n
 > .tmp_/lalign_mut_location
 
-cat .tmp_/gggenome_location | sed "s/^/@ /g" |
-join - .tmp_/lalign_mut_location |
-awk 'BEGIN{OFS="\t"}{print $2,$3+$6-0,$3+$7+0}' |
-sort -k1,1 -k2,2n |
-awk 'BEGIN{OFS="\t"}{print $0, NR}' \
-> .tmp_/mut_location.bed
+cat .tmp_/lalign_mut_location |
+awk '{print int(($3+$2)/2)}' \
+> .tmp_/lalign_mut_center
 
-cat .tmp_/gggenome_location | sed "s/^/@ /g" |
-join - .tmp_/lalign_mut_location |
-awk '{print $3+$6-200,$3+$7+200}' |
-sort -k1,1 -k2,2n \
-> .tmp_/mut_location_ext200
+flank1=$(cat .tmp_/lalign_mut_center | head -n 1)
+flank2=$(cat .tmp_/lalign_mut_center | tail -n 1)
 
-left_flank=$(cat .tmp_/mut_location_ext200 | head -n 1)
-right_flank=$(cat .tmp_/mut_location_ext200 | tail -n 1)
 # ======================================
 # Pairwise alignment between KI sequence and reads
 # ======================================
 
 # barcode=barcode14
+mkdir -p results/figures/png/seqlogo/ results/figures/svg/seqlogo/
 for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     bam=bam/${barcode}.bam
-    printf "${bam} is processing...\n"
+    printf "##########\n${bam} is processing...\n##########\n"
     #
     samtools view ${bam} |
     sort |
@@ -91,103 +84,99 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     > .tmp_/sorted_bam
     #
     cat .tmp_/sorted_bam |
-    cut -d " " -f 4 \
-    > .tmp_/sorted_bam_start
-
-    for start in "$left_flank" "$right_flank"; do
-        left_start=$(echo $start | cut -d " " -f 1)
-        right_start=$(echo $start | cut -d " " -f 2)
-        echo $left_start
-        echo $right_start
-        cat .tmp_/sorted_bam_start |
-        awk -v ls="$left_start" '{print ls-$1}' |
-        head
-        cat .tmp_/sorted_bam_start |
-        awk -v rs="$right_start" '{print rs-$1}' |
-        sort | uniq -c
-
-    done
-
-    rm -rf .tmp_/tmp_bam 2>/dev/null 1>/dev/null
-    mkdir -p .tmp_/tmp_bam
+    awk -v f1=${flank1} -v f2=${flank2} '{
+        print ">"$1"\n"substr($6,f1-100, 200) > ".tmp_/mutsite_split1"
+        print ">"$1"\n"substr($6,f2-100, 200) > ".tmp_/mutsite_split2"}'
     #
-    cat .tmp_/sorted_bam |
-    awk '{$6="HOGE"$6; print}' |
-    sed -e "s/^/>/g" -e "s/HOGE/\n/g" |
-    split -l 2 - .tmp_/tmp_bam/split_
+    rm -rf .tmp_/split 2>/dev/null 1>/dev/null
+    mkdir -p .tmp_/split
     #
-    time find .tmp_/tmp_bam | grep split_ |
-    xargs -I {} \
-    ./miniogenotype/src/format_laligh.sh .tmp_/mutation.fa {} > .tmp_/lalign.txt # 15 min...
+    split -l 2 .tmp_/mutsite_split1 .tmp_/split/split1_
+    split -l 2 .tmp_/mutsite_split2 .tmp_/split/split2_
     #
-    progress_total=$(find .tmp_/tmp_bam | grep split_ | wc -l)
-    true > .tmp_/progress
-    for ten_break in $(awk BEGIN'{for (i=10; i<=90; i=i+10) print i}'); do
-        awk -v prog=${progress_total} \
-        -v ten=${ten_break} \
-        'BEGIN{print "@"int(prog*ten*0.01)"@", ten}' >> .tmp_/progress
-    done
+    printf "Align reads to loxP sequence...\n"
+    { find .tmp_/split |
+    grep split1_ |
+    xargs -I {} ./miniogenotype/src/format_laligh.sh .tmp_/mutation.fa {} \
+    > .tmp_/lalign1.fa & } 1>/dev/null 2>/dev/null
     #
-    printf "Detect loxP intactness...\n"
-    true > .tmp_/lalign.txt
-    progress_i=1
-    time for fa in $(find .tmp_/tmp_bam | grep split_); do
-        ./miniogenotype/src/format_laligh.sh .tmp_/mutation.fa ${fa} >> .tmp_/lalign.txt
-        #
-        grep @${progress_i}@ .tmp_/progress |
-        awk '{print "Approx "$2"% complete"}'
-        progress_i=$((progress_i + 1))
-    done
+    { find .tmp_/split |
+    grep split2_ |
+    xargs -I {} ./miniogenotype/src/format_laligh.sh .tmp_/mutation.fa {} \
+    > .tmp_/lalign2.fa & } 1>/dev/null 2>/dev/null
+    wait 1>/dev/null 2>/dev/null # 1 min...
     #
-    cat .tmp_/lalign.txt |
-    sort -t " " |
-    join - .tmp_/sorted_bam |
-    awk '{$NF=""; print $0}' |
-    awk 'BEGIN{OFS="\t"} {print $7,$8+$2,$8+$3,$5,$1"@@@"$4"___"$6}' |
-    bedtools intersect -a - -b .tmp_/mut_location.bed -wb |
-    awk 'BEGIN{OFS="\t"} {print $NF"HOGE"$5,$4}' |
-    sed "s/@@@/ /g" |
-    awk '{if(max[$1]<$3) {max[$1]=$3; seq[$1]=$0}}
-    END{for(key in max) print seq[key]}' |
-    sed "s/___/ /g" |
-    cut -d " " -f 1-2 |
-    sed -e "s/^/>/g" -e "s/ /\n/g" \
-    > .tmp_/mut_bestscore.fa
-    
-    # separate left and right insertion site
-    cat .tmp_/mut_bestscore.fa |
-    awk '{if($1 !~ /^>/) print "@@@"$0; else print}' |
-    tr -d "\n" | sed -e "s/>/\n>/g" -e "s/@@@/ @@@/g" |
-    grep "1HOGE" | sed -e "s/1HOGE//g" -e "s/@@@/\n/g" |
-    sed "s/-//g" \
-    > .tmp_/mut_bestscore_1.fa
-    
-    cat .tmp_/mut_bestscore.fa |
-    awk '{if($1 !~ /^>/) print "@@@"$0; else print}' |
-    tr -d "\n" | sed -e "s/>/\n>/g" -e "s/@@@/ @@@/g" |
-    grep "2HOGE" | sed -e "s/2HOGE//g" -e "s/@@@/\n/g" \
-    > .tmp_/mut_bestscore_2.fa
-    
-    printf "Output sequence logo at loxP loci..."
+    printf "Output sequence logo at loxP loci...\n"
     # Multiple alignment by clustal omega
-    clustalo --auto \
-    -i .tmp_/mut_bestscore_1.fa \
-    --threads=${threads:-4} \
-    > .tmp_/clustalo_1.fa 2>/dev/null
+    { clustalo -t DNA --auto -i .tmp_/lalign1.fa \
+    > .tmp_/clustalo_left.fa & } 1>/dev/null 2>/dev/null
     #
-    clustalo --auto \
-    -i .tmp_/mut_bestscore_2.fa \
-    --threads=${threads:-4} \
-    > .tmp_/clustalo_2.fa 2>/dev/null
-    # Sequence logo
-    ## PNG
-    weblogo -n 50 --errorbars no -c classic --format png_print \
-    < .tmp_/clustalo_1.fa > results/figures/png/seqlogo_left.png
-    weblogo -n 50 --errorbars no -c classic --format png_print \
-    < .tmp_/clustalo_2.fa > results/figures/png/seqlogo_right.png
-    ## SVG
-    weblogo -n 50 --errorbars no -c classic --format svg \
-    < .tmp_/clustalo_1.fa > results/figures/svg/seqlogo_left.svg
-    weblogo -n 50 --errorbars no -c classic --format svg \
-    < .tmp_/clustalo_2.fa > results/figures/svg/seqlogo_right.svg
+    { clustalo -t DNA --auto -i .tmp_/lalign2.fa \
+    > .tmp_/clustalo_right.fa & } 1>/dev/null 2>/dev/null
+    wait 1>/dev/null 2>/dev/null
+    # -----------------------------------------------------------------
+    # REMOVE GAP
+    # -----------------------------------------------------------------
+    for input in .tmp_/clustalo_left.fa .tmp_/clustalo_right.fa; do
+        output_rmgap=$(echo ${input} | sed -e "s/.fa/_rmgap.fa/g")
+        # Extract gap-enriched nucreotide location
+        true > .tmp_/remove_gaprow
+        seqnum=$(cat ${input} | awk -F "" '{if(NR==2) print length($0)}')
+        for i in $(awk -v num=${seqnum} 'BEGIN{for(i=1;i<=num;i++) print i}'); do
+            # echo "$i --------" #! ==============================
+            cat ${input} |
+            awk -F "" -v i=${i} '{if(NR%2==0) print $i}' |
+            sort |
+            uniq -c |
+            # awk -v i=${i} '{sum+=$1; if($2=="-") gapnum=$1}
+            # END{print i,$1/sum*100}' |
+            # awk '$2>50' |
+            awk -v i=${i} '{sum+=$1; if(max<$1) {max=$1; nuc=$2}}
+            END{print i,nuc,max/sum*100}' |
+            #Extract nucleotide position with gap "-" > 20%
+            awk '$2 == "-" && $3>50' |
+            cut -d " " -f 1 >> .tmp_/remove_gaprow
+        done
+        # Remove gap-enriched nucreotide location
+        cat .tmp_/remove_gaprow |
+        sed -e "s/^/\$/g" \
+            -e 's/$/="";@/g' |
+        tr -d "\n" |
+        sed -e "s/@/ /g" \
+            -e "s/^/{if(NR%2==0){/g" \
+            -e "s/$/ print} else print}/g" \
+        > .tmp_/remove_gap.awk
+        #
+        cat ${input} |
+        awk -F "" -f .tmp_/remove_gap.awk |
+        sed "s/ //g" \
+        > ${output_rmgap}
+        #
+        # Output sequence logo
+        ## PNG
+        output_logo=$(echo ${output_rmgap} | sed -e "s/.*clustalo_//g" -e "s/_rmgap.fa//g")
+        { weblogo -n 50 --errorbars no -c classic --format png_print \
+            < ${output_rmgap} > results/figures/png/seqlogo/${barcode}_${output_logo}.png & } 1>/dev/null 2>/dev/null
+        ## SVG
+        { weblogo -n 50 --errorbars no -c classic --format svg \
+            < ${output_rmgap} > results/figures/svg/seqlogo/${barcode}_${output_logo}.svg & } 1>/dev/null 2>/dev/null
+        wait 1>/dev/null 2>/dev/null
+    done
 done
+
+output_logo=$(echo ${output_rmgap} | sed -e "s/.*clustalo_//g" -e "s/_rmgap.fa//g")
+{ weblogo -n 50 --errorbars no -c classic --format png_print \
+    < .tmp_/clustalo_right.fa > results/figures/png/seqlogo/negacon.png & } 1>/dev/null 2>/dev/null
+
+# Sequence logo
+## PNG
+# { weblogo -n 50 --errorbars no -c classic --format png_print \
+#     < .tmp_/clustalo1.fa > results/figures/png/seqlogo/${barcode}_left.png & } 1>/dev/null 2>/dev/null
+# { weblogo -n 50 --errorbars no -c classic --format png_print \
+#     < .tmp_/clustalo2.fa > results/figures/png/seqlogo/${barcode}_right.png & } 1>/dev/null 2>/dev/null
+# ## SVG
+# { weblogo -n 50 --errorbars no -c classic --format svg \
+#     < .tmp_/clustalo1.fa > results/figures/svg/seqlogo/${barcode}_left.svg & } 1>/dev/null 2>/dev/null
+# { weblogo -n 50 --errorbars no -c classic --format svg \
+#     < .tmp_/clustalo2.fa > results/figures/svg/seqlogo/${barcode}_right.svg & } 1>/dev/null 2>/dev/null
+# wait 1>/dev/null 2>/dev/null
