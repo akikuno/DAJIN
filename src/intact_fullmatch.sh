@@ -47,17 +47,19 @@ mutation_profile_rev=$(./miniogenotype/src/revcomp.sh .tmp_/tmp_mutation_profile
 
 
 # ======================================
-# Pairwise alignment between KI sequence and reads
+# Search reads with loxP exact matching
 # ======================================
 
 flank1=$(cat .tmp_/lalign_mut_center | head -n 1)
 flank2=$(cat .tmp_/lalign_mut_center | tail -n 1)
 
+true > .tmp_/target_perfectmatch.csv
+
 # barcode=barcode14
 mkdir -p results/figures/png/seqlogo/ results/figures/svg/seqlogo/
 for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     bam=bam/${barcode}.bam
-    printf "##########\n${bam} is processing...\n##########\n"
+    # printf "##########\n${bam} is processing...\n##########\n"
     #
     samtools view ${bam} |
     sort |
@@ -72,22 +74,30 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     #
     cat .tmp_/mutsite_split1 |
     grep -e ${mutation_profile_for} -e ${mutation_profile_rev} |
+    cut -d " " -f 1 |
     sort \
     > .tmp_/mutsite_targetpositive1
     cat .tmp_/mutsite_split2 |
     grep -e ${mutation_profile_for} -e ${mutation_profile_rev} |
+    cut -d " " -f 1 |
     sort \
     > .tmp_/mutsite_targetpositive2
-    join .tmp_/mutsite_targetpositive1 .tmp_/mutsite_targetpositive2 | sed "s/^/${barcode},flox\t/g" | cut -f 1 | head
-    join -v 1 .tmp_/mutsite_targetpositive1 .tmp_/mutsite_targetpositive2 | sed "s/^/${barcode},left-loxP\t/g" | cut -f 1 | head
-    join -v 2 .tmp_/mutsite_targetpositive1 .tmp_/mutsite_targetpositive2 | sed "s/^/${barcode},left-loxP\t/g" | cut -f 1 | head
-    cat .tmp_/mutsite_targetpositive1 .tmp_/mutsite_targetpositive2 | sort -u | cut -d " " -f 1 > .tmp_/tmp
-    join -v 1 .tmp_/sorted_bam tmp | wc -l
-    wc -l .tmp_/sorted_bam
-    wc -l tmp
-
-    cut -d " " -f 1 .tmp_/mutsite_targetpositive1 > tmp1
-    cut -d " " -f 1 .tmp_/mutsite_targetpositive2 > tmp2
-    
-    
+    # Output results...
+    join .tmp_/mutsite_targetpositive1 .tmp_/mutsite_targetpositive2 |
+    sed "s/^/${barcode},flox\t/g" |
+    cut -f 1 \
+    >> .tmp_/target_perfectmatch.csv
+    join -v 1 .tmp_/mutsite_targetpositive1 .tmp_/mutsite_targetpositive2 |
+    sed "s/^/${barcode},left loxP\t/g" |
+    cut -f 1 \
+    >> .tmp_/target_perfectmatch.csv
+    join -v 2 .tmp_/mutsite_targetpositive1 .tmp_/mutsite_targetpositive2 |
+    sed "s/^/${barcode},right loxP\t/g" |
+    cut -f 1 \
+    >> .tmp_/target_perfectmatch.csv
+    cat .tmp_/mutsite_targetpositive1 .tmp_/mutsite_targetpositive2 |
+    sort -u |
+    join -v 1 .tmp_/sorted_bam - |
+    sed "s/^/${barcode},No exact match\t/g" |
+    cut -f 1 >> .tmp_/target_perfectmatch.csv
 done
