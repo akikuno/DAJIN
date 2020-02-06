@@ -24,14 +24,16 @@ fig_types = ["svg", "png"]
 
 df_mutation = pd.read_csv(".tmp_/target_perfectmatch.csv",
                           names=["barcodeID", "mutation"])
+barcode_list = pd.DataFrame({"barcodeID": df_mutation.barcodeID.unique()})
 df_predicted = pd.read_csv(".tmp_/prediction_result.txt",
                            sep="\t")
-barcode_list = df_mutation.barcodeID.unique()
+df_predicted = pd.merge(df_predicted, barcode_list, on="barcodeID", how="inner")
+
 
 # ? ==========================================================
 
-df_read_size = df_predicted.groupby("barcodeID").size()
 df_mutation_size = df_mutation.groupby("barcodeID").size()
+df_read_size = df_predicted.groupby("barcodeID").size()
 
 fig, ax1 = plt.subplots()
 ax2 = ax1.twinx()
@@ -46,7 +48,7 @@ color_2 = plt.cm.Set1.colors[0]
 df_read_size.plot(ax=ax1, kind='bar', stacked=False, rot=0,
                   color=color_1, label="total read numbers")
 df_mutation_size.plot(ax=ax2, kind='bar', stacked=False,
-                      rot=0, color=color_2, label="total flox numbers")
+                      rot=0, color=color_2, label="total predicted flox numbers")
 
 ax1.yaxis.set_major_locator(MaxNLocator(nbins=5))
 ax2.yaxis.set_major_locator(MaxNLocator(nbins=5))
@@ -86,6 +88,8 @@ for i in barcode_list:
                                 i]["mutation"].reset_index(drop=True)
 
 # +
+counts = df_mutation.apply(lambda x: x.dropna(
+).value_counts() / len(x.dropna())).transpose()
 
 counts = df_stacked.apply(lambda x: x.dropna(
 ).value_counts() / len(x.dropna())).transpose()
