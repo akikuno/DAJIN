@@ -99,9 +99,6 @@ output_figure = file_name.replace(".txt.gz", "").replace("data_for_ml/", "")
 output_model = file_name.replace(".txt.gz", "").replace(
     "data_for_ml", "data_for_ml/model")
 
-# print(file_name)
-# print(output_npz)
-
 df = pd.read_csv(file_name, header=None, sep='\t')
 
 if "ACGT" in file_name:
@@ -115,8 +112,6 @@ df_sim = df[df[0].str.endswith(
     "simulated") * ~df[0].str.startswith("abnormal")].reset_index(drop=True)
 df_real = df[~df[0].str.endswith("simulated")].reset_index(drop=True)
 
-# print(df_sim.head())
-
 # Save One-hot matrix
 print("One-hot encording simulated reads...")
 X_sim = X_onehot(df_sim)
@@ -126,104 +121,28 @@ np.savez_compressed(output_npz,
                     X_sim=X_sim,
                     X_real=X_real
                     )
-# print(output_npz)
-
-# + {"language": "sh"}
-# ls -lht data_for_ml/*npz
-# -
-
 # # Load One-hot matrix
-
-# print(output_figure)
-# print(output_model)
-# -
-# for fig_dir in fig_dirs:
-#     fig_type = re.sub(".*/", "", fig_dir)
-#     print(f"{fig_dir}/{output_figure}.{fig_type}")
 
 np.load = partial(np.load, allow_pickle=True)
 npz = np.load(output_npz)
-
-# print(npz.files)
 
 X_sim = npz["X_sim"]
 X_real = npz["X_real"]
 
 labels, id = pd.factorize(df_sim.iloc[:, 0])
-# print(id)
 
-# +
 X = X_sim
-X_reshape = X.reshape(X.shape[0], len(df_sim.iloc[1, 1])*X.shape[2])
 
 labels_categorical = np_utils.to_categorical(labels)
 
 X_train, X_test, Y_train, Y_test = train_test_split(
     X, labels_categorical,
     test_size=0.2, random_state=42, shuffle=True)
-# -
-
-# # PCA
-# +
-# np.seterr(divide='ignore', invalid='ignore')
-# # Run The PCA
-# pca = PCA(n_components=3)
-# pca.fit(X_reshape)
-
-# # Store results of PCA in a data frame
-# result_PCA = pd.DataFrame(pca.transform(X_reshape), columns=[
-#                           'PCA%i' % i for i in range(3)], index=labels)
-# colorlist = ['#1f77b4', '#d62728', '#4daf4a', '#9467bd', '#999999']
-
-# # %matplotlib inline
-# plt.figure(figsize=(8, 6), dpi=350)
-# plt.style.use('default')
-# plt.rcParams['axes.linewidth'] = 1.5
-# plt.rcParams['font.family'] = 'Arial'
-# plt.rcParams['font.size'] = '20'
-# matplotlib_axes_logger.setLevel('ERROR')
-# for c, l in zip(range(len(id)), np.unique(labels)):
-#     plt.scatter(result_PCA[labels == l]["PCA0"],
-#                 result_PCA[labels == l]["PCA1"],
-#                 c=plt.cm.tab20(c),
-#                 # c=colorlist[c],
-#                 alpha=0.5,
-#                 label=id[l])
-
-# plt.legend(bbox_to_anchor=(1.01, 1), loc='upper left',
-#            borderaxespad=0, fontsize=10)
-# plt.title('PCA of raw sequence data')
-
-# fig_name = "pca_before"
-# for fig_dir in fig_dirs:
-#     fig_type = re.sub(".*/", "", fig_dir)
-#     plt.savefig(f"{fig_dir}/{output_figure}_{fig_name}.{fig_type}",
-#                 dpi=350, bbox_inches="tight")
-
 
 # # Three layer 1D concolusion
 
-# 定義した全ての変数を初期化
-# tf.initializers.global_variables()
-
-# +
 tf.get_logger().setLevel('INFO')
 model = Sequential()
-# model.add(Conv1D(filters=32, kernel_size=128, activation="relu",
-#                  input_shape=(X.shape[1], X.shape[2]), name="1st_Conv1D"))
-# model.add(MaxPooling1D(pool_size=4, name="1st_MaxPooling1D"))
-
-# model.add(Conv1D(filters=32, kernel_size=64,
-#                  activation="relu", name="2nd_Conv1D"))
-# model.add(MaxPooling1D(pool_size=4, name="2nd_MaxPooling1D"))
-
-# model.add(Conv1D(filters=32, kernel_size=12,
-#                  activation="relu", name="3rd_Conv1D"))
-# model.add(MaxPooling1D(pool_size=4, name="3rd_MaxPooling1D"))
-
-# model.add(Conv1D(filters=32, kernel_size=4,
-#                  activation="relu", name="4th_Conv1D"))
-# model.add(MaxPooling1D(pool_size=4, name="4th_MaxPooling1D"))
 
 model.add(Conv1D(filters=32, kernel_size=32, activation="relu",
                  input_shape=(X.shape[1], X.shape[2]), name="1st_Conv1D"))
@@ -250,15 +169,6 @@ model.add(Dense(64, activation='relu', name="1st_FC"))
 alpha = 0.1  # hyperparameter
 model.add(Dense(64, activation='linear',
                 activity_regularizer=regularizers.l2(alpha), name="L2-softmax"))
-pca_layer_name = "L2-softmax"
-# output_figure = output_figure + "_L2_" + str(alpha)
-# >>>>>>>>>>>
-
-# # noL2 <<<<<<<
-# model.add(Dense(64, activation='relu', name="FC"))
-# pca_layer_name = "FC"
-# output_figure = output_figure + "_noL2"
-# # >>>>>>>>>>>
 
 model.add(Dense(len(id), activation='softmax', name="final_layer"))
 model.compile(optimizer='adam', loss='categorical_crossentropy',
@@ -269,7 +179,6 @@ model.summary()
 stack = model.fit(X_train, Y_train, epochs=20, verbose=0,
                   validation_split=0.2, shuffle=True)
 
-# +
 # %matplotlib inline
 plt.figure()
 plt.style.use('default')
@@ -303,115 +212,12 @@ for fig_dir in fig_dirs:
                 dpi=350, bbox_inches="tight")
 # -
 
-# score = model.evaluate(X_test, Y_test)
-# print('Test loss:', score[0])
-# print('Test accuracy:', score[1])
-
-##################################################
-# ## Confusion matrix
-##################################################
-
-# +
-# %matplotlib inline
-
-# predicted_labels = model.predict(X_test)
-# cm = confusion_matrix(np.argmax(Y_test, axis=1),
-#                       np.argmax(predicted_labels, axis=1))
-
-# cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-
-# plt.figure(figsize=(10, 10))
-# plt.style.use('default')
-# plt.rcParams["font.size"] = 15
-# plt.rcParams['axes.linewidth'] = 1.5
-# plt.rcParams['font.family'] = 'Arial'
-# # plt.rcParams['figure.figsize'] = (20, 20)
-# plt.tight_layout()
-# plt.title('Normalized confusion matrix', fontsize=20)
-# plt.imshow(cm, cmap=plt.cm.Blues)
-# plt.colorbar()
-# plt.xlabel('Predicted label')
-# plt.ylabel('True label')
-# plt.xticks(np.arange(len(id)), (id), rotation=90)
-# plt.yticks(np.arange(len(id)), (id), rotation=0)
-# plt.grid(False)
-# for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-#     plt.text(j, i, format(cm[i, j], '.2f'),
-#              horizontalalignment='center',
-#              color='white' if cm[i, j] > 0.5 else 'black')
-
-# # ------------------------
-# fig_name = "confusion"
-# for fig_dir in fig_dirs:
-#     fig_type = re.sub(".*/", "", fig_dir)
-#     plt.savefig(f"{fig_dir}/{output_figure}_{fig_name}.{fig_type}",
-#                 dpi=350, bbox_inches="tight")
-# # -
 
 # ## save and load model
 
 model.save(output_model + '.h5')  # creates a HDF5 file 'my_model.h5'
-# del model  # deletes the existing model
 
 model = load_model(output_model + '.h5')
-
-
-# ## PCA using final 1D-CNN layer (flatten)
-
-# # +
-# intermediate_layer_model = Model(inputs=model.input,
-#                                  outputs=model.get_layer(pca_layer_name).output)
-# intermediate_output = intermediate_layer_model.predict(X_train)
-# new_label = np.zeros(len(Y_train))
-
-# for i in range(len(Y_train)):
-#     for j in range(len(id)):
-#         if Y_train[i, j] == 1:
-#             new_label[i] = j
-
-# np.seterr(divide='ignore', invalid='ignore')
-# # Run The PCA
-# pca = PCA(n_components=5)
-# pca.fit(intermediate_output)
-
-# # Store results of PCA in a data frame
-# result_PCA = pd.DataFrame(pca.transform(intermediate_output),
-#                           columns=['PCA%i' % i for i in range(5)],
-#                           index=new_label)
-
-# # +
-# # %matplotlib inline
-# sns.set_style("ticks", {"font": "Arial"})
-# # %config InlineBackend.figure_formats = {'png', 'retina'}
-# # plt.style.use('seaborn-pastel')
-# # plt.style.use('seaborn-ticks')
-# plt.style.use('default')
-# colorlist = sns.color_palette("Set2", 24).as_hex()
-
-# plt.figure(figsize=(8, 6), dpi=350)
-# plt.rcParams['axes.linewidth'] = 1.5
-# plt.rcParams['font.family'] = 'Arial'
-# plt.rcParams['font.size'] = '20'
-
-
-# for c, l in zip(range(len(id)), np.unique(new_label)):
-#     plt.scatter(result_PCA[new_label == l]["PCA0"],
-#                 result_PCA[new_label == l]["PCA1"],
-#                 c=colorlist[c],
-#                 alpha=0.5,
-#                 label=id[l])
-
-# plt.legend(bbox_to_anchor=(1.01, 1), loc='upper left',
-#            borderaxespad=0, fontsize=10)
-# plt.title('PCA of L2-softmax layer')
-
-# # --------------------------------
-# fig_name = "pca_after"
-# for fig_dir in fig_dirs:
-#     fig_type = re.sub(".*/", "", fig_dir)
-#     plt.savefig(f"{fig_dir}/{output_figure}_{fig_name}.{fig_type}",
-#                 dpi=350, bbox_inches="tight")
-# # -
 
 ################################################
 # # Compute cosine similarity
@@ -445,12 +251,10 @@ def cosine_similarity(x1, x2):
     cosine_sim = np.dot(x1, x2.T)/(x1_norm*x2_norm+1e-10)
     return cosine_sim
 
-
-# -
 X_all = np.concatenate((X_sim, X_real))
 df_name = pd.concat([df_sim[0].reset_index(drop=True),
                      df_real[0].reset_index(drop=True)])
-# X_all.shape
+
 cos_all, normal_vector, predict_vector = get_score_cosine(
     model, X_train[0:1000], X_all)
 
@@ -471,34 +275,6 @@ df_unexpected = df_all[df_all.label == -1]
 df_unexpected["abnormal_prediction"] = df_unexpected.cos_similarity.apply(
     lambda x: "normal" if x > optimal_threshold else "abnormal")
 df_unexpected = df_unexpected.reset_index()
-# #? ----------------------------------------
-# cos_all, normal_vector, predict_vector = get_score_cosine(
-#     model, X_train[0:1000], X_sim)
-
-# df_expected = pd.concat([df_sim[0].reset_index(
-#     drop=True), pd.DataFrame(cos_all)], axis=1)
-# df_expected.columns = ["barcode", "cos_similarity"]
-
-# cos_all, normal_vector, predict_vector = get_score_cosine(
-#     model, X_train[0:1000], X_real)
-
-# df_unexpected = pd.concat([df_real[0].reset_index(
-#     drop=True), pd.DataFrame(cos_all)], axis=1)
-# df_unexpected.columns = ["barcode", "cos_similarity"]
-
-# df_unexpected.describe()
-# #? ----------------------------------------
-
-# df_all = pd.concat([df_expected, df_unexpected], axis=0)
-# df_all["label"] = df_all.barcode.apply(
-#     lambda x: -1 if x.startswith("barcode") else 1)
-
-# optimal_threshold = df_expected.cos_similarity.quantile(0.001)
-
-# df_all["abnormal_prediction"] = df_all.cos_similarity.apply(
-#     lambda x: 1 if x > optimal_threshold else -1)
-# df_unexpected["abnormal_prediction"] = df_unexpected.cos_similarity.apply(
-#     lambda x: "normal" if x > optimal_threshold else "abnormal")
 
 # +
 plt.figure(figsize=(6, 10))
