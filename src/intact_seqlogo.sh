@@ -17,11 +17,11 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 flank1=$(cat .tmp_/lalign_mut_center | head -n 1)
 flank2=$(cat .tmp_/lalign_mut_center | tail -n 1)
 
-# barcode=barcode14
+# barcode=barcode20
 mkdir -p results/figures/png/seqlogo/ results/figures/svg/seqlogo/
 for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     bam=bam/${barcode}.bam
-    printf "##########\n${bam} is processing...\n##########\n"
+    printf " ----------------------- \n ${bam} is processing... \n ----------------------- \n"
     #
     samtools view ${bam} |
     sort |
@@ -69,6 +69,7 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
         true > .tmp_/remove_gaprow
         seqnum=$(cat ${input} | awk -F "" '{if(NR==2) print length($0)}')
         for i in $(awk -v num=${seqnum} 'BEGIN{for(i=1;i<=num;i++) print i}'); do
+            # echo "$i ==============="
             cat ${input} |
             awk -F "" -v i=${i} '{if(NR%2==0) print $i}' |
             sort |
@@ -76,7 +77,7 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
             awk -v i=${i} '{sum+=$1; if(max<$1) {max=$1; nuc=$2}}
             END{print i,nuc,max/sum*100}' |
             #Extract nucleotide position with gap "-" > 20%
-            awk '$2 == "-" && $3>50' |
+            awk '$2 == "-" && $3>20' |
             cut -d " " -f 1 >> .tmp_/remove_gaprow
         done
         # Remove gap-enriched nucreotide location

@@ -359,9 +359,9 @@ if [ $? -eq 0 ]; then
     ./miniogenotype/src/intact_preparation.sh
     printf "Generate sequence logo at loxP sites...\n"
     ./miniogenotype/src/intact_seqlogo.sh
-    printf "Search loxP full-matched reads...\n"
+    printf "Search loxP exactly matched reads...\n"
     ./miniogenotype/src/intact_fullmatch.sh
-    printf "Finished!...\n"
+    python ./miniogenotype/src/intact_fullmatch.py
 fi
 set -e
 
@@ -369,11 +369,12 @@ set -e
 # Alignment viewing
 # ======================================
 
+printf "Visualizing alignment reads...\n"
 printf "Browser will be launched. Click 'igvjs.html'.\n"
 { npx live-server results/igvjs/ & } 1>/dev/null 2>/dev/null
 
 # rm -rf .tmp_
-printf "Completed\n"
+printf "Completed! \nCheck 'results/figures/' directory.\n"
 
 exit 0
 
