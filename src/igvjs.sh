@@ -109,7 +109,7 @@ ls results/igvjs/bam_${read_num}reads/* | grep -e bam$ | sed -e "s#^.*/bam#bam#g
 ls results/igvjs/bam_${read_num}reads/* | grep -e bam$ | sed -e "s#^.*/bam#bam#g" -e "s#.*/##g" -e "s#.bam##g" -e 's#_#\\_#g' > .tmp_/tmp2
 paste .tmp_/tmp1 .tmp_/tmp2 > .tmp_/template.txt
 
-./miniogenotype/src/mojihame-l -l LABEL miniogenotype/src/igvjs_template.html .tmp_/template.txt |
+./DAJIN/src/mojihame-l -l LABEL DAJIN/src/igvjs_template.html .tmp_/template.txt |
 sed -e "s/genome_info/${genome}/g" \
 -e "s/locus_info/${chromosome}:${start}-${end}/g" \
 > results/igvjs/igvjs.html
