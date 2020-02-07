@@ -26,10 +26,10 @@ Usage     : ${0##*/} [options] \\
             -seq [string] (optional) \\
             -t [integer] (optional)
 
-Example   : ./miniogenotype/allele_profiler.sh \\
-            -i miniogenotype/example/cables2_flox.fa \\
-            -ont miniogenotype/example/demultiplex \\
-            -ont_ref miniogenotype/example/demultiplex/barcode21.fastq.gz \\
+Example   : ./DAJIN/allele_profiler.sh \\
+            -i DAJIN/example/cables2_flox.fa \\
+            -ont DAJIN/example/demultiplex \\
+            -ont_ref DAJIN/example/demultiplex/barcode21.fastq.gz \\
             -genome mm10 \\
             -seq ATAACTTCGTATAATGTATGCTATACGAAGTTAT
             -t 8
@@ -198,7 +198,7 @@ awk -v ref_seqlength="$ref_seqlength" \
 > .tmp_/revcomp
 
 if [ $(cat .tmp_/revcomp) -eq 1 ] ; then
-    ./miniogenotype/src/revcomp.sh "${fasta}" \
+    ./DAJIN/src/revcomp.sh "${fasta}" \
     > .tmp_/fasta_revcomp && fasta=".tmp_/fasta_revcomp"
     cat $fasta | sed "s/^/@/g" | tr -d "\n" | sed -e "s/@>/\n>/g" -e "s/$/\n/g" | grep -v "^$" |
     while read input; do
@@ -243,7 +243,7 @@ NanoSim simulation starts
 +++++++++++++++++++++\n"
 
 printf "Read analysis...\n"
-./miniogenotype/NanoSim/src/read_analysis.py genome \
+./DAJIN/NanoSim/src/read_analysis.py genome \
     -i "$ont_ref" \
     -rg fasta/wt.fa \
     -t ${threads:-4} \
@@ -261,7 +261,7 @@ for input in $(ls fasta/* | grep -v igv); do
         len=$ref_seqlength
     fi
     ##
-    ./miniogenotype/NanoSim/src/simulator.py genome \
+    ./DAJIN/NanoSim/src/simulator.py genome \
         -dna_type linear -c NanoSim/training \
         -rg $input -n 3000 -t ${threads:-4} \
         -min ${len} \
@@ -270,7 +270,7 @@ for input in $(ls fasta/* | grep -v igv); do
 done
 
 rm -rf NanoSim/training* \
-    miniogenotype/NanoSim/src/__pycache__
+    DAJIN/NanoSim/src/__pycache__
 
 printf 'Success!!\nSimulation is finished\n'
 
@@ -283,7 +283,7 @@ printf \
 Generate BAM files
 +++++++++++++++++++++\n"
 
-./miniogenotype/src/igvjs.sh ${genome}
+./DAJIN/src/igvjs.sh ${genome}
 
 printf "BAM files are saved at bam\n"
 printf "Next converting BAM to MIDS format...\n"
@@ -330,7 +330,7 @@ for input in ./fasta_ont/*; do
     minimap2 -t ${threads:-4} --cs=long -ax splice ${reference} ${input} 2>/dev/null |
     awk '$3 == "wt"' > .tmp_/${output}
     #
-    ./miniogenotype/src/mids_convertion.sh .tmp_/${output} ${first_flank} ${second_flank} \
+    ./DAJIN/src/mids_convertion.sh .tmp_/${output} ${first_flank} ${second_flank} \
     >> data_for_ml/${output_file}.txt
 done
 
@@ -339,7 +339,7 @@ gzip -f data_for_ml/${output_file}.txt
 printf "Finished.\n${output_file}.txt.gz is generated.\n"
 
 printf "Start allele prediction...\n"
-python miniogenotype/src/allele_prediction.py data_for_ml/${output_file}.txt.gz
+python DAJIN/src/allele_prediction.py data_for_ml/${output_file}.txt.gz
 printf "Prediction was finished...\n"
 
 # ======================================
@@ -356,12 +356,12 @@ grep -q -i -e "ATAACTTCGTATAATGTATGCTATACGAAGTTAT" \
     -e "ATAACTTCGTATAGCATACATTATACGAAGTTAT"
 if [ $? -eq 0 ]; then
     printf "Checking the intactness of loxP sequence loci...\n"
-    ./miniogenotype/src/intact_preparation.sh
+    ./DAJIN/src/intact_preparation.sh
     printf "Generate sequence logo at loxP sites...\n"
-    ./miniogenotype/src/intact_seqlogo.sh
+    ./DAJIN/src/intact_seqlogo.sh
     printf "Search loxP exactly matched reads...\n"
-    ./miniogenotype/src/intact_fullmatch.sh
-    python ./miniogenotype/src/intact_fullmatch.py
+    ./DAJIN/src/intact_fullmatch.sh
+    python ./DAJIN/src/intact_fullmatch.py
 fi
 set -e
 

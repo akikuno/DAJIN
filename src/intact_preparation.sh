@@ -46,7 +46,7 @@ printf ">mut\n${mutation_profile}\n" \
 reference=.tmp_/mutation.fa
 query=.tmp_/target.fa
 if grep -q '-' .tmp_/gggenome_location; then # 2>/dev/null 1>/dev/null
-    ./miniogenotype/src/revcomp.sh .tmp_/target.fa > .tmp_/target_rev.fa
+    ./DAJIN/src/revcomp.sh .tmp_/target.fa > .tmp_/target_rev.fa
     query=.tmp_/target_rev.fa
 fi
 lalign36 -m 3 ${reference} ${query} |

@@ -16,7 +16,7 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 mutation_profile_for="ATAACTTCGTATAATGTATGCTATACGAAGTTAT"
 printf "${mutation_profile_for}\n" > .tmp_/tmp_mutation_profile_for
-mutation_profile_rev=$(./miniogenotype/src/revcomp.sh .tmp_/tmp_mutation_profile_for)
+mutation_profile_rev=$(./DAJIN/src/revcomp.sh .tmp_/tmp_mutation_profile_for)
 
 # ======================================
 # Search reads with loxP exact matching

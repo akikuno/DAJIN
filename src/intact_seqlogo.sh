@@ -43,12 +43,12 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     printf "Align reads to loxP sequence...\n"
     { find .tmp_/split |
     grep split1_ |
-    xargs -I {} ./miniogenotype/src/intact_lalign.sh .tmp_/mutation.fa {} \
+    xargs -I {} ./DAJIN/src/intact_lalign.sh .tmp_/mutation.fa {} \
     > .tmp_/lalign1.fa & } 1>/dev/null 2>/dev/null
     #
     { find .tmp_/split |
     grep split2_ |
-    xargs -I {} ./miniogenotype/src/intact_lalign.sh .tmp_/mutation.fa {} \
+    xargs -I {} ./DAJIN/src/intact_lalign.sh .tmp_/mutation.fa {} \
     > .tmp_/lalign2.fa & } 1>/dev/null 2>/dev/null
     wait 1>/dev/null 2>/dev/null # 1 min...
     #

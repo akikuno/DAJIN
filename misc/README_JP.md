@@ -1,4 +1,4 @@
-# miniogenotype
+# DAJIN 一網打尽
 A simple, rapid, scalable whole-allelic profile of genome editing aminals using ONT MinION
 
 # インストール (OS別)
@@ -6,15 +6,15 @@ A simple, rapid, scalable whole-allelic profile of genome editing aminals using 
 [Anaconda](https://docs.anaconda.com/anaconda/install/)または[Miniconda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)をインストールした後に、下記のコマンドを実行してください。
 
 ```
-conda create -y -n miniogenotype python=3.6 anaconda git tensorflow-gpu keras tqdm nodejs
-conda install -y -n miniogenotype -c bioconda nanosim samtools htslib fasta3 clustalo weblogo
-conda activate miniogenotype
-git clone https://github.com/akikuno/miniogenotype.git
+conda create -y -n DAJIN python=3.6 anaconda git tensorflow-gpu keras tqdm nodejs
+conda install -y -n DAJIN -c bioconda nanosim samtools htslib fasta3 clustalo weblogo
+conda activate DAJIN
+git clone https://github.com/akikuno/DAJIN.git
 ```
 
 ## Windows10
 Windows Subsystem for LinuxとAnaconda Promptの設定が必要です。    
-[こちらのページ](https://github.com/akikuno/miniogenotype/blob/master/misc/WindowsOS_Setting_JP.md)をご覧ください。  
+[こちらのページ](https://github.com/akikuno/DAJIN/blob/master/misc/WindowsOS_Setting_JP.md)をご覧ください。  
 
 ## macOS
 macOSはCPUでの実行は出来ますが、計算時間がかかるため推奨できません。
@@ -44,10 +44,10 @@ Options :
 # Example
 
 ```
-./miniogenotype/allele_profiler.sh \
-  -i miniogenotype/example/cables2_flox.fa \
-  -ont miniogenotype/example/demultiplex \
-  -ont_ref miniogenotype/example/demultiplex/barcode21.fastq.gz \
+./DAJIN/allele_profiler.sh \
+  -i DAJIN/example/cables2_flox.fa \
+  -ont DAJIN/example/demultiplex \
+  -ont_ref DAJIN/example/demultiplex/barcode21.fastq.gz \
   -genome mm10 \
   -o test \
   -t 8
@@ -58,7 +58,7 @@ Options :
 `results` directory contains a figure of whole-allelic profile.  
 This is an example result of three mice.  
 
-<img src="https://github.com/akikuno/miniogenotype/blob/master/misc/images/sequence_MIDS_prediction_result.png" width="50%">  
+<img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/sequence_MIDS_prediction_result.png" width="50%">  
 
 Barcode14 and 19 are a founder mice, whose target allele is flox. Barcode21 is a wild-type mice as a control.   
 This result shows ~80% of reads from Barcode14 are labeled as "target" (flox), and indicates Barcode14 is the desired mouse that has homozygous floxed allele.
@@ -70,11 +70,11 @@ npx live-server results/igvjs/
 ```
 The browser will pop-up the following page:  
 
-<img src="https://github.com/akikuno/miniogenotype/blob/master/misc/images/igvjs_localhost.png" width="50%">  
+<img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/igvjs_localhost.png" width="50%">  
 
 Click `igvjs.html` and you can see the alignment views:  
 
-<img src="https://github.com/akikuno/miniogenotype/blob/master/misc/images/igvjs_alignment.png" width="50%">
+<img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/igvjs_alignment.png" width="50%">
 
 The barcode14 has two purple sites, where **insertion** occurs.
 
