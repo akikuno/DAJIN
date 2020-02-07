@@ -31,6 +31,7 @@ conda update -y -n base conda
 conda create -y -n DAJIN_win python=3.6 anaconda tensorflow-gpu keras tqdm
 conda activate DAJIN_win
 bash
+
 # Install other packages (samtools etc) in Linux environment.
 echo 'alias python="python.exe"' >> ~/.bashrc
 source ~/.bashrc
