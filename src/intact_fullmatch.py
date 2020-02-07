@@ -49,20 +49,30 @@ counts = df_stacked.apply(lambda x: x.dropna(
 
 sns.set_style("ticks", {"font": "Arial"})
 plt.style.use('seaborn-ticks')
-colorlist = ["#DDDDDD", "red", "darkorange", "gold"]
+labels = counts.columns.values
+# colorlist = ["#DDDDDD", "red", "darkorange", "gold"]
+colorlist = {"No exact match": "#DDDDDD",
+             "exact flox": "red",
+             "exact left loxP": "darkorange",
+             "exact right loxP":"gold"}
+colors = []
+for i in range(len(labels)):
+    colors.append(colorlist[labels[i]])
+
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
-counts.plot(ax=ax, kind='bar', stacked=True, rot=0, color=colorlist)
+counts.plot(ax=ax, kind='bar', stacked=True, rot=0, color=colors)
 ax.legend(bbox_to_anchor=(1, 1, 0.1, 0))
 ax.set_axisbelow(True)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
 ax.set_ylabel("Percentage of exactly matched reads", fontsize=15)
 ax.yaxis.grid(True)
-ax.legend(bbox_to_anchor=(1, 1, 0.1, 0))
+ax.legend(bbox_to_anchor=(1.05, 1), loc = "upper left")
 
 # figure ----------------------------
 fig_name = "persentage_of_loxP_intactness"
 for fig_type in fig_types:
     plt.savefig(f"{output_dir}/{fig_type}/{fig_name}.{fig_type}",
                 dpi=350, bbox_inches="tight")
+
