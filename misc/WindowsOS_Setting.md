@@ -27,11 +27,12 @@ Get [Miniconda3 Windows 64-bit](https://docs.conda.io/en/latest/miniconda.html#w
 Type `Anaconda Prompt` in the search window and open it.  
 Then execute the following commands.  
 ```
-# Install Python packages (Tensorflow-GPU etc) in Windows environment.
+: Install Python packages (Tensorflow-GPU etc) in Windows environment.
 conda update -y -n base conda
 conda create -y -n DAJIN_win python=3.6 anaconda tensorflow-gpu keras tqdm
 conda activate DAJIN_win
 bash
+
 # Install other packages (samtools etc) in Linux environment.
 echo 'alias python="python.exe"' >> ~/.bashrc
 source ~/.bashrc
