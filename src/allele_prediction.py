@@ -36,6 +36,7 @@ warnings.filterwarnings('ignore')
 # print(device_lib.list_local_devices())
 # print(tf.test.gpu_device_name())
 
+
 class hot_dna:
     def __init__(self, fasta):
         # check for and grab sequence name
@@ -108,8 +109,7 @@ else:
     df.iloc[:][1] = "MIDS=" + df.iloc[:][1]
     # print("MIDS")
 
-df_sim = df[df[0].str.endswith(
-    "simulated") * ~df[0].str.startswith("abnormal")].reset_index(drop=True)
+df_sim = df[df[0].str.endswith("simulated")].reset_index(drop=True)
 df_real = df[~df[0].str.endswith("simulated")].reset_index(drop=True)
 
 # Save One-hot matrix
@@ -137,7 +137,7 @@ labels_categorical = np_utils.to_categorical(labels)
 
 X_train, X_test, Y_train, Y_test = train_test_split(
     X, labels_categorical,
-    test_size=0.2, random_state=42, shuffle=True)
+    test_size=0.2, shuffle=True)
 
 # # Three layer 1D concolusion
 
@@ -222,7 +222,6 @@ model = load_model(output_model + '.h5')
 ################################################
 # # Compute cosine similarity
 ################################################
-# +
 
 
 def get_score_cosine(model, train, test):
@@ -251,19 +250,20 @@ def cosine_similarity(x1, x2):
     cosine_sim = np.dot(x1, x2.T)/(x1_norm*x2_norm+1e-10)
     return cosine_sim
 
+
 X_all = np.concatenate((X_sim, X_real))
-df_name = pd.concat([df_sim[0].reset_index(drop=True),
-                     df_real[0].reset_index(drop=True)])
+df_name = pd.concat([df_sim[[0, 2]].reset_index(drop=True),
+                     df_real[[0, 2]].reset_index(drop=True)])
 
 cos_all, normal_vector, predict_vector = get_score_cosine(
     model, X_train[0:1000], X_all)
 
 df_all = pd.concat([df_name.reset_index(
     drop=True), pd.DataFrame(cos_all)], axis=1)
-df_all.columns = ["barcode", "cos_similarity"]
+df_all.columns = ["barcode", "sequence_id", "cos_similarity"]
 
 df_all["label"] = df_all.barcode.apply(
-    lambda x: -1 if x.startswith("barcode") else 1)
+    lambda x: 1 if x.endswith("simulated") else -1)
 
 optimal_threshold = df_all[df_all.label == 1].cos_similarity.quantile(0.001)
 
@@ -276,7 +276,14 @@ df_unexpected["abnormal_prediction"] = df_unexpected.cos_similarity.apply(
     lambda x: "normal" if x > optimal_threshold else "abnormal")
 df_unexpected = df_unexpected.reset_index()
 
-# +
+
+# Output abnormal read IDs --------------------------
+df_all[df_all.abnormal_prediction == -1
+       * ~df_all.barcode.str.contains("simulated")].to_csv(
+           '.tmp_/abnormal_sequenceids.txt', columns=["barcode", "sequence_id"],
+    header=False, index=False, sep="\t")
+# ---------------------------------------------------
+
 plt.figure(figsize=(6, 10))
 plt.rcParams['axes.linewidth'] = 1.5
 plt.rcParams['font.family'] = 'Arial'
@@ -300,7 +307,9 @@ for fig_dir in fig_dirs:
                 dpi=350, bbox_inches="tight")
 # -
 
+################################################
 # # Prediction
+################################################
 
 print("Predict labels...")
 predict = model.predict(X_real, verbose=1, batch_size=1)
