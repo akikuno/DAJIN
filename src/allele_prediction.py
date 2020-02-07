@@ -36,7 +36,6 @@ warnings.filterwarnings('ignore')
 # print(device_lib.list_local_devices())
 # print(tf.test.gpu_device_name())
 
-
 class hot_dna:
     def __init__(self, fasta):
         # check for and grab sequence name
@@ -166,40 +165,40 @@ X_train, X_test, Y_train, Y_test = train_test_split(
 
 # # PCA
 # +
-np.seterr(divide='ignore', invalid='ignore')
-# Run The PCA
-pca = PCA(n_components=3)
-pca.fit(X_reshape)
+# np.seterr(divide='ignore', invalid='ignore')
+# # Run The PCA
+# pca = PCA(n_components=3)
+# pca.fit(X_reshape)
 
-# Store results of PCA in a data frame
-result_PCA = pd.DataFrame(pca.transform(X_reshape), columns=[
-                          'PCA%i' % i for i in range(3)], index=labels)
-colorlist = ['#1f77b4', '#d62728', '#4daf4a', '#9467bd', '#999999']
+# # Store results of PCA in a data frame
+# result_PCA = pd.DataFrame(pca.transform(X_reshape), columns=[
+#                           'PCA%i' % i for i in range(3)], index=labels)
+# colorlist = ['#1f77b4', '#d62728', '#4daf4a', '#9467bd', '#999999']
 
-# %matplotlib inline
-plt.figure(figsize=(8, 6), dpi=350)
-plt.style.use('default')
-plt.rcParams['axes.linewidth'] = 1.5
-plt.rcParams['font.family'] = 'Arial'
-plt.rcParams['font.size'] = '20'
-matplotlib_axes_logger.setLevel('ERROR')
-for c, l in zip(range(len(id)), np.unique(labels)):
-    plt.scatter(result_PCA[labels == l]["PCA0"],
-                result_PCA[labels == l]["PCA1"],
-                c=plt.cm.tab20(c),
-                # c=colorlist[c],
-                alpha=0.5,
-                label=id[l])
+# # %matplotlib inline
+# plt.figure(figsize=(8, 6), dpi=350)
+# plt.style.use('default')
+# plt.rcParams['axes.linewidth'] = 1.5
+# plt.rcParams['font.family'] = 'Arial'
+# plt.rcParams['font.size'] = '20'
+# matplotlib_axes_logger.setLevel('ERROR')
+# for c, l in zip(range(len(id)), np.unique(labels)):
+#     plt.scatter(result_PCA[labels == l]["PCA0"],
+#                 result_PCA[labels == l]["PCA1"],
+#                 c=plt.cm.tab20(c),
+#                 # c=colorlist[c],
+#                 alpha=0.5,
+#                 label=id[l])
 
-plt.legend(bbox_to_anchor=(1.01, 1), loc='upper left',
-           borderaxespad=0, fontsize=10)
-plt.title('PCA of raw sequence data')
+# plt.legend(bbox_to_anchor=(1.01, 1), loc='upper left',
+#            borderaxespad=0, fontsize=10)
+# plt.title('PCA of raw sequence data')
 
-fig_name = "pca_before"
-for fig_dir in fig_dirs:
-    fig_type = re.sub(".*/", "", fig_dir)
-    plt.savefig(f"{fig_dir}/{output_figure}_{fig_name}.{fig_type}",
-                dpi=350, bbox_inches="tight")
+# fig_name = "pca_before"
+# for fig_dir in fig_dirs:
+#     fig_type = re.sub(".*/", "", fig_dir)
+#     plt.savefig(f"{fig_dir}/{output_figure}_{fig_name}.{fig_type}",
+#                 dpi=350, bbox_inches="tight")
 
 
 # # Three layer 1D concolusion
@@ -315,39 +314,39 @@ for fig_dir in fig_dirs:
 # +
 # %matplotlib inline
 
-predicted_labels = model.predict(X_test)
-cm = confusion_matrix(np.argmax(Y_test, axis=1),
-                      np.argmax(predicted_labels, axis=1))
+# predicted_labels = model.predict(X_test)
+# cm = confusion_matrix(np.argmax(Y_test, axis=1),
+#                       np.argmax(predicted_labels, axis=1))
 
-cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+# cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
 
-plt.figure(figsize=(10, 10))
-plt.style.use('default')
-plt.rcParams["font.size"] = 15
-plt.rcParams['axes.linewidth'] = 1.5
-plt.rcParams['font.family'] = 'Arial'
-# plt.rcParams['figure.figsize'] = (20, 20)
-plt.tight_layout()
-plt.title('Normalized confusion matrix', fontsize=20)
-plt.imshow(cm, cmap=plt.cm.Blues)
-plt.colorbar()
-plt.xlabel('Predicted label')
-plt.ylabel('True label')
-plt.xticks(np.arange(len(id)), (id), rotation=90)
-plt.yticks(np.arange(len(id)), (id), rotation=0)
-plt.grid(False)
-for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-    plt.text(j, i, format(cm[i, j], '.2f'),
-             horizontalalignment='center',
-             color='white' if cm[i, j] > 0.5 else 'black')
+# plt.figure(figsize=(10, 10))
+# plt.style.use('default')
+# plt.rcParams["font.size"] = 15
+# plt.rcParams['axes.linewidth'] = 1.5
+# plt.rcParams['font.family'] = 'Arial'
+# # plt.rcParams['figure.figsize'] = (20, 20)
+# plt.tight_layout()
+# plt.title('Normalized confusion matrix', fontsize=20)
+# plt.imshow(cm, cmap=plt.cm.Blues)
+# plt.colorbar()
+# plt.xlabel('Predicted label')
+# plt.ylabel('True label')
+# plt.xticks(np.arange(len(id)), (id), rotation=90)
+# plt.yticks(np.arange(len(id)), (id), rotation=0)
+# plt.grid(False)
+# for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+#     plt.text(j, i, format(cm[i, j], '.2f'),
+#              horizontalalignment='center',
+#              color='white' if cm[i, j] > 0.5 else 'black')
 
-# ------------------------
-fig_name = "confusion"
-for fig_dir in fig_dirs:
-    fig_type = re.sub(".*/", "", fig_dir)
-    plt.savefig(f"{fig_dir}/{output_figure}_{fig_name}.{fig_type}",
-                dpi=350, bbox_inches="tight")
-# -
+# # ------------------------
+# fig_name = "confusion"
+# for fig_dir in fig_dirs:
+#     fig_type = re.sub(".*/", "", fig_dir)
+#     plt.savefig(f"{fig_dir}/{output_figure}_{fig_name}.{fig_type}",
+#                 dpi=350, bbox_inches="tight")
+# # -
 
 # ## save and load model
 
@@ -359,60 +358,60 @@ model = load_model(output_model + '.h5')
 
 # ## PCA using final 1D-CNN layer (flatten)
 
-# +
-intermediate_layer_model = Model(inputs=model.input,
-                                 outputs=model.get_layer(pca_layer_name).output)
-intermediate_output = intermediate_layer_model.predict(X_train)
-new_label = np.zeros(len(Y_train))
+# # +
+# intermediate_layer_model = Model(inputs=model.input,
+#                                  outputs=model.get_layer(pca_layer_name).output)
+# intermediate_output = intermediate_layer_model.predict(X_train)
+# new_label = np.zeros(len(Y_train))
 
-for i in range(len(Y_train)):
-    for j in range(len(id)):
-        if Y_train[i, j] == 1:
-            new_label[i] = j
+# for i in range(len(Y_train)):
+#     for j in range(len(id)):
+#         if Y_train[i, j] == 1:
+#             new_label[i] = j
 
-np.seterr(divide='ignore', invalid='ignore')
-# Run The PCA
-pca = PCA(n_components=5)
-pca.fit(intermediate_output)
+# np.seterr(divide='ignore', invalid='ignore')
+# # Run The PCA
+# pca = PCA(n_components=5)
+# pca.fit(intermediate_output)
 
-# Store results of PCA in a data frame
-result_PCA = pd.DataFrame(pca.transform(intermediate_output),
-                          columns=['PCA%i' % i for i in range(5)],
-                          index=new_label)
+# # Store results of PCA in a data frame
+# result_PCA = pd.DataFrame(pca.transform(intermediate_output),
+#                           columns=['PCA%i' % i for i in range(5)],
+#                           index=new_label)
 
-# +
-# %matplotlib inline
-sns.set_style("ticks", {"font": "Arial"})
-# %config InlineBackend.figure_formats = {'png', 'retina'}
-# plt.style.use('seaborn-pastel')
-# plt.style.use('seaborn-ticks')
-plt.style.use('default')
-colorlist = sns.color_palette("Set2", 24).as_hex()
+# # +
+# # %matplotlib inline
+# sns.set_style("ticks", {"font": "Arial"})
+# # %config InlineBackend.figure_formats = {'png', 'retina'}
+# # plt.style.use('seaborn-pastel')
+# # plt.style.use('seaborn-ticks')
+# plt.style.use('default')
+# colorlist = sns.color_palette("Set2", 24).as_hex()
 
-plt.figure(figsize=(8, 6), dpi=350)
-plt.rcParams['axes.linewidth'] = 1.5
-plt.rcParams['font.family'] = 'Arial'
-plt.rcParams['font.size'] = '20'
+# plt.figure(figsize=(8, 6), dpi=350)
+# plt.rcParams['axes.linewidth'] = 1.5
+# plt.rcParams['font.family'] = 'Arial'
+# plt.rcParams['font.size'] = '20'
 
 
-for c, l in zip(range(len(id)), np.unique(new_label)):
-    plt.scatter(result_PCA[new_label == l]["PCA0"],
-                result_PCA[new_label == l]["PCA1"],
-                c=colorlist[c],
-                alpha=0.5,
-                label=id[l])
+# for c, l in zip(range(len(id)), np.unique(new_label)):
+#     plt.scatter(result_PCA[new_label == l]["PCA0"],
+#                 result_PCA[new_label == l]["PCA1"],
+#                 c=colorlist[c],
+#                 alpha=0.5,
+#                 label=id[l])
 
-plt.legend(bbox_to_anchor=(1.01, 1), loc='upper left',
-           borderaxespad=0, fontsize=10)
-plt.title('PCA of L2-softmax layer')
+# plt.legend(bbox_to_anchor=(1.01, 1), loc='upper left',
+#            borderaxespad=0, fontsize=10)
+# plt.title('PCA of L2-softmax layer')
 
-# --------------------------------
-fig_name = "pca_after"
-for fig_dir in fig_dirs:
-    fig_type = re.sub(".*/", "", fig_dir)
-    plt.savefig(f"{fig_dir}/{output_figure}_{fig_name}.{fig_type}",
-                dpi=350, bbox_inches="tight")
-# -
+# # --------------------------------
+# fig_name = "pca_after"
+# for fig_dir in fig_dirs:
+#     fig_type = re.sub(".*/", "", fig_dir)
+#     plt.savefig(f"{fig_dir}/{output_figure}_{fig_name}.{fig_type}",
+#                 dpi=350, bbox_inches="tight")
+# # -
 
 ################################################
 # # Compute cosine similarity
