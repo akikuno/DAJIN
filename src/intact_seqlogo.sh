@@ -32,7 +32,7 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     cat .tmp_/sorted_bam |
     awk -v f1=${flank1} -v f2=${flank2} '{
         print ">"$1"\n"substr($6,f1-100, 200) > ".tmp_/mutsite_split1"
-        print ">"$1"\n"substr($6,f2-100, 200) > ".tmp_/mutsite_split2"}'
+    print ">"$1"\n"substr($6,f2-100, 200) > ".tmp_/mutsite_split2"}'
     #
     rm -rf .tmp_/split 2>/dev/null 1>/dev/null
     mkdir -p .tmp_/split
@@ -42,13 +42,13 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     #
     printf "Align reads to loxP sequence...\n"
     { find .tmp_/split |
-    grep split1_ |
-    xargs -I {} ./DAJIN/src/intact_lalign.sh .tmp_/mutation.fa {} \
+        grep split1_ |
+        xargs -I {} ./DAJIN/src/intact_lalign.sh .tmp_/mutation.fa {} \
     > .tmp_/lalign1.fa & } 1>/dev/null 2>/dev/null
     #
     { find .tmp_/split |
-    grep split2_ |
-    xargs -I {} ./DAJIN/src/intact_lalign.sh .tmp_/mutation.fa {} \
+        grep split2_ |
+        xargs -I {} ./DAJIN/src/intact_lalign.sh .tmp_/mutation.fa {} \
     > .tmp_/lalign2.fa & } 1>/dev/null 2>/dev/null
     wait 1>/dev/null 2>/dev/null # 1 min...
     #
@@ -83,11 +83,11 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
         # Remove gap-enriched nucreotide location
         cat .tmp_/remove_gaprow |
         sed -e "s/^/\$/g" \
-            -e 's/$/="";@/g' |
+        -e 's/$/="";@/g' |
         tr -d "\n" |
         sed -e "s/@/ /g" \
-            -e "s/^/{if(NR%2==0){/g" \
-            -e "s/$/ print} else print}/g" \
+        -e "s/^/{if(NR%2==0){/g" \
+        -e "s/$/ print} else print}/g" \
         > .tmp_/remove_gap.awk
         #
         cat ${input} |
@@ -99,10 +99,10 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
         ## PNG
         output_logo=$(echo ${output_rmgap} | sed -e "s/.*clustalo_//g" -e "s/_rmgap.fa//g")
         { weblogo --title "${barcode} ${output_logo}" --scale-width no -n 50 --errorbars no -c classic --format png_print \
-            < ${output_rmgap} > results/figures/png/seqlogo/${barcode}_${output_logo}.png & } 1>/dev/null 2>/dev/null
+        < ${output_rmgap} > results/figures/png/seqlogo/${barcode}_${output_logo}.png & } 1>/dev/null 2>/dev/null
         ## SVG
         { weblogo --title "${barcode} ${output_logo}" --scale-width no -n 50 --errorbars no -c classic --format svg \
-            < ${output_rmgap} > results/figures/svg/seqlogo/${barcode}_${output_logo}.svg & } 1>/dev/null 2>/dev/null
+        < ${output_rmgap} > results/figures/svg/seqlogo/${barcode}_${output_logo}.svg & } 1>/dev/null 2>/dev/null
         wait 1>/dev/null 2>/dev/null
     done
 done
