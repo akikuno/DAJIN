@@ -36,7 +36,7 @@ bash
 echo 'alias python="python.exe"' >> ~/.bashrc
 source ~/.bashrc
 conda update -y -n base conda
-conda create -y -n DAJIN_wsl python=3.6 git nodejs
+conda create -y -n DAJIN_wsl python=3.6 git nodejs pdf2svg
 conda install -y -n DAJIN_wsl -c bioconda nanosim samtools htslib fasta3 clustalo weblogo
 conda activate DAJIN_wsl
 ```
