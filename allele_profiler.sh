@@ -10,6 +10,10 @@ export LC_ALL=C
 type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
+# For Windows Subsystem for Linux
+uname -a | grep Microsoft 1>/dev/null 2>/dev/null &&
+alias python="python.exe"
+
 # ======================================
 # Define the functions for printing usage and error message
 # ======================================
@@ -31,7 +35,7 @@ Example   : ./DAJIN/allele_profiler.sh \\
             -ont DAJIN/example/demultiplex \\
             -ont_ref DAJIN/example/demultiplex/barcode21.fastq.gz \\
             -genome mm10 \\
-            -seq ATAACTTCGTATAATGTATGCTATACGAAGTTAT
+            -seq ATAACTTCGTATAATGTATGCTATACGAAGTTAT \\
             -t 8
 
 Options :   -i         : Multi-FASTA file. It must includes ">target" and ">wt"
@@ -129,9 +133,6 @@ if test "$?" -eq 1; then error_exit 1 'Please install minimap2'; fi
 type bgzip 1>/dev/null 2>/dev/null
 if test "$?" -eq 1; then error_exit 1 'Please install bgzip'; fi
 #
-uname -a |
-grep Microsoft 1>/dev/null 2>/dev/null &&
-alias python="python.exe"
 python -c \
 "from tensorflow.python.client import device_lib;
 print(device_lib.list_local_devices())" \
@@ -140,7 +141,7 @@ if test "$?" -eq 1; then error_exit 1 'GPU is not recognized'; fi
 set -e
 
 # Define threads
-set +u
+set +eu
 # Linux and similar...
 [ -z "$threads" ] && threads=$(getconf _NPROCESSORS_ONLN 2>/dev/null | awk '{print int($0/2)}')
 # FreeBSD and similar...
@@ -149,15 +150,15 @@ set +u
 [ -z "$threads" ] && threads=$(ksh93 -c 'getconf NPROCESSORS_ONLN' | awk '{print int($0/2)}')
 # Give up...
 [ -z "$threads" ] && threads=1
-set -u
+set -eu
 
 # ======================================
 # Setting Directory
 # ======================================
 
 dirs="fasta fasta_ont bam data_for_ml results .tmp_ results/figures/svg results/figures/png results/igvjs"
-rm -rf $dirs NanoSim
-mkdir -p $dirs
+rm -rf ${dirs} .tmp_/NanoSim
+mkdir -p ${dirs}
 
 # ======================================
 # Format FASTA file
@@ -231,23 +232,17 @@ ont_ref=$(echo $ont_ref | sed -e "s#.*/#fasta_ont/#g" -e "s#\..*#.fa#g")
 # Setting NanoSim (v2.5.0)
 # ======================================
 
-# git clone https://github.com/bcgsc/NanoSim # version 2.5.0
-# cat NanoSim/src/simulator.py  |
-# sed "/Simulate unaligned reads/,/Merging error subfiles/d" \
-# > tmp
-# chmod 755 tmp && mv tmp NanoSim/src/simulator.py
-
 printf "
 +++++++++++++++++++++
 NanoSim simulation starts
 +++++++++++++++++++++\n"
 
 printf "Read analysis...\n"
-./DAJIN/NanoSim/src/read_analysis.py genome \
+./DAJIN/utils/NanoSim/src/read_analysis.py genome \
     -i "$ont_ref" \
     -rg fasta/wt.fa \
     -t ${threads:-4} \
-    -o NanoSim/training
+    -o .tmp_/NanoSim/training
 
 ref_seqlength=$(cat fasta/wt.fa | sed 1d | awk '{print length($0)}')
 for input in $(ls fasta/* | grep -v igv); do
@@ -261,16 +256,16 @@ for input in $(ls fasta/* | grep -v igv); do
         len=$ref_seqlength
     fi
     ##
-    ./DAJIN/NanoSim/src/simulator.py genome \
-        -dna_type linear -c NanoSim/training \
+    ./DAJIN/utils/NanoSim/src/simulator.py genome \
+        -dna_type linear -c .tmp_/NanoSim/training \
         -rg $input -n 3000 -t ${threads:-4} \
         -min ${len} \
         -o ${output}_simulated
     rm fasta_ont/*_error_* # fasta_ont/*_unaligned_*
 done
 
-rm -rf NanoSim \
-    DAJIN/NanoSim/src/__pycache__
+rm -rf .tmp_/NanoSim \
+    DAJIN/utils/NanoSim/src/__pycache__
 
 printf 'Success!!\nSimulation is finished\n'
 
