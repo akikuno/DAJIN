@@ -276,14 +276,6 @@ df_unexpected["abnormal_prediction"] = df_unexpected.cos_similarity.apply(
     lambda x: "normal" if x > optimal_threshold else "abnormal")
 df_unexpected = df_unexpected.reset_index()
 
-
-# Output abnormal read IDs --------------------------
-df_all[df_all.abnormal_prediction == -1
-       * ~df_all.barcode.str.contains("simulated")].to_csv(
-           '.tmp_/abnormal_sequenceids.txt', columns=["barcode", "sequence_id"],
-    header=False, index=False, sep="\t")
-# ---------------------------------------------------
-
 plt.figure(figsize=(6, 10))
 plt.rcParams['axes.linewidth'] = 1.5
 plt.rcParams['font.family'] = 'Arial'
@@ -305,7 +297,18 @@ for fig_dir in fig_dirs:
     fig_type = re.sub(".*/", "", fig_dir)
     plt.savefig(f"{fig_dir}/{output_figure}_{fig_name}.{fig_type}",
                 dpi=350, bbox_inches="tight")
-# -
+
+################################################
+# # Discriminate non-probrematic of problematic anomaly
+################################################
+
+# Output abnormal read IDs --------------------------
+df_all[df_all.abnormal_prediction == -1
+       * ~df_all.barcode.str.contains("simulated")].to_csv(
+           '.tmp_/abnormal_sequenceids.txt', columns=["barcode", "sequence_id"],
+    header=False, index=False, sep="\t")
+# ---------------------------------------------------
+
 
 ################################################
 # # Prediction

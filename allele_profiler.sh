@@ -306,14 +306,6 @@ tr -d "\~\*\-\+atgc" |
 awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' \
 > .tmp_/mutation_points
 
-# minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
-# awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-# sed -e "s/cs:Z:://g" -e "s/:/\t/g" |
-# tr -d "\*\-\+atgc" |
-# awk '{if(NF==2) print $1,$1+$2
-#     else if (NF==3) print $1,$1+$3
-#     else print $1}' > .tmp_/mutation_points
-
 ref_length=$(cat ${reference} | grep -v "^>" | awk '{print length($0)}')
 ext=${ext:=100}
 first_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{print $1-ext}')
