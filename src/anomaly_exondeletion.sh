@@ -94,7 +94,7 @@ for barcode in $(cut -f 1 .tmp_/abnormal_sequenceids.txt | sort | uniq); do
     sort -k 1,1 -k 2,2n |
     bedtools intersect -a - -b .tmp_/all_exons.bed -wb |
     awk -v start=${start} -v end=${end} \
-    '$2==start && $3==end' |
+    '$2<start && $3>end' |
     cut -f 4,8 |
     awk 'BEGIN{OFS="\t"}{print $1,1,100,$2}' |
     sort -k 1,1 -k 2,2n |
