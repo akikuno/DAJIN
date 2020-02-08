@@ -168,8 +168,8 @@ mkdir -p ${dirs}
 cat ${fasta} |
 sed -e "s/\r$//" |
 grep -v "^$" \
-> .tmp_/fasta
-fasta=.tmp_/fasta
+> .tmp_/fasta.fa
+fasta=.tmp_/fasta.fa
 
 # Separate multiple-FASTA into FASTA files
 cat ${fasta} |
@@ -200,7 +200,7 @@ awk -v ref_seqlength="$ref_seqlength" \
 
 if [ $(cat .tmp_/revcomp) -eq 1 ] ; then
     ./DAJIN/src/revcomp.sh "${fasta}" \
-    > .tmp_/fasta_revcomp && fasta=".tmp_/fasta_revcomp"
+    > .tmp_/fasta_revcomp.fa && fasta=".tmp_/fasta_revcomp.fa"
     cat $fasta | sed "s/^/@/g" | tr -d "\n" | sed -e "s/@>/\n>/g" -e "s/$/\n/g" | grep -v "^$" |
     while read input; do
         output=$(echo $input | sed -e "s/@.*//g" -e "s#>#fasta/#g" -e "s/$/.fa/g")
@@ -223,7 +223,7 @@ for input in ${ont}/* ; do
     else
         cat ${input} | awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' > .tmp_/tmp_$$
     fi
-        cat .tmp_/tmp_$$ > ${output}
+    mv .tmp_/tmp_$$ ${output}
 done
 set -e
 ont_ref=$(echo $ont_ref | sed -e "s#.*/#fasta_ont/#g" -e "s#\..*#.fa#g")
@@ -241,7 +241,7 @@ printf "Read analysis...\n"
 ./DAJIN/utils/NanoSim/src/read_analysis.py genome \
     -i "$ont_ref" \
     -rg fasta/wt.fa \
-    -t ${threads:-4} \
+    -t ${threads:-1} \
     -o .tmp_/NanoSim/training
 
 ref_seqlength=$(cat fasta/wt.fa | sed 1d | awk '{print length($0)}')
@@ -258,7 +258,7 @@ for input in $(ls fasta/* | grep -v igv); do
     ##
     ./DAJIN/utils/NanoSim/src/simulator.py genome \
         -dna_type linear -c .tmp_/NanoSim/training \
-        -rg $input -n 3000 -t ${threads:-4} \
+        -rg $input -n 3000 -t ${threads:-1} \
         -min ${len} \
         -o ${output}_simulated
     rm fasta_ont/*_error_* # fasta_ont/*_unaligned_*
@@ -278,7 +278,7 @@ printf \
 Generate BAM files
 +++++++++++++++++++++\n"
 
-./DAJIN/src/igvjs.sh ${genome}
+./DAJIN/src/igvjs.sh ${genome} ${threads:-1}
 
 printf "BAM files are saved at bam\n"
 printf "Next converting BAM to MIDS format...\n"
@@ -311,14 +311,23 @@ if [ "$second_flank" -gt "$ref_length" ]; then second_flank=$(($ref_length)); fi
 
 true > data_for_ml/${output_file:=sequence_MIDS}.txt
 
+# mkdir .tmp_/bam_cstag
 for input in ./fasta_ont/*; do
     output=$(echo ${input} | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
     #
-    minimap2 -t ${threads:-4} --cs=long -ax splice ${reference} ${input} 2>/dev/null |
-    awk '$3 == "wt"' > .tmp_/${output}
+    # minimap2 -t ${threads:-1} --cs=long -ax splice ${reference} ${input} 2>/dev/null > .tmp_/tmp_minimap_csshort.sam
+    # #
+    # cat .tmp_/tmp_minimap.sam | awk '$3 == "wt"' > .tmp_/${output}
+    minimap2 -t ${threads:-1} --cs=long -ax splice ${reference} ${input} 2>/dev/null |
+    awk '$3 == "wt"' \
+    > .tmp_/${output}
     #
     ./DAJIN/src/mids_convertion.sh .tmp_/${output} ${first_flank} ${second_flank} \
     >> data_for_ml/${output_file}.txt
+    #
+    # samtools sort ${threads} .tmp_/tmp_minimap.sam > .tmp_/bam_cstag/${output}.bam
+    # samtools index ${threads} .tmp_/bam_cstag/${barcode}.bam
+    rm .tmp_/${output} # .tmp_/tmp_minimap.sam
 done
 
 gzip -f data_for_ml/${output_file}.txt

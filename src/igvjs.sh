@@ -25,6 +25,7 @@ warning() {
 # ---------------------------------------------------------------------
 
 genome=${1}
+threads=${2}
 
 true > .tmp_/gggenome.txt
 # left flank
@@ -74,7 +75,7 @@ for input in fasta_ont/*; do
         -e "s#.*/#bam/#g")
     echo "${output} is now generating..."
     ####
-    minimap2 -t ${threads:-4} -ax splice ${reference} ${input} 2>/dev/null |
+    minimap2 -t ${threads:-1} -ax splice --cs ${reference} ${input} 2>/dev/null |
     # header: replace chromosome number and length
     awk -v chrom=${chromosome} -v chrom_len=${chrom_len} '{
     if($1=="@SQ") print "@SQ\tSN:"chrom"\tLN:"chrom_len
@@ -85,8 +86,8 @@ for input in fasta_ont/*; do
     if($1!~/^@/) {$3=chrom; $4=start+$4-1; print}
     else print
     }' |
-    samtools sort -@ ${threads:-4} - 2>/dev/null > ${output}
-    samtools index -@ ${threads:-4} ${output}
+    samtools sort -@ ${threads:-1} - 2>/dev/null > ${output}
+    samtools index -@ ${threads:-1} ${output}
 done
 
 #* export 100 reads in "igvjs/bam_100reads" dir
@@ -100,16 +101,17 @@ for input in $(ls bam/*bam) ; do
     # echo "${output} is now generating..."
     ####
     samtools view -h ${input} | awk '$1 ~ /^@/ || $2 == 0 || $2 == 16'| head -n $((${read_num}+5)) |
-    samtools sort -@ ${threads:-4} - 2>/dev/null > ${output}
-    samtools index -@ ${threads:-4} ${output}
+    samtools sort -@ ${threads:-1} - 2>/dev/null > ${output}
+    samtools index -@ ${threads:-1} ${output}
 done
 cp -rf bam/bam_${read_num}reads results/igvjs/
 # 
 ls results/igvjs/bam_${read_num}reads/* | grep -e bam$ | sed -e "s#^.*/bam#bam#g" -e 's#_#\\_#g' > .tmp_/tmp1
 ls results/igvjs/bam_${read_num}reads/* | grep -e bam$ | sed -e "s#^.*/bam#bam#g" -e "s#.*/##g" -e "s#.bam##g" -e 's#_#\\_#g' > .tmp_/tmp2
-paste .tmp_/tmp1 .tmp_/tmp2 > .tmp_/template.txt
+paste .tmp_/tmp1 .tmp_/tmp2 > .tmp_/igvjs_template.txt
+rm .tmp_/tmp1 .tmp_/tmp2
 
-./DAJIN/src/mojihame-l -l LABEL DAJIN/src/igvjs_template.html .tmp_/template.txt |
+./DAJIN/src/mojihame-l -l LABEL DAJIN/src/igvjs_template.html .tmp_/igvjs_template.txt |
 sed -e "s/genome_info/${genome}/g" \
 -e "s/locus_info/${chromosome}:${start}-${end}/g" \
 > results/igvjs/igvjs.html

@@ -17,7 +17,8 @@ label=$(echo $1 | sed -e "s#.*/##g" -e "s#\..*##g")
 printf "$label is now processing...\n" 1>&2
 
 #---------------------------------
-cat $1 |
+cat ${1} |
+grep -v "^@" |
 # fetch sequence start and end sites
 awk 'BEGIN{OFS="\t"}{
     cigar=$6;
