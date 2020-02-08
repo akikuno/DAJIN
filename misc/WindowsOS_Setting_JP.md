@@ -26,11 +26,12 @@ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 Anaconda/Minicondaをインストールした後、スタートメニューから`Anaconda Prompt`を検索して起動します。  
 `Anaconda Prompt`を起動したのち、下記のコマンドを実行してください。  
 ```
-# Install Python packages (Tensorflow-GPU etc) in Windows environment.
+:: Install Python packages (Tensorflow-GPU etc) in Windows environment.
 conda update -y -n base conda
 conda create -y -n DAJIN_win python=3.6 anaconda tensorflow-gpu keras tqdm
 conda activate DAJIN_win
 bash
+
 # Install other packages (samtools etc) in Linux environment.
 echo 'alias python="python.exe"' >> ~/.bashrc
 source ~/.bashrc
@@ -40,7 +41,7 @@ conda install -y -n DAJIN_wsl -c bioconda nanosim samtools htslib fasta3 clustal
 conda activate DAJIN_wsl
 ```
 
-最後に、以下のコマンドで使用しているGPUの情報が表示されれば完了です。  
+続けて以下のコマンドを実行し、使用しているGPUの情報が表示されれば完了です。  
 ```
 python -c "from tensorflow.python.client import device_lib; 
 print(device_lib.list_local_devices())"

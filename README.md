@@ -67,10 +67,8 @@ Options :
 ./DAJIN/allele_profiler.sh \
   -i DAJIN/example/cables2_flox.fa \
   -ont DAJIN/example/demultiplex \
-  -ont_ref DAJIN/example/demultiplex/barcode21.fastq.gz \
-  -genome mm10 \
-  -o test \
-  -t 8
+  -ont_ref DAJIN/example/demultiplex/barcode01.fq.gz \
+  -genome mm10
 ```
 
 # Output

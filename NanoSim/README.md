@@ -15,11 +15,11 @@ NanoSim [(v2.5)](https://github.com/bcgsc/NanoSim/releases/tag/v2.5.1) is able t
 
 ![Citation](https://img.shields.io/badge/NanoSim-manuscript-ff69b4)  
 **NanoSim**  
-Chen Yang, Justin Chu, René L Warren, and Inanç Birol; NanoSim: nanopore sequence read simulator based on statistical characterization. Gigascience 2017 gix010. doi: 10.1093/gigascience/gix010  
+Chen Yang, Justin Chu, Ren辿 L Warren, and Inan巽 Birol; NanoSim: nanopore sequence read simulator based on statistical characterization. Gigascience 2017 gix010. doi: 10.1093/gigascience/gix010  
 
 
 **Trans-NanoSim**  
-Saber Hafezqorani, Chen Yang, Ka Ming Nip, René L. Warren, and Inanç Birol; Trans-NanoSim characterizes and simulates nanopore RNA-seq data. bioRxiv (2019): 800110.  
+Saber Hafezqorani, Chen Yang, Ka Ming Nip, Ren辿 L. Warren, and Inan巽 Birol; Trans-NanoSim characterizes and simulates nanopore RNA-seq data. bioRxiv (2019): 800110.  
 
 
 ## Dependencies
