@@ -14,8 +14,6 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 genome=${1}
 threads=${2:-1}
 
-output_anomaly=".tmp_/anomaly_classification.txt"
-true > ${output_anomaly}
 # ======================================
 # Identify Target Exon
 # ======================================
@@ -29,11 +27,8 @@ awk -F ":" '{print $2,$3}' |
 sed -e "s/-/ /g" -e "s/~[a-z]*/ /g" -e "s/[a-z]*$//g" |
 awk 'BEGIN{OFS="\t"}{print $1,$2+$4,$2+$4+$5}' \
 > .tmp_/deletion_location.bed
-
-
-chr=$(cat .tmp_/deletion_location.bed | cut -f 1 | sort | uniq)
-
-wget -qO - https://hgdownload.soe.ucsc.edu/goldenPath/${genome}/database/refFlat.txt.gz |
+#
+wget -qO - ftp://hgdownload.soe.ucsc.edu/goldenPath/${genome}/database/refFlat.txt.gz |
 gzip -dc |
 awk 'BEGIN{OFS="\t"}{print $3,$5,$6,$0}' |
 bedtools intersect -a - -b .tmp_/gggenome_location -wb |
@@ -41,6 +36,8 @@ cut -f 13-14 > .tmp_/tmp_1
 #
 cat .tmp_/tmp_1 | cut -f 1 | sed "s/,/\n/g" | grep -v "^$" > .tmp_/tmp_2
 cat .tmp_/tmp_1 | cut -f 2 | sed "s/,/\n/g" | grep -v "^$" > .tmp_/tmp_3
+#
+chr=$(cat .tmp_/deletion_location.bed | cut -f 1 | sort | uniq)
 #
 paste .tmp_/tmp_2 .tmp_/tmp_3 | grep -v "^$" | sed "s/^/${chr}\t/g" | sort -k 1,1 -k 2,2n | uniq |
 bedtools intersect -a - -b .tmp_/deletion_location.bed \
@@ -66,35 +63,47 @@ cut -f 1,2 |
 sort -k 2,2  \
 > .tmp_/abnormal_seqid_sorted.txt
 
-barcode=barcode17
+output_anomaly=".tmp_/anomaly_nonproblematic.txt"
+true > ${output_anomaly}
+barcode=barcode27
 for barcode in $(cut -f 1 .tmp_/abnormal_sequenceids.txt | sort | uniq); do
-    echo ${barcode}
+    # echo ${barcode}
     samtools view bam/${barcode}.bam |
+    # grep  525565d | # !================================
     sort |
     join -1 1 -2 2 - .tmp_/abnormal_seqid_sorted.txt |
     sed "s/ /\t/g" |
-    awk '$2==0||$2==16' > .tmp_/abnormal.sam
+    awk '$2==0||$2==16' \
+    > .tmp_/abnormal.sam
     #
-    cat .tmp_/abnormal.sam  | # grep 91606edc | # ! ==================
-    awk '{print $(NF-2)}' |
+    cat .tmp_/abnormal.sam  |
+    awk '{print $1, $(NF-2)}' |
     sed -e "s/cs:Z:://g" -e "s/~[a-z]*\([0-9]*\)/ \1\t/" |
     cut -f 1 |
-    sed -e "s/:/ /g" -e "s/\*[a-z][a-z]/+1/g" -e "s/\+/ /g" | #  |
-    # awk '{for(i=1;i<=NF;i++) {gsub("+[a-z]*","",$i)}; print}' |
-    sed -e "s/\-/ - /g" |
-    awk '{for(i=1;i<=NF;i++) if($i ~ /[a-z]/) $i=length($i); print}' |
-    sed "s/\- /\-/g" |
-    awk '{sum=1; for(i=1;i<=NF-1;i++) sum+=$i; print sum, $NF}' \
+    sed -e "s/:/ /g" -e "s/\*[a-z][a-z]/+1/g" |
+    # Remove inversion reads
+    awk '{seq=$(NF-1);
+        if (seq !~ /\+[a-z]+$/ ) print }' | 
+    #
+    awk '{id=$1; $1="ID";
+        gsub("-"," - ",$0); gsub("+"," + ",$0);
+        $1=id; print}' |
+    awk '{for(i=2;i<=NF-1;i++) if($i ~ /[a-z]/) $i=length($i); print}' |
+    awk '{id=$1; $1="ID";
+        gsub("- "," -",$0); gsub("+ "," ",$0);
+        $1=id; print}' |
+    awk '{sum=1; for(i=2;i<=NF-1;i++) sum+=$i; print $1, sum, $NF}' |
+    sort \
     > .tmp_/abnormal_deletionsite
     #
-    cat .tmp_/abnormal.sam | # grep 91606edc | # ! ==================
+    cat .tmp_/abnormal.sam |
     cut -f 1,3,4 |
-    paste - .tmp_/abnormal_deletionsite |
+    join - .tmp_/abnormal_deletionsite |
     awk 'BEGIN{OFS="\t"}{print $2, $3+$4, $3+$4+$5, $1}' |
     sort -k 1,1 -k 2,2n |
-    bedtools intersect -a - -b .tmp_/all_exons.bed -wb |
+    bedtools intersect -a - -b .tmp_/all_exons.bed -wa -wb |
     awk -v start=${start} -v end=${end} \
-    '$2<start && $3>end' |
+    '$2<=start && $3>=end' |
     cut -f 4,8 |
     awk 'BEGIN{OFS="\t"}{print $1,1,100,$2}' |
     sort -k 1,1 -k 2,2n |
@@ -103,93 +112,24 @@ for barcode in $(cut -f 1 .tmp_/abnormal_sequenceids.txt | sort | uniq); do
     cut -f 1 |
     sort |
     sed -e "s/^/${barcode}\t/g" \
-        -e "s/$/\tNon_problematic_anomaly/g" \
+        -e "s/$/\tnon_problematic/g" \
     >> ${output_anomaly}
 done
 
 
-#確認
+## confirmation
 
-cat .tmp_/anomaly_classification.txt |
-grep ${barcode} | cut -f 2 | sort > tmp
+# cat .tmp_/anomaly_classification.txt |
+# grep ${barcode} | cut -f 2 | sort > tmp
 
-echo ${barcode}
-samtools view -h bam/${barcode}.bam | grep "^@" > .tmp_/header
-samtools view bam/${barcode}.bam |
-sort |
-join - tmp |
-sed "s/ /\t/g" >> .tmp_/header
-samtools sort .tmp_/header > .tmp_/bam_abnormal/${barcode}_nonproblem.bam
-samtools index .tmp_/bam_abnormal/${barcode}_nonproblem.bam
-rm tmp .tmp_/header
-
-# ======================================
-# Extract abnormal reads
-# ======================================
-
-
-
-
-mkdir -p .tmp_/bam_abnormal
-cat .tmp_/abnormal_sequenceids.txt |
-cut -f 1,2 |
-sort -k 2,2  \
-> .tmp_/abnormal_seqid_sorted.txt
-for barcode in $(cut -f 1 .tmp_/abnormal_sequenceids.txt | sort | uniq); do
-    echo ${barcode}
-    samtools view -h bam/${barcode}.bam | grep "^@" > .tmp_/header
-    samtools view bam/${barcode}.bam |
-    sort |
-    join - .tmp_/abnormal_seqid_sorted.txt |
-    sed "s/ /\t/g" >> .tmp_/header
-    samtools sort .tmp_/header > .tmp_/bam_abnormal/${barcode}.bam
-    samtools index .tmp_/bam_abnormal/${barcode}.bam
-    rm .tmp_/header
-done
-
-    # ----------------------------------------
-    # None-exon cutting
-    # ----------------------------------------
-    cat tmp_$$ |
-    cut -f 4 |
-    sort > tmp2_$$
-    #
-    cat .tmp_/abnormal.sam | grep cbd69deb -A100 |
-    cut -f 1 |
-    sort |
-    join -v 1 - tmp2_$$ |
-    sed -e "s/^/${barcode}\t/g" \
-        -e "s/$/\tProblematic_abnormal/g" \
-    >> ${output_anomaly}
-    # ----------------------------------------
-    # Cutting Other Exons, retain Target Exon
-    # ----------------------------------------
-    cat tmp_$$ |
-    bedtools intersect -v -a - -b .tmp_/target_exon.bed |  
-    cut -f 4 |
-    sort > tmp3_$$
-    cat .tmp_/abnormal.sam | grep cbd69deb -A100 |
-    cut -f 1 |
-    sort |
-    join - tmp3_$$ |
-    sed -e "s/^/${barcode}\t/g" \
-        -e "s/$/\tProblematic_abnormal/g" \
-    >> ${output_anomaly}
-
-    # ----------------------------------------
-    # Cutting Target Exons AND Other Exons
-    # ----------------------------------------
-
-
-    cat .tmp_/abnormal.sam | grep cbd69deb -A100 |
-    cut -f 1 |
-    sort |
-    join -v 1 - tmp |
-    sed -e "s/^/${barcode}\t/g" \
-        -e "s/$/\tProblematic_abnormal/g" 
-
-    cat tmp |
-    awk -v num=${target_exon_num} '$2!=num' |
-
-    sort |
-    join head
+# echo ${barcode}
+# samtools view -h bam/${barcode}.bam | grep "^@" > .tmp_/header
+# samtools view bam/${barcode}.bam |
+# sort |
+# join - tmp |
+# awk '$2=="0" || $2=="16"' |
+# sed "s/ /\t/g" >> .tmp_/header
+# samtools sort .tmp_/header > .tmp_/bam_abnormal/${barcode}_nonproblem.bam
+# samtools index .tmp_/bam_abnormal/${barcode}_nonproblem.bam
+# wc -l .tmp_/header
+# rm tmp .tmp_/header
