@@ -32,12 +32,10 @@ conda update -y -n base conda
 conda create -y -n DAJIN_win python=3.6 anaconda tensorflow-gpu keras tqdm
 conda activate DAJIN_win
 bash
-
+alias python="python.exe"
 # Install other packages (samtools etc) in Linux environment.
-echo 'alias python="python.exe"' >> ~/.bashrc
-source ~/.bashrc
 conda update -y -n base conda
-conda create -y -n DAJIN_wsl python=3.6 git nodejs
+conda create -y -n DAJIN_wsl python=3.6 git nodejs pdf2svg 
 conda install -y -n DAJIN_wsl -c bioconda nanosim samtools htslib fasta3 clustalo weblogo
 conda activate DAJIN_wsl
 ```
@@ -52,6 +50,7 @@ From now on, you can execute the following command in `Anaconda Prompt` to condu
 ```
 conda activate DAJIN_win
 bash
+alias python="python.exe"
 conda activate DAJIN_wsl
 ```
 
