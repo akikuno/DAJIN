@@ -30,7 +30,7 @@ Usage     : ${0##*/} [options] \\
             -seq [string] (optional) \\
             -t [integer] (optional)
 
-Example   : ./DAJIN/allele_profiler.sh \\
+Example   : ./DAJIN/${0##*/} \\
             -i DAJIN/example/cables2_flox.fa \\
             -ont DAJIN/example/demultiplex \\
             -ont_ref DAJIN/example/demultiplex/barcode21.fastq.gz \\
