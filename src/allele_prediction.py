@@ -1,6 +1,3 @@
-# # Environment
-
-# +
 from keras.models import Model
 from keras import Model
 from keras.models import load_model
@@ -64,8 +61,6 @@ class hot_dna:
         self.onehot = onehot_encoded_seq
 
 
-# # -
-
 def X_onehot(X_data):
     import collections
     char_num = np.zeros(10)
@@ -82,18 +77,21 @@ def X_onehot(X_data):
     return(X)
 
 
-# # Input Simulation data
+# ====================================
+# Input and format data
+# ====================================
 
 args = sys.argv
-
 file_name = args[1]
 
 fig_dirs = ["results/figures/png", "results/figures/svg"]
 
 for fig_dir in fig_dirs:
     os.makedirs(fig_dir, exist_ok=True)
+
 os.makedirs("data_for_ml/model", exist_ok=True)
 os.makedirs("results", exist_ok=True)
+
 output_npz = file_name.replace(".txt.gz", ".npz").replace(
     "data_for_ml/", "data_for_ml/model/")
 output_figure = file_name.replace(".txt.gz", "").replace("data_for_ml/", "")
@@ -112,7 +110,9 @@ else:
 df_sim = df[df[0].str.endswith("simulated")].reset_index(drop=True)
 df_real = df[~df[0].str.endswith("simulated")].reset_index(drop=True)
 
+# ====================================
 # Save One-hot matrix
+# ====================================
 print("One-hot encording simulated reads...")
 X_sim = X_onehot(df_sim)
 print("One-hot encording real reads...")
@@ -121,25 +121,27 @@ np.savez_compressed(output_npz,
                     X_sim=X_sim,
                     X_real=X_real
                     )
-# # Load One-hot matrix
 
+# ====================================
+# # Load One-hot matrix
+# ====================================
 np.load = partial(np.load, allow_pickle=True)
 npz = np.load(output_npz)
 
 X_sim = npz["X_sim"]
 X_real = npz["X_real"]
 
-labels, id = pd.factorize(df_sim.iloc[:, 0])
-
 X = X_sim
-
+labels, labels_id = pd.factorize(df_sim.iloc[:, 0])
 labels_categorical = np_utils.to_categorical(labels)
 
 X_train, X_test, Y_train, Y_test = train_test_split(
     X, labels_categorical,
     test_size=0.2, shuffle=True)
 
-# # Three layer 1D concolusion
+# ====================================
+# # Model construction
+# ====================================
 
 tf.get_logger().setLevel('INFO')
 model = Sequential()
@@ -170,7 +172,7 @@ alpha = 0.1  # hyperparameter
 model.add(Dense(64, activation='linear',
                 activity_regularizer=regularizers.l2(alpha), name="L2-softmax"))
 
-model.add(Dense(len(id), activation='softmax', name="final_layer"))
+model.add(Dense(len(labels_id), activation='softmax', name="final_layer"))
 model.compile(optimizer='adam', loss='categorical_crossentropy',
               metrics=['accuracy'])
 model.summary()
@@ -213,11 +215,11 @@ for fig_dir in fig_dirs:
 # -
 
 
-# ## save and load model
+# ====================================
+# ## Save the model
+# ====================================
+model.save(output_model + '.h5')
 
-model.save(output_model + '.h5')  # creates a HDF5 file 'my_model.h5'
-
-model = load_model(output_model + '.h5')
 
 ################################################
 # # Compute cosine similarity
@@ -321,7 +323,7 @@ predict = np.argmax(predict, axis=1)
 
 df_predict = pd.Series(predict, dtype="str") + "_"
 
-for i, j in enumerate(pd.Series(id).str.replace("_simulated", "")):
+for i, j in enumerate(pd.Series(labels_id).str.replace("_simulated", "")):
     df_predict = df_predict.str.replace(str(i)+"_", j)
 
 df_result = pd.DataFrame({"barcodeID": df_real.iloc[:, 0],
