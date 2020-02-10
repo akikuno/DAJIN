@@ -36,8 +36,10 @@ warnings.filterwarnings('ignore')
 
 args = sys.argv
 file_name = args[1]
+# file_name = "data_for_ml/sequence_MIDS.txt.gz"
+
 df_anomaly = pd.read_csv(".tmp_/anomaly_classification_revised.txt",
-                      header=None, sep='\t')
+                         header=None, sep='\t')
 
 fig_dirs = ["results/figures/png", "results/figures/svg"]
 
@@ -83,10 +85,67 @@ df_predict = pd.Series(predict, dtype="str") + "_"
 for i, j in enumerate(pd.Series(labels_id).str.replace("_simulated", "")):
     df_predict = df_predict.str.replace(str(i)+"_", j)
 
-df_result = pd.DataFrame({"barcodeID": df_real.iloc[:, 0],
-                          "seqID": df_real.iloc[:, 2],
+df_result = pd.DataFrame({"barcodeID": df_anomaly.iloc[:, 0],
+                          "seqID": df_anomaly.iloc[:, 1],
                           "predict": df_predict,
-                          "anomaly": df_unexpected.abnormal_prediction})
+                          "anomaly": df_anomaly.iloc[:, 2]})
+
+df_result.predict = df_result.predict.mask(
+    df_result.anomaly.str.contains("Abnormal"), df_result.anomaly)
 
 df_result.predict = df_result.predict.where(
-    df_result.anomaly == "normal", "abnormal")
+    df_result.anomaly.str.contains("Abnormal"), "hoge")
+
+del df_result["anomaly"]
+
+# ## Output result
+df_result.to_csv('.tmp_/prediction_result.txt', sep='\t', index=False)
+
+# ## Visualization of allele profile
+barcode_list = df_result.barcodeID.unique()
+df_stacked = np.zeros(
+    [df_result.barcodeID.value_counts().max(), len(barcode_list)])
+df_stacked = pd.DataFrame(df_stacked, columns=barcode_list)
+for i in barcode_list:
+    df_stacked[i] = df_result[df_result.barcodeID
+                              == i]["predict"].reset_index(drop=True)
+
+# ## Plot figures
+colorlist = ["#FF4500", "#D3D3D3", "#ADD8E6"]  # #88CCEE #0072B2
+colorlist = ["#FF4500", "#D3D3D3", "#FFF9B0", "#ADD8E6"]
+colorlist.extend(list(sns.color_palette("Accent", 24).as_hex()))
+
+counts = df_stacked.apply(lambda x: x.dropna(
+).value_counts() / len(x.dropna())).transpose()
+
+tmp1 = counts.loc[:, ["target", "wt",
+                      "Abnormal(target_deletion)",
+                      "Abnormal(problematic)"]].columns.values
+
+tmp2 = counts.drop(["target", "wt",
+                    "Abnormal(target_deletion)",
+                    "Abnormal(problematic)"], axis=1).columns.values
+counts = counts.loc[:, np.concatenate([tmp1, tmp2])]
+
+sns.set_style("ticks", {"font": "Arial"})
+plt.style.use('seaborn-pastel')
+fig = plt.figure(figsize=(10, 10))
+ax = fig.add_subplot(111)
+counts.iloc[::-1].plot(ax=ax, kind='barh', stacked=True, rot=0,
+                       color=colorlist,
+                       edgecolor='#000000', width=1)  # "#f87f73"
+
+ax.set_xlabel("Percentage of predicted allele type")
+ax.set_xticklabels(['{:3.0f}%'.format(x*100) for x in ax.get_xticks()])
+ax.yaxis.grid(True)
+ax.set_axisbelow(True)
+ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
+ax.legend(bbox_to_anchor=(1, 1, 0.1, 0))
+
+# figure ----------------------------
+fig_name = "prediction_result"
+for fig_dir in fig_dirs:
+    fig_type = re.sub(".*/", "", fig_dir)
+    plt.savefig(f"{fig_dir}/{output_figure}_{fig_name}.{fig_type}",
+                dpi=350, bbox_inches="tight")
+
