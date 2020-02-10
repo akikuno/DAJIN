@@ -58,26 +58,26 @@ rm .tmp_/tmp*
 # (Target exon was not cutted, or Other exons were deleted)
 # ======================================
 
-cat .tmp_/abnormal_sequenceids.txt |
-cut -f 1,2 |
+cat .tmp_/anomaly_classification.txt |
 sort -k 2,2  \
-> .tmp_/abnormal_seqid_sorted.txt
+> .tmp_/anomaly_classification_sorted.txt
 
 output_anomaly=".tmp_/anomaly_nonproblematic.txt"
 true > ${output_anomaly}
 barcode=barcode27
 for barcode in $(cut -f 1 .tmp_/abnormal_sequenceids.txt | sort | uniq); do
-    # echo ${barcode}
+    echo ${barcode}
     samtools view bam/${barcode}.bam |
     # grep  525565d | # !================================
     sort |
-    join -1 1 -2 2 - .tmp_/abnormal_seqid_sorted.txt |
+    join -1 1 -2 2 - .tmp_/anomaly_classification_sorted.txt |
+    grep Abnormal |
     sed "s/ /\t/g" |
     awk '$2==0||$2==16' \
     > .tmp_/abnormal.sam
     #
     cat .tmp_/abnormal.sam  |
-    awk '{print $1, $(NF-2)}' |
+    awk '{for(i=1;i<=NF;i++) if($i ~ "cs:Z::") print $1, $i}' |
     sed -e "s/cs:Z:://g" -e "s/~[a-z]*\([0-9]*\)/ \1\t/" |
     cut -f 1 |
     sed -e "s/:/ /g" -e "s/\*[a-z][a-z]/+1/g" |
@@ -110,13 +110,18 @@ for barcode in $(cut -f 1 .tmp_/abnormal_sequenceids.txt | sort | uniq); do
     bedtools merge -i - -c 4 -o distinct |
     grep -v other |
     cut -f 1 |
-    sort |
     sed -e "s/^/${barcode}\t/g" \
-        -e "s/$/\tnon_problematic/g" \
+        -e "s/$/\tAbnormal(target_deletion)/g" \
     >> ${output_anomaly}
 done
 
-
+cat ${output_anomaly} |
+sort -k 2,2 |
+join -a 1 -1 2 -2 2 .tmp_/anomaly_classification_sorted.txt - |
+# grep 01a16fea-5549-41e3-aa4d-160c68280d5d |
+awk 'BEGIN{OFS="\t"}{if(NF==5){$3=$5}; print $2,$1,$3}' |
+sort \
+> .tmp_/anomaly_classification_revised.txt
 ## confirmation
 
 # cat .tmp_/anomaly_classification.txt |
