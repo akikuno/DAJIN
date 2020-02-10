@@ -113,7 +113,7 @@ error_exit 1 "ONT reads from wild-type is required: See ${0##*/} -h"
 echo $option_cnt | grep "\-genome" > /dev/null ||
 error_exit 1 "Reference genome should be specified: See ${0##*/} -h"
 
-if [ $(grep '>target' $fasta | wc -l) -ne 1 -a $(grep '>wt' $fasta | wc -l) -ne 1 ]; then
+if [ $(grep -i '>target' $fasta | wc -l) -ne 1 -a $(grep -i '>wt' $fasta | wc -l) -ne 1 ]; then
     error_exit 1 "FASTA requires including \">target\" and \">wt\" headers. See ./${0##*/} -h"
 fi
 set -e
