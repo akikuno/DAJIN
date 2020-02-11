@@ -17,7 +17,7 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 cat .tmp_/prediction_result.txt |
 sed 1d |
 awk '{barcode[$1]++
-    if($3 ~ "target") barcode_target[$1]++}
+    if($3 == "target") barcode_target[$1]++}
     END{for(key in barcode)
     print key, barcode_target[key]/barcode[key]*100}' |
 awk '{if($2 > 1) print $1"@@@"}' |

@@ -60,17 +60,7 @@ output_model = file_name.replace(".txt.gz", "").replace(
 # ====================================
 np.load = partial(np.load, allow_pickle=True)
 npz = np.load(output_npz)
-
-# X_sim = npz["X_sim"]
 X_real = npz["X_real"]
-
-# X = X_sim
-# labels, labels_id = pd.factorize(df_sim.iloc[:, 0])
-# labels_categorical = np_utils.to_categorical(labels)
-
-# X_train, X_test, Y_train, Y_test = train_test_split(
-#     X, labels_categorical,
-#     test_size=0.2, shuffle=True)
 
 # ====================================
 # # Load model
@@ -104,10 +94,17 @@ df_result.predict = df_result.predict.mask(
 
 del df_result["anomaly"]
 # df_result = df_result.head(1000)
+
+# ====================================
 # ## Output result
+# ====================================
+
 df_result.to_csv('.tmp_/prediction_result.txt', sep='\t', index=False)
 
+# ====================================
 # ## Visualization of allele profile
+# ====================================
+
 barcode_list = df_result.barcodeID.unique()
 df_stacked = np.zeros(
     [df_result.barcodeID.value_counts().max(), len(barcode_list)])
@@ -150,7 +147,7 @@ ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
 ax.legend(bbox_to_anchor=(1, 1, 0.1, 0))
 
 # figure ----------------------------
-fig_name = "prediction_result2"  # ! ------------------------------------------
+fig_name = "prediction_result"
 for fig_dir in fig_dirs:
     fig_type = re.sub(".*/", "", fig_dir)
     plt.savefig(f"{fig_dir}/{output_figure}_{fig_name}.{fig_type}",
