@@ -342,10 +342,13 @@ mutation_type=$(
 printf "Start allele prediction...\n"
 # python DAJIN/src/allele_prediction.py data_for_ml/${output_file}.txt.gz
 python DAJIN/src/anomaly_detection.py data_for_ml/${output_file}.txt.gz
+#
 if [ $(echo ${mutation_type}) -eq 1 ]; then
     ./DAJIN/src/anomaly_exondeletion.sh ${genome} ${threads}
-else mv .tmp_/anomaly_classification.txt .tmp_/anomaly_classification_revised.txt
+    else \
+    mv .tmp_/anomaly_classification.txt .tmp_/anomaly_classification_revised.txt
 fi
+#
 python DAJIN/src/prediction.py data_for_ml/${output_file}.txt.gz
 printf "Prediction was finished...\n"
 
@@ -354,7 +357,7 @@ printf "Prediction was finished...\n"
 # ======================================
 if [ $(echo ${mutation_type}) -eq 1 ]; then
     printf "Check the intactness of a joint sequence of deletion...\n"
-    
+    ./DAJIN/src/intact_2cutdeletion.sh ${threads}
 fi
 
 # ======================================

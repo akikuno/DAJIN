@@ -83,7 +83,7 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     # Multiple alignment by clustal omega
     # -----------------------------------------------------------------
     printf "Output sequence logo at loxP loci...\n"
-    clustalo -t DNA --auto -i .tmp_/lalign.fa \
+    clustalo --threads=${threads:-1} -t DNA --auto -i .tmp_/lalign.fa \
     > .tmp_/clustalo.fa 2>/dev/null
     # -----------------------------------------------------------------
     # REMOVE GAP
@@ -93,7 +93,7 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     true > .tmp_/remove_gaprow
     seqnum=$(cat .tmp_/clustalo.fa | awk -F "" '{if(NR==2) print length($0)}')
     for i in $(awk -v num=${seqnum} 'BEGIN{for(i=1;i<=num;i++) print i}'); do
-        echo "$i ==============="
+        # echo "$i ==============="
         cat .tmp_/clustalo.fa |
         awk -F "" -v i=${i} '{if(NR%2==0) print $i}' |
         sort |
@@ -128,10 +128,10 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     < ${output_rmgap} > results/figures/svg/seqlogo/${barcode}.svg & } 1>/dev/null 2>/dev/null
     wait 1>/dev/null 2>/dev/null
 done
-## PNG
+## Positive control PNG
 { weblogo --title "Expected Joint sequence" --scale-width no -n 50 --errorbars no -c classic --format png_print \
 < .tmp_/mutation.fa > results/figures/png/seqlogo/expected.png & } 1>/dev/null 2>/dev/null
-## SVG
+## Positive control SVG
 { weblogo --title "Expected Joint sequence" --scale-width no -n 50 --errorbars no -c classic --format svg \
 < .tmp_/mutation.fa > results/figures/svg/seqlogo/expected.svg & } 1>/dev/null 2>/dev/null
 wait 1>/dev/null 2>/dev/null
