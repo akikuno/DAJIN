@@ -350,6 +350,14 @@ python DAJIN/src/prediction.py data_for_ml/${output_file}.txt.gz
 printf "Prediction was finished...\n"
 
 # ======================================
+# Joint sequence logo in 2-cut Exon deletion
+# ======================================
+if [ $(echo ${mutation_type}) -eq 1 ]; then
+    printf "Check the intactness of a joint sequence of deletion...\n"
+    
+fi
+
+# ======================================
 # KI sequence intactness
 # ======================================
 reference=fasta/wt.fa
@@ -362,7 +370,7 @@ sed -e "s/cs:Z:://g" -e "s/:/\t/g" |
 grep -q -i -e "ATAACTTCGTATAATGTATGCTATACGAAGTTAT" \
     -e "ATAACTTCGTATAGCATACATTATACGAAGTTAT"
 if [ $? -eq 0 ]; then
-    printf "Checking the intactness of loxP sequence loci...\n"
+    printf "Check the intactness of loxP sequence loci...\n"
     ./DAJIN/src/intact_preparation.sh
     printf "Generate sequence logo at loxP sites...\n"
     ./DAJIN/src/intact_seqlogo.sh
