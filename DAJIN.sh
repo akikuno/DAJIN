@@ -201,7 +201,8 @@ awk -v ref_seqlength="$ref_seqlength" \
 if [ $(cat .tmp_/revcomp) -eq 1 ] ; then
     ./DAJIN/src/revcomp.sh "${fasta}" \
     > .tmp_/fasta_revcomp.fa && fasta=".tmp_/fasta_revcomp.fa"
-    cat $fasta | sed "s/^/@/g" | tr -d "\n" | sed -e "s/@>/\n>/g" -e "s/$/\n/g" | grep -v "^$" |
+    #
+    cat ${fasta} | sed "s/^/@/g" | tr -d "\n" | sed -e "s/@>/\n>/g" -e "s/$/\n/g" | grep -v "^$" |
     while read input; do
         output=$(echo $input | sed -e "s/@.*//g" -e "s#>#fasta/#g" -e "s/$/.fa/g")
         echo $input | sed "s/@/\n/g" > $output
@@ -291,33 +292,29 @@ printf \
 Converting ACGT into MIDS format
 ++++++++++++\n"
 
-reference=fasta/wt.fa
-query=fasta/target.fa
+# reference=fasta/wt.fa
+# query=fasta/target.fa
 
-minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
-awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
-tr -d "\~\*\-\+atgc" |
-awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' \
-> .tmp_/mutation_points
+# minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
+# awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
+# sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
+# tr -d "\~\*\-\+atgc" |
+# awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' \
+# > .tmp_/mutation_points
 
-ref_length=$(cat ${reference} | grep -v "^>" | awk '{print length($0)}')
-ext=${ext:=100}
-first_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{print $1-ext}')
-second_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{if(NF==2) print $2+ext; else print $1+ext}')
-if [ "$first_flank" -lt 1 ]; then first_flank=1; fi
-if [ "$second_flank" -gt "$ref_length" ]; then second_flank=$(($ref_length)); fi
-# echo $first_flank $second_flank
+# ext=${ext:=100}
+# ref_length=$(cat ${reference} | grep -v "^>" | awk '{print length($0)}')
+# first_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{print $1-ext}')
+# second_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{if(NF==2) print $2+ext; else print $1+ext}')
+# if [ "$first_flank" -lt 1 ]; then first_flank=1; fi
+# if [ "$second_flank" -gt "$ref_length" ]; then second_flank=$(($ref_length)); fi
+# # echo $first_flank $second_flank
 
 true > data_for_ml/${output_file:=sequence_MIDS}.txt
 
-# mkdir .tmp_/bam_cstag
 for input in ./fasta_ont/*; do
     output=$(echo ${input} | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
     #
-    # minimap2 -t ${threads:-1} --cs=long -ax splice ${reference} ${input} 2>/dev/null > .tmp_/tmp_minimap_csshort.sam
-    # #
-    # cat .tmp_/tmp_minimap.sam | awk '$3 == "wt"' > .tmp_/${output}
     minimap2 -t ${threads:-1} --cs=long -ax splice ${reference} ${input} 2>/dev/null |
     awk '$3 == "wt"' \
     > .tmp_/${output}
@@ -325,17 +322,31 @@ for input in ./fasta_ont/*; do
     ./DAJIN/src/mids_convertion.sh .tmp_/${output} ${first_flank} ${second_flank} \
     >> data_for_ml/${output_file}.txt
     #
-    # samtools sort ${threads} .tmp_/tmp_minimap.sam > .tmp_/bam_cstag/${output}.bam
-    # samtools index ${threads} .tmp_/bam_cstag/${barcode}.bam
-    rm .tmp_/${output} # .tmp_/tmp_minimap.sam
+    rm .tmp_/${output}
 done
 
 gzip -f data_for_ml/${output_file}.txt
 
 printf "Finished.\n${output_file}.txt.gz is generated.\n"
 
+# ======================================
+# Prediction
+# ======================================
+
+mutation_type=$(
+    minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
+    awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
+    grep "~" | wc -l
+    )
+
 printf "Start allele prediction...\n"
-python DAJIN/src/allele_prediction.py data_for_ml/${output_file}.txt.gz
+# python DAJIN/src/allele_prediction.py data_for_ml/${output_file}.txt.gz
+python DAJIN/src/anomaly_detection.py data_for_ml/${output_file}.txt.gz
+if [ $(echo ${mutation_type}) -eq 1 ]; then
+    ./DAJIN/src/anomaly_exondeletion.sh ${genome} ${threads}
+else mv .tmp_/anomaly_classification.txt .tmp_/anomaly_classification_revised.txt
+fi
+python DAJIN/src/prediction.py data_for_ml/${output_file}.txt.gz
 printf "Prediction was finished...\n"
 
 # ======================================

@@ -38,11 +38,19 @@ args = sys.argv
 file_name = args[1]
 # file_name = "data_for_ml/sequence_MIDS.txt.gz"
 
+# df_anomaly = pd.read_csv(args[2], header=None, sep='\t')
 df_anomaly = pd.read_csv(".tmp_/anomaly_classification_revised.txt",
                          header=None, sep='\t')
+labels_index = pd.read_csv(
+    ".tmp_/anomaly_classification_labels.txt",
+    header=None, sep='\t')
+# labels_id = df_fasta[df_fasta.iloc[:, 0].str.startswith(
+#     ">")].squeeze().str.strip(">").reset_index(drop=True)
 
 fig_dirs = ["results/figures/png", "results/figures/svg"]
 
+output_npz = file_name.replace(".txt.gz", ".npz").replace(
+    "data_for_ml/", "data_for_ml/model/")
 output_figure = file_name.replace(".txt.gz", "").replace("data_for_ml/", "")
 output_model = file_name.replace(".txt.gz", "").replace(
     "data_for_ml", "data_for_ml/model")
@@ -53,16 +61,16 @@ output_model = file_name.replace(".txt.gz", "").replace(
 np.load = partial(np.load, allow_pickle=True)
 npz = np.load(output_npz)
 
-X_sim = npz["X_sim"]
+# X_sim = npz["X_sim"]
 X_real = npz["X_real"]
 
-X = X_sim
-labels, labels_id = pd.factorize(df_sim.iloc[:, 0])
-labels_categorical = np_utils.to_categorical(labels)
+# X = X_sim
+# labels, labels_id = pd.factorize(df_sim.iloc[:, 0])
+# labels_categorical = np_utils.to_categorical(labels)
 
-X_train, X_test, Y_train, Y_test = train_test_split(
-    X, labels_categorical,
-    test_size=0.2, shuffle=True)
+# X_train, X_test, Y_train, Y_test = train_test_split(
+#     X, labels_categorical,
+#     test_size=0.2, shuffle=True)
 
 # ====================================
 # # Load model
@@ -77,12 +85,13 @@ model = load_model(output_model + '.h5')
 
 print("Predict labels...")
 predict = model.predict(X_real, verbose=1, batch_size=1)
+# predict = model.predict(X_real[0:1000], verbose=1, batch_size=1)
 
 predict = np.argmax(predict, axis=1)
 
 df_predict = pd.Series(predict, dtype="str") + "_"
 
-for i, j in enumerate(pd.Series(labels_id).str.replace("_simulated", "")):
+for i, j in enumerate(labels_index.squeeze().str.replace("_simulated", "")):
     df_predict = df_predict.str.replace(str(i)+"_", j)
 
 df_result = pd.DataFrame({"barcodeID": df_anomaly.iloc[:, 0],
@@ -93,11 +102,8 @@ df_result = pd.DataFrame({"barcodeID": df_anomaly.iloc[:, 0],
 df_result.predict = df_result.predict.mask(
     df_result.anomaly.str.contains("Abnormal"), df_result.anomaly)
 
-df_result.predict = df_result.predict.where(
-    df_result.anomaly.str.contains("Abnormal"), "hoge")
-
 del df_result["anomaly"]
-
+# df_result = df_result.head(1000)
 # ## Output result
 df_result.to_csv('.tmp_/prediction_result.txt', sep='\t', index=False)
 
@@ -118,15 +124,16 @@ colorlist.extend(list(sns.color_palette("Accent", 24).as_hex()))
 counts = df_stacked.apply(lambda x: x.dropna(
 ).value_counts() / len(x.dropna())).transpose()
 
-tmp1 = counts.loc[:, ["target", "wt",
-                      "Abnormal(target_deletion)",
-                      "Abnormal(problematic)"]].columns.values
+tmp0 = pd.Series(["target", "wt"])
+tmp1 = counts.columns[counts.columns.str.startswith(("Abnormal"))].values
+tmp10 = pd.concat([tmp0, pd.Series(tmp1)])
 
-tmp2 = counts.drop(["target", "wt",
-                    "Abnormal(target_deletion)",
-                    "Abnormal(problematic)"], axis=1).columns.values
-counts = counts.loc[:, np.concatenate([tmp1, tmp2])]
+tmp2 = counts.drop(tmp10, axis=1).columns.values
+tmp012 = pd.concat([tmp10, pd.Series(tmp2)])
 
+counts = counts[tmp012]
+
+# counts = counts[np.concatenate([tmp0, tmp1, tmp2])]
 sns.set_style("ticks", {"font": "Arial"})
 plt.style.use('seaborn-pastel')
 fig = plt.figure(figsize=(10, 10))
@@ -143,9 +150,8 @@ ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
 ax.legend(bbox_to_anchor=(1, 1, 0.1, 0))
 
 # figure ----------------------------
-fig_name = "prediction_result"
+fig_name = "prediction_result2"  # ! ------------------------------------------
 for fig_dir in fig_dirs:
     fig_type = re.sub(".*/", "", fig_dir)
     plt.savefig(f"{fig_dir}/{output_figure}_{fig_name}.{fig_type}",
                 dpi=350, bbox_inches="tight")
-

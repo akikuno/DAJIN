@@ -312,3 +312,7 @@ output["abnormal_prediction"] = df_all[df_all.label == -1].reset_index().cos_sim
 output.to_csv(
     '.tmp_/anomaly_classification.txt',
     header=False, index=False, sep="\t")
+
+pd.Series(labels_index).to_csv(
+    '.tmp_/anomaly_classification_labels.txt',
+    header=False, index=False, sep="\t")

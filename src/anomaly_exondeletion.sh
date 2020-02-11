@@ -66,7 +66,7 @@ output_anomaly=".tmp_/anomaly_nonproblematic.txt"
 true > ${output_anomaly}
 barcode=barcode27
 for barcode in $(cut -f 1 .tmp_/abnormal_sequenceids.txt | sort | uniq); do
-    echo ${barcode}
+    # echo ${barcode}
     samtools view bam/${barcode}.bam |
     # grep  525565d | # !================================
     sort |
