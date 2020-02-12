@@ -19,14 +19,18 @@ grep -v "^$" \
 > tmp_testdata
 
 # ========================================
+barcode=barcode28
+barcode=barcode12
+# ========================================
+
 cat .tmp_/anomaly_classification_revised.txt |
 grep ${barcode} | grep target_deletion |
 cut -f 2 |
-awk '{gsub("\-.*","",$1); print}' |
+awk '{gsub("-.*","",$1); print}' |
 sort > tmpid
 
 samtools view bam/${barcode}.bam |
-awk '{gsub("\-.*","",$1); print}' |
+awk '{gsub("-.*","",$1); print}' |
 sort |
 join tmpid - > tmp
 
@@ -46,6 +50,32 @@ awk '{sum=1; for(i=3;i<=NF-1;i++) sum+=$i
     print $1,$2+sum,$2+sum+$NF, $NF}' \
 > tmp_testdata2
 
+# =============================
+rm tmp*
+for cl in $(cat hoge.txt | awk '{print $NF}' | sort | uniq); do
+    echo $cl
+    cat hoge.txt |
+    awk -v cl=${cl} '$NF==cl' |
+    cut -f 1 |
+    sort \
+    > tmp_${cl}
+done
+
+samtools view -h bam/${barcode}.bam |
+grep "^@" > tmp_header
+
+samtools view bam/${barcode}.bam |
+awk '{gsub("\-.*","",$1); print}' |
+sort |
+join tmp_-1 - |
+head -n 100 |
+sed "s/ /\t/g" \
+>> tmp_header
+
+samtools sort tmp_header > tmp.bam
+samtools index tmp.bam
+
+
 # --------------------
 barcode=barcode12
 samtools view -h bam/${barcode}.bam |
@@ -58,30 +88,5 @@ join tmp_testdata - |
 sed "s/ /\t/g" |
 cut -f 1,3- \
 >> tmp_header
-samtools sort tmp_header > tmp.bam
-samtools index tmp.bam
-
-rm tmp*
-for cl in $(cat hoge.txt | awk '{print $NF}' | sort | uniq); do
-    echo $cl
-    cat hoge.txt |
-    awk -v cl=${cl} '$NF==cl' |
-    cut -f 1 |
-    sort \
-    > tmp_${cl}
-done
-
-barcode=barcode12
-samtools view -h bam/${barcode}.bam |
-grep "^@" > tmp_header
-
-samtools view bam/${barcode}.bam |
-awk '{gsub("\-.*","",$1); print}' |
-sort |
-join tmp_-1 - |
-head -n 100 |
-sed "s/ /\t/g" \
->> tmp_header
-
 samtools sort tmp_header > tmp.bam
 samtools index tmp.bam

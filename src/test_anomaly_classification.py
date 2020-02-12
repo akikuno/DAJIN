@@ -107,16 +107,17 @@ X_reshape = np.array(X)
 # label = db
 # label = testdata.label
 
+inputdata = X_reshape
 label = hdbscan.HDBSCAN(
-    min_samples=int(X_reshape.shape[0]/5),
-    min_cluster_size=int(X_reshape.shape[0]/5)+1,
-).fit_predict(X_reshape)
+    min_samples=int(inputdata.shape[0]/5),
+    min_cluster_size=int(inputdata.shape[0]/5)+1,
+).fit_predict(inputdata)
 pd.Series(label).value_counts()
 
 testdata["label"] = label
 testdata.to_csv("hoge.txt", sep="\t", header=False, index=False)
 
-umap_embedding = umap.UMAP().fit_transform(X_reshape)
+umap_embedding = umap.UMAP().fit_transform(inputdata)
 result_UMAP = pd.DataFrame(umap_embedding, columns=[
     'dim%i' % i for i in range(2)])
 result_UMAP["label"] = label
