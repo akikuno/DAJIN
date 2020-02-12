@@ -44,8 +44,6 @@ df_anomaly = pd.read_csv(".tmp_/anomaly_classification_revised.txt",
 labels_index = pd.read_csv(
     ".tmp_/anomaly_classification_labels.txt",
     header=None, sep='\t')
-# labels_id = df_fasta[df_fasta.iloc[:, 0].str.startswith(
-#     ">")].squeeze().str.strip(">").reset_index(drop=True)
 
 fig_dirs = ["results/figures/png", "results/figures/svg"]
 
