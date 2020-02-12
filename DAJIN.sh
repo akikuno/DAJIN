@@ -292,23 +292,15 @@ printf \
 Converting ACGT into MIDS format
 ++++++++++++\n"
 
-# reference=fasta/wt.fa
-# query=fasta/target.fa
+reference=fasta/wt.fa
+query=fasta/target.fa
 
-# minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
-# awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-# sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
-# tr -d "\~\*\-\+atgc" |
-# awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' \
-# > .tmp_/mutation_points
-
-# ext=${ext:=100}
-# ref_length=$(cat ${reference} | grep -v "^>" | awk '{print length($0)}')
-# first_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{print $1-ext}')
-# second_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{if(NF==2) print $2+ext; else print $1+ext}')
-# if [ "$first_flank" -lt 1 ]; then first_flank=1; fi
-# if [ "$second_flank" -gt "$ref_length" ]; then second_flank=$(($ref_length)); fi
-# # echo $first_flank $second_flank
+minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
+awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
+sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
+tr -d "\~\*\-\+atgc" |
+awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' \
+> .tmp_/mutation_points
 
 true > data_for_ml/${output_file:=sequence_MIDS}.txt
 
@@ -319,7 +311,7 @@ for input in ./fasta_ont/*; do
     awk '$3 == "wt"' \
     > .tmp_/${output}
     #
-    ./DAJIN/src/mids_convertion.sh .tmp_/${output} ${first_flank} ${second_flank} \
+    ./DAJIN/src/mids_convertion.sh .tmp_/${output} \
     >> data_for_ml/${output_file}.txt
     #
     rm .tmp_/${output}

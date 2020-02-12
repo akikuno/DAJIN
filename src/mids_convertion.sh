@@ -16,21 +16,13 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # ======================================
 
 reference=fasta/wt.fa
-query=fasta/target.fa
-
-minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
-awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
-tr -d "\~\*\-\+atgc" |
-awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' \
-> .tmp_/mutation_points
 
 ext=${ext:=100}
 reflength=$(cat ${reference} | grep -v "^>" | awk '{print length($0)}')
 first_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{print $1-ext}')
 second_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{if(NF==2) print $2+ext; else print $1+ext}')
 if [ "$first_flank" -lt 1 ]; then first_flank=1; fi
-if [ "$second_flank" -gt "$ref_length" ]; then second_flank=$(($ref_length)); fi
+if [ "$second_flank" -gt "$reflength" ]; then second_flank=$(($reflength)); fi
 # echo $first_flank $second_flank
 
 label=$(echo ${1} | sed -e "s#.*/##g" -e "s#\..*##g")
@@ -49,16 +41,16 @@ awk 'BEGIN{OFS="\t"}{
     gsub("[0-9]*H","",cigar);
     gsub("M|D|I|N","\t",cigar);
     gsub("+$","",cigar);
-    print $1, $4, cigar}' |
+print $1, $4, cigar}' |
 awk '{sum=0; for(i=3; i<=NF; i++){ sum+=$i }; print $1,$2,$2+sum}' |
 sort -t " " -n |
 awk '{if(length(min[$1])==0) min[$1]="inf";
     if(min[$1]>$2) min[$1]=$2;
     if(max[$1]<$3) max[$1]=$3}
-    END{for(key in min) print key, min[key], max[key]}' |
+END{for(key in min) print key, min[key], max[key]}' |
 sort -t " " -n |
 awk -v first=${first_flank} -v second=${second_flank} '{
-    if($2<=first && $3>=second) print $1}' |
+if($2<=first && $3>=second) print $1}' |
 sort > .tmp_/tmp_sequenceID
 #
 cat ${1} |
@@ -68,7 +60,7 @@ join - .tmp_/tmp_sequenceID |
 awk '{
     if($2==0 || $2==16) {alignment="primary"} else {alignment="secondary"};
     for(i=1;i<=NF;i++) if($i ~ /cs:Z/) print $1,$4,alignment, $i
-    }' |
+}' |
 # cut -d " " -f 1-3 |
 sort -t " " -k 1,1 -k 2,2n |
 # concatenate primary and secondary (secondary is converted to "I")
@@ -82,11 +74,11 @@ awk '{s=$2; alignment=$3; cstag=$4;
     if(length(start[$1])==0) start[$1]="inf"
     if(start[$1]>s) start[$1]=s;
     }
-    END {for (key in ID) print key, start[key],ID[key]}' |
+END {for (key in ID) print key, start[key],ID[key]}' |
 # replace matched nuc to "M"
 awk '{cstag=$3;
     gsub(/[A|C|G|T]/, "M", cstag);
-    print $1,$2,cstag}' |
+print $1,$2,cstag}' |
 # replace insertion to "I"
 awk '{seq=cstag=$3
     insertion_num=gsub("+","+",cstag);
@@ -107,7 +99,7 @@ awk '{seq=cstag=$3
     print $1,$2,seq
     }
     else {print $0}
-    }' |
+}' |
 # replace single-nuc substitution to "S"
 awk '{gsub(/\*[a|t|g|c]*/, "S", $3); print $0}' |
 # replace Deletion to "D"
@@ -128,7 +120,7 @@ awk '{seq=cstag=$3;
         sub(splice_num[i],SPLICE,cstag)
     }
     print $1,$2,toupper(cstag)
-    }' |
+}' |
 # complement seqences to match sequence length (insert "=")
 ## start
 awk '{start=""; for(i=1; i < $2; i++) start=start"="; print $1,$2,start""$3}' |
