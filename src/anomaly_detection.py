@@ -99,9 +99,10 @@ def X_onehot(X_data):
         tmp = collections.Counter(tmp).values()
         char_num[i] = len(tmp)
     char_num = int(char_num.max())
-    X = np.empty((len(X_data[0]), len(
+    #
+    X = np.empty((X_data.shape[0], len(
         X_data.iloc[1, 1]), char_num), dtype="uint8")
-    for i in tqdm(range(0, len(X_data[0]))):
+    for i in tqdm(range(0, X_data.shape[0])):
         X[i] = hot_dna(X_data.iloc[i, 1]).onehot[0:len(X_data.iloc[1, 1])]
     X = X[:, :, 1:]
     return(X)
@@ -265,7 +266,7 @@ df_all.columns = ["barcodeID", "seqID", "cos_similarity"]
 df_all["label"] = df_all.barcodeID.apply(
     lambda x: 1 if x.endswith("simulated") else -1)
 
-optimal_threshold = df_all[df_all.label == 1].cos_similarity.quantile(0.001)
+optimal_threshold = df_all[df_all.label == 1].cos_similarity.quantile(0.0001)
 
 df_all["abnormal_prediction"] = df_all.cos_similarity.apply(
     lambda x: 1 if x > optimal_threshold else -1)
@@ -284,7 +285,7 @@ plt.rcParams['font.family'] = 'Arial'
 plt.rcParams['font.size'] = '20'
 sns.set_style("whitegrid")
 
-ax = sns.boxplot(x="cos_similarity", y="barcode", data=df_all,
+ax = sns.boxplot(x="cos_similarity", y="barcodeID", data=df_all,
                  showfliers=False)
 ax.set(xlim=[0.0, 1.05])
 ax.set_title("Cosine similarity")
