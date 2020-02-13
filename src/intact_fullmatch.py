@@ -1,19 +1,10 @@
-#!/usr/bin/env python
+import warnings
 
-# # Environment
-
-# +
-import matplotlib.ticker as ticker
-from matplotlib.ticker import MaxNLocator
-from matplotlib.axes._axes import _log as matplotlib_axes_logger
-import sys
-import seaborn as sns
 import matplotlib.pyplot as plt
-import os
 import numpy as np
 import pandas as pd
-import re
-import warnings
+import seaborn as sns
+
 warnings.filterwarnings('ignore')
 
 
@@ -54,7 +45,7 @@ labels = counts.columns.values
 colorlist = {"No exact match": "#DDDDDD",
              "exact flox": "red",
              "exact left loxP": "darkorange",
-             "exact right loxP":"gold"}
+             "exact right loxP": "gold"}
 colors = []
 for i in range(len(labels)):
     colors.append(colorlist[labels[i]])
@@ -68,11 +59,10 @@ ax.set_axisbelow(True)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
 ax.set_ylabel("Percentage of exactly matched reads", fontsize=15)
 ax.yaxis.grid(True)
-ax.legend(bbox_to_anchor=(1.05, 1), loc = "upper left")
+ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
 
 # figure ----------------------------
 fig_name = "persentage_of_loxP_intactness"
 for fig_type in fig_types:
     plt.savefig(f"{output_dir}/{fig_type}/{fig_name}.{fig_type}",
                 dpi=350, bbox_inches="tight")
-

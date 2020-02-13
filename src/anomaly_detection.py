@@ -1,33 +1,27 @@
-from keras.models import Model
-from keras import Model
-from keras.models import load_model
-import keras
-from matplotlib.axes._axes import _log as matplotlib_axes_logger
-import sys
-import itertools
-from sklearn.metrics import confusion_matrix
-from keras.models import Sequential
-from keras import regularizers
-from keras.layers import Conv1D, Dense, MaxPooling1D, Flatten, Dropout, Activation
-import seaborn as sns
-import matplotlib.pyplot as plt
-from sklearn.decomposition import PCA
-from keras.utils import np_utils
-from sklearn.model_selection import train_test_split
-from functools import partial
 import os
+import re
+import sys
+import warnings
+from functools import partial
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import re
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.preprocessing import LabelEncoder
-from numpy import argmax
-from numpy import array
-from keras.backend import tensorflow_backend
-from tensorflow.python.client import device_lib
-import tensorflow as tf
-import warnings
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from tqdm import tqdm
+
+import keras
+import tensorflow as tf
+from keras import Model, regularizers
+from keras.backend import tensorflow_backend
+from keras.layers import (Activation, Conv1D, Dense, Dropout, Flatten,
+                          MaxPooling1D)
+from keras.models import Model, Sequential, load_model
+from keras.utils import np_utils
+from tensorflow.python.client import device_lib
+
 warnings.filterwarnings('ignore')
 
 # ====================================
@@ -77,7 +71,7 @@ class hot_dna:
         else:
             name = 'unknown_sequence'
             sequence = fasta
-        seq_array = array(list(sequence))
+        seq_array = np.array(list(sequence))
         label_encoder = LabelEncoder()
         integer_encoded_seq = label_encoder.fit_transform(seq_array)
         # one hot the sequence
