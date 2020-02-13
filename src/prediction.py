@@ -1,33 +1,18 @@
-from keras.models import Model
-from keras import Model
-from keras.models import load_model
-import keras
-from matplotlib.axes._axes import _log as matplotlib_axes_logger
+import re
 import sys
-import itertools
-from sklearn.metrics import confusion_matrix
-from keras.models import Sequential
-from keras import regularizers
-from keras.layers import Conv1D, Dense, MaxPooling1D, Flatten, Dropout, Activation
-import seaborn as sns
-import matplotlib.pyplot as plt
-from sklearn.decomposition import PCA
-from keras.utils import np_utils
-from sklearn.model_selection import train_test_split
+import warnings
 from functools import partial
-import os
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import re
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.preprocessing import LabelEncoder
-from numpy import argmax
-from numpy import array
-from keras.backend import tensorflow_backend
-from tensorflow.python.client import device_lib
+import seaborn as sns
+
+import keras
 import tensorflow as tf
-import warnings
-from tqdm import tqdm
+from keras.backend import tensorflow_backend
+from keras.models import load_model
+
 warnings.filterwarnings('ignore')
 
 # ====================================
