@@ -8,7 +8,7 @@ import hdbscan
 # ====================================
 df = pd.read_csv(".tmp_/tmp_anomaly_classification",
                  header=None,
-                 names=["seqID", "start", "cutsite", "cutlength"],
+                 names=["seqID", "start", "cutsite", "cutlength", "sum"],
                  sep=' ')
 
 X = df[["start", "cutsite", "cutlength"]]
