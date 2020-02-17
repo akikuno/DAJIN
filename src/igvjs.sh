@@ -75,7 +75,7 @@ for input in fasta_ont/*; do
         -e "s#.*/#bam/#g")
     echo "${output} is now generating..."
     ####
-    minimap2 -t ${threads:-1} -ax splice --cs ${reference} ${input} 2>/dev/null |
+    minimap2 -t ${threads:-1} -ax splice --cs=long ${reference} ${input} 2>/dev/null |
     # header: replace chromosome number and length
     awk -v chrom=${chromosome} -v chrom_len=${chrom_len} '{
     if($1=="@SQ") print "@SQ\tSN:"chrom"\tLN:"chrom_len
