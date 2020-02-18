@@ -106,8 +106,8 @@ for input in $(ls bam/*bam) ; do
 done
 cp -rf bam/bam_${read_num}reads results/igvjs/
 # 
-ls results/igvjs/bam_${read_num}reads/* | grep -e bam$ | sed -e "s#^.*/bam#bam#g" -e 's#_#\\_#g' > .tmp_/tmp1
-ls results/igvjs/bam_${read_num}reads/* | grep -e bam$ | sed -e "s#^.*/bam#bam#g" -e "s#.*/##g" -e "s#.bam##g" -e 's#_#\\_#g' > .tmp_/tmp2
+find results/igvjs/bam_${read_num}reads/| grep -e bam$ | sort | sed -e "s#^.*/bam#bam#g" -e 's#_#\\_#g' > .tmp_/tmp1
+find results/igvjs/bam_${read_num}reads/| grep -e bam$ | sort | sed -e "s#^.*/bam#bam#g" -e "s#.*/##g" -e "s#.bam##g" -e 's#_#\\_#g' > .tmp_/tmp2
 paste .tmp_/tmp1 .tmp_/tmp2 > .tmp_/igvjs_template.txt
 rm .tmp_/tmp1 .tmp_/tmp2
 
