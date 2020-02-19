@@ -317,7 +317,10 @@ for input in ./fasta_ont/*; do
     rm .tmp_/${output}
 done
 
-gzip -f data_for_ml/${output_file}.txt
+cat data_for_ml/${output_file}.txt |
+sort -k 3,3 |
+gzip -c \
+> data_for_ml/${output_file}.txt.gz
 
 printf "Finished.\n${output_file}.txt.gz is generated.\n"
 
@@ -338,7 +341,7 @@ python DAJIN/src/anomaly_detection.py data_for_ml/${output_file}.txt.gz
 if [ $(echo ${mutation_type}) -eq 1 ]; then
     ./DAJIN/src/anomaly_exondeletion.sh ${genome} ${threads}
     else \
-    mv .tmp_/anomaly_classification.txt .tmp_/anomaly_classification_revised.txt
+    cp .tmp_/anomaly_classification.txt .tmp_/anomaly_classification_revised.txt
 fi
 #
 python DAJIN/src/prediction.py data_for_ml/${output_file}.txt.gz

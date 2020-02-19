@@ -58,27 +58,26 @@ rm .tmp_/tmp*
 # (Target exon was not cutted, or Other exons were deleted)
 # ======================================
 
-cat .tmp_/anomaly_classification.txt |
-sort -k 2,2  \
-> .tmp_/anomaly_classification_sorted.txt
+# cat .tmp_/anomaly_classification.txt |
+# sort -k 2,2  \
+# > .tmp_/anomaly_classification_sorted.txt
 
 output_anomaly=".tmp_/anomaly_nonproblematic.txt"
 true > ${output_anomaly}
-barcode=barcode27
+barcode=barcode01
 for barcode in $(cut -f 1 .tmp_/abnormal_sequenceids.txt | sort | uniq); do
     # echo ${barcode}
     samtools view bam/${barcode}.bam |
-    # grep  525565d | # !================================
     sort |
-    join -1 1 -2 2 - .tmp_/anomaly_classification_sorted.txt |
+    join -1 1 -2 2 - .tmp_/anomaly_classification.txt |
     grep Abnormal |
     sed "s/ /\t/g" |
     awk '$2==0||$2==16' \
     > .tmp_/abnormal.sam
     #
     cat .tmp_/abnormal.sam  |
-    awk '{for(i=1;i<=NF;i++) if($i ~ "cs:Z::") print $1, $i}' |
-    sed -e "s/cs:Z:://g" -e "s/~[a-z]*\([0-9]*\)/ \1\t/" |
+    awk '{for(i=1;i<=NF;i++) if($i ~ "cs:Z:") print $1, $i}' |
+    sed -e "s/cs:Z://g" -e "s/~[a-z]*\([0-9]*\)/ \1\t/" |
     cut -f 1 |
     sed -e "s/:/ /g" -e "s/\*[a-z][a-z]/+1/g" |
     # Remove inversion reads
@@ -86,9 +85,9 @@ for barcode in $(cut -f 1 .tmp_/abnormal_sequenceids.txt | sort | uniq); do
         if (seq !~ /\+[a-z]+$/ ) print }' | 
     #
     awk '{id=$1; $1="ID";
-        gsub("-"," - ",$0); gsub("+"," + ",$0);
+        gsub("-"," - ",$0); gsub("+"," + ",$0); gsub("=", " + ", $0)
         $1=id; print}' |
-    awk '{for(i=2;i<=NF-1;i++) if($i ~ /[a-z]/) $i=length($i); print}' |
+    awk '{for(i=2;i<=NF-1;i++) if($i ~ /[A-Z|a-z]/) $i=length($i); print}' |
     awk '{id=$1; $1="ID";
         gsub("- "," -",$0); gsub("+ "," ",$0);
         $1=id; print}' |
@@ -117,10 +116,10 @@ done
 
 cat ${output_anomaly} |
 sort -k 2,2 |
-join -a 1 -1 2 -2 2 .tmp_/anomaly_classification_sorted.txt - |
+join -a 1 -1 2 -2 2 .tmp_/anomaly_classification.txt - |
 # grep 01a16fea-5549-41e3-aa4d-160c68280d5d |
 awk 'BEGIN{OFS="\t"}{if(NF==5){$3=$5}; print $2,$1,$3}' |
-sort \
+sort -k 2,2 \
 > .tmp_/anomaly_classification_revised.txt
 ## confirmation
 
