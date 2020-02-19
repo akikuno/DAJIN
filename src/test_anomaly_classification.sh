@@ -30,7 +30,7 @@ output_dir_seqlogo="bam/abnormal_class/seqlogo"
 printf "barcodeID,cluster,number of reads\n" \
 > ${output_dir}/${output_csv}
 mkdir -p ${output_dir} ${output_dir_seqlogo}
-#
+# barcode=barcode26
 for barcode in $(cat .tmp_/barcodelist); do
     echo "${barcode}..."
     # =====================================================
@@ -49,16 +49,16 @@ for barcode in $(cat .tmp_/barcodelist); do
     awk '{gsub("-.*","",$1); print}' |
     sort -k 1,1 |
     join .tmp_/tmp_id - 2>/dev/null |
-    awk '$2==0 || $2==16' |
+    awk '$2==0 || $2==16' | # head -n 10 | #!!!!!!!!!!!!!!!!!!!
     sed "s/ /\t/g" |
     awk '{print $1,$4,$(NF-1)}' |
-    sed -e "s/cs:Z:://g" \
+    sed -e "s/cs:Z://g" \
     -e "s/~[a-z]*/ /g" |
     awk '{gsub("[a-z].*","",$NF); print}' |
-    sed -e "s/:/ /g" -e "s/\*[a-z][a-z]/+1/g" \
-        -e "s/+/ /g" -e "s/-/ -/g" |
-    awk '{for(i=3;i<=NF-1;i++) if($i~"-") $i=length($i)-1;
-        else if($i ~ /[a-z]/) $i=0 # $i="-"length($i)
+    sed -e "s/:/ /g" -e "s/\*[a-z][a-z]/ 1/g" \
+        -e "s/+/ /g" -e "s/-/ - /g" -e "s/=/ /g" |
+    awk '{for(i=3;i<=NF-1;i++) if($i !~ "-") $i=length($i);
+        # else if($i ~ /[a-z]/) $i=0 # $i="-"length($i)
         print}' |
     awk '{sum=-1; for(i=3;i<=NF-1;i++) sum+=$i
         print $1,$2+sum,$2+sum+$NF, $NF,sum}' \
@@ -67,7 +67,6 @@ for barcode in $(cat .tmp_/barcodelist); do
     # =====================================================
     ## Clustering
     # =====================================================
-    
     python ./DAJIN/src/test_anomaly_classification.py
     # cat .tmp_/tmp_anomaly_label | awk '{print $NF}' | sort | uniq -c
     # =====================================================
@@ -85,9 +84,6 @@ for barcode in $(cat .tmp_/barcodelist); do
         wc -l |
         sed "s/^/${barcode},${cl},/g" \
         >> ${output_dir}/${output_csv}
-        #
-        #cl="cluster"${cl}
-        #
         # -----------------------------------------------------
         # Generate BAM file
         # -----------------------------------------------------
@@ -105,10 +101,19 @@ for barcode in $(cat .tmp_/barcodelist); do
         #
         samtools sort .tmp_/tmp_header > ${output_dir}/${barcode}_cluster${cl}.bam
         samtools index ${output_dir}/${barcode}_cluster${cl}.bam
+    done
+done
+
         #
-        # =====================================================
-        ## Sequence logo
-        # =====================================================
+# =====================================================
+## Sequence logo
+# =====================================================
+# barcode=barcode26; cl=1
+# 
+for barcode in $(cat .tmp_/barcodelist); do
+    echo "${barcode}..."
+        for cl in $(cat .tmp_/tmp_anomaly_label | awk '{print $NF}' | sort | uniq); do
+
         # -----------------------------------------------------
         # Extract mode of cutting site and cutting length
         # -----------------------------------------------------
@@ -141,6 +146,19 @@ for barcode in $(cat .tmp_/barcodelist); do
         print "wget -qO - "url$1-14"-"$1 > ".tmp_/tmp_togo1"
         print "wget -qO - "url$1+$2"-"$1+$2+14 > ".tmp_/tmp_togo2"}'
         #
+        # Check TOGOWS AIP is available or not
+        wget -qO - "http://togows.org/api/ucsc/mm10/chr5:128993315-128993329" |
+        grep "Service Unavailable" 1>/dev/null 2>/dev/null
+        if [ $? -eq 0 ]; then
+        cat .tmp_/tmp_togo1 |
+        awk -F '/' '{print $NF}' |
+        sed "s/-/,/g" |
+        sed "s#^#wget -qO - http://genome.ucsc.edu/cgi-bin/das/${genome}/dna?segment=#g" |
+        sh -E
+        fi
+
+        # http://genome.ucsc.edu/cgi-bin/das/mm10/dna?segment=chr5:128992459,128992958
+
         cat .tmp_/tmp_togo1 | sh -E > .tmp_/tmp_togoseq1
         cat .tmp_/tmp_togo2 | sh -E > .tmp_/tmp_togoseq2
         paste .tmp_/tmp_togoseq1 .tmp_/tmp_togoseq2 | \
@@ -149,7 +167,7 @@ for barcode in $(cat .tmp_/barcodelist); do
         # -----------------------------------------------------
         # Align sequence
         # -----------------------------------------------------
-        samtools view bam/${barcode}.bam |  grep -e 0447dce1 |
+        samtools view bam/${barcode}.bam |  grep -e 009ca6f8 |
         awk '{gsub("-.*","",$1); print}' |
         sort -k 1,1 |
         join .tmp_/tmp_id - 2>/dev/null |

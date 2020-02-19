@@ -82,19 +82,19 @@ del df_result["anomaly"]
 # ## Output result
 # ====================================
 
-df_result.to_csv('.tmp_/prediction_result.txt', sep='\t', index=False)
+df_result.to_csv('.tmp_/prediction_result.txt',
+                 sep='\t', index=False, header=False)
 
 # ====================================
 # ## Visualization of allele profile
 # ====================================
-
-barcode_list = df_result.barcodeID.unique()
+data = df_result.sort_values(by="barcodeID")
+barcode_list = data.barcodeID.unique()
 df_stacked = np.zeros(
-    [df_result.barcodeID.value_counts().max(), len(barcode_list)])
+    [data.barcodeID.value_counts().max(), len(barcode_list)])
 df_stacked = pd.DataFrame(df_stacked, columns=barcode_list)
 for i in barcode_list:
-    df_stacked[i] = df_result[df_result.barcodeID
-                              == i]["predict"].reset_index(drop=True)
+    df_stacked[i] = data[data.barcodeID == i]["predict"].reset_index(drop=True)
 
 # ## Plot figures
 colorlist = ["#FF4500", "#D3D3D3", "#ADD8E6"]  # #88CCEE #0072B2
