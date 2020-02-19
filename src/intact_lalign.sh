@@ -12,10 +12,11 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 # ======================================
 
+mut_length=$(cat "${1}" | tail -n 1 | awk '{print length($0)}')
 label=$(cat "${2}" | head -n 1 | cut -d " " -f 1 | sed "s/^>//g")
-mut_length=$(cat .tmp_/mutation.fa | tail -n 1 | awk '{print length($0)}')
 
 #lalign36 -m 3 .tmp_/mutation.fa .tmp_/split/split2_zbed |
+# lalign36 -m 3 mutation.fa split_aa |
 lalign36 -m 3 "${1}" "${2}" |
 grep -v -e ">--" |
 sed "s/ \.\./ /g" |
