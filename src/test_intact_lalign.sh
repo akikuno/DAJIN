@@ -1,7 +1,8 @@
+#!/bin/sh
+# TGATGCTCGGC ref >2655 zczc >4703 zfzw
+# TGATGCTCGGT mut >249 jo >5147 zgqy
 mut_length=$(cat "${1}" | tail -n 1 | awk '{print length($0)}')
-label=$(cat "${2}" | head -n 1 | cut -d " " -f 1 | sed "s/^>//g")
-
-#lalign36 -m 3 mutation.fa split_zblk |
+#lalign36 -m 3 .tmp_/mutation.fa .tmp_/split/split_zgqy -b # |
 lalign36 -m 3 "${1}" "${2}" |
 sed -n "/identity/,/^$/p" |
 grep -v "^$" |
@@ -22,14 +23,17 @@ tail -n 1 \
 #
 # Reverse complement
 #
+ [ ! -s .tmp_/split/tmp ] && exit 1
+
 start=$(cat .tmp_/split/tmp | cut -d " " -f 2)
 end=$(cat .tmp_/split/tmp | cut -d " " -f 3)
 seq=$(cat .tmp_/split/tmp | awk '{print $NF}')
 query=".tmp_/split/tmp"
+
 if [ "$start" -gt "$end" ]; then
     cat .tmp_/split/tmp | awk '{print $NF}' > .tmp_/split/tmp_seq
-    #revseq=$(./DAJIN/src/revcomp.sh .tmp_/split/tmp_seq)
-    revseq=$(./revcomp.sh .tmp_/split/tmp_seq)
+    revseq=$(./DAJIN/src/revcomp.sh .tmp_/split/tmp_seq)
+    #revseq=$(./revcomp.sh .tmp_/split/tmp_seq)
     cat .tmp_/split/tmp | sed "s/${seq}/${revseq}/g" |
     awk -v s=${start} -v e=${end} '{$2=e;$3=s; print}' \
     > .tmp_/split/tmp_rev
@@ -50,8 +54,7 @@ awk -v mut_len=${mut_length} '{
     for(i=1;i<=int(end);i++) e_seq=e_seq"-"
     #print s_seq, e_seq
     print $6"_"$1"\n"s_seq,$NF,e_seq
-}' |
-sed "s/ //g"
+}'
 # Extract 5(50-6+1) and 12(50-38)
 # awk -v mut_len=${mut_length} '{
 #     if($0 ~ "similar") {
