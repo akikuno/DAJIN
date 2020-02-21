@@ -42,22 +42,30 @@ sort -k 2,2 \
 ./DAJIN/src/revcomp.sh .tmp_/target.fa > .tmp_/target_rev.fa
 # STRECHER
 ## compare original and revcomp
-score1=$(stretcher -asequence .tmp_/ref.fa -bsequence .tmp_/target.fa \
--outfile stdout 2>/dev/null | grep Score | awk '{print $NF}')
-score2=$(stretcher -asequence .tmp_/ref.fa -bsequence .tmp_/target_rev.fa \
--outfile stdout 2>/dev/null | grep Score | awk '{print $NF}')
-query=.tmp_/target.fa
-[ "$score2" -gt "$score1" ] && query=.tmp_/target_rev.fa
+# score1=$(stretcher -asequence .tmp_/ref.fa -bsequence .tmp_/target.fa \
+# -outfile stdout 2>/dev/null | grep Score | awk '{print $NF}')
+# score2=$(stretcher -asequence .tmp_/ref.fa -bsequence .tmp_/target_rev.fa \
+# -outfile stdout 2>/dev/null | grep Score | awk '{print $NF}')
+# query=.tmp_/target.fa
+# [ "$score2" -gt "$score1" ] && query=.tmp_/target_rev.fa
 
-stretcher -asequence .tmp_/ref.fa -bsequence ${query} \
--outfile stdout -aformat sam 2>/dev/null|
-grep -v "^@" |
-cut -f 6,10 |
-awk '{gsub(/[A-Z].*/,"",$1)
-    print $1 > ".tmp_/joint_site"
-    print ">mut\n"substr($2,$1-24,50) > ".tmp_/mutation.fa"}'
-joint_site=$(cat .tmp_/joint_site)
+# stretcher -asequence .tmp_/ref.fa -bsequence ${query} \
+# -outfile stdout -aformat sam 2>/dev/null|
+# grep -v "^@" |
+# cut -f 6,10 |
+# awk '{gsub(/[A-Z].*/,"",$1)
+#     print $1 > ".tmp_/joint_site"
+#     print ">mut\n"substr($2,$1-24,50) > ".tmp_/mutation.fa"}'
 
+minimap2 -ax map-ont fasta/wt.fa fasta/target.fa 2>/dev/null |
+awk '$1 !~ "@"' |
+awk '{sub("M.*","",$6)
+    print substr($10,$6-24,50)}' |
+sed "s/^/>mut\n/g" \
+> .tmp_/mutation_Fw.fa
+
+./DAJIN/src/revcomp.sh .tmp_/mutation_Fw.fa \
+> .tmp_/mutation_Rv.fa
 # ======================================
 # 
 # ======================================
