@@ -72,12 +72,15 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     sort |
     join -1 1 - -2 2 .tmp_/sorted_prediction_result |
     awk '$2==0 || $2==16' |
-    #grep ATGTGATGCTCGGCTTGGGAACAACGCTGT |
+    # grep ATGTGATGCTCGGCTTGGGAACAACGCTGT |
+    # grep 9a53fc27 |
     #head -n5 |
     awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i,$10}' |
     awk '{
         match($1, "~"); seq=substr($1,RSTART-50,50)
-        gsub(".*[-|+|*|=]","",seq)
+        gsub("[-|+|=]", "", seq)
+        gsub("*[a-z]", "", seq)
+        seq=toupper(seq)
         match($2,seq); seq=substr($2,RSTART+length(seq)-100,200)
         print ">"NR"\n"seq}' \
     > .tmp_/mutsite_split
@@ -90,7 +93,7 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     find .tmp_/split/ -name split_* -type f |
         xargs -I {} ./DAJIN/src/intact_lalign.sh .tmp_/mutation.fa {} \
     > .tmp_/lalign.fa # 1>/dev/null 2>/dev/null
-    #
+    # cp .tmp_/lalign_test.fa .tmp_/clustalo.fa 
     # -----------------------------------------------------------------
     # Multiple alignment by clustal omega
     # -----------------------------------------------------------------
@@ -105,8 +108,9 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     true > .tmp_/remove_gaprow
     seqnum=$(cat .tmp_/clustalo.fa | awk -F "" '{if(NR==2) print length($0)}')
     for i in $(awk -v num=${seqnum} 'BEGIN{for(i=1;i<=num;i++) print i}'); do
-        # echo "$i ==============="
-        cat .tmp_/clustalo.fa |
+        #echo "$i ==============="  #! ===================================
+        cat .tmp_/clustalo.fa | #! ===================================
+        #cat .tmp_/lalign_test.fa | #! ===================================
         awk -F "" -v i=${i} '{if($1!~/^>/) print $i}' |
         sort |
         uniq -c |
