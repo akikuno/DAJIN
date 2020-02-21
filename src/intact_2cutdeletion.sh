@@ -39,7 +39,7 @@ sort -k 2,2 \
 # ======================================
 # Positive controls
 # ======================================
-./DAJIN/src/revcomp.sh .tmp_/target.fa > .tmp_/target_rev.fa
+#./DAJIN/src/revcomp.sh .tmp_/target.fa > .tmp_/target_rev.fa
 # STRECHER
 ## compare original and revcomp
 # score1=$(stretcher -asequence .tmp_/ref.fa -bsequence .tmp_/target.fa \
@@ -66,8 +66,9 @@ sed "s/^/>mut\n/g" \
 
 ./DAJIN/src/revcomp.sh .tmp_/mutation_Fw.fa \
 > .tmp_/mutation_Rv.fa
+
 # ======================================
-# 
+# Extract Joint sequence 
 # ======================================
 
 barcode=barcode03
@@ -80,10 +81,13 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     sort |
     join -1 1 - -2 2 .tmp_/sorted_prediction_result |
     awk '$2==0 || $2==16' |
-    # grep ATGTGATGCTCGGCTTGGGAACAACGCTGT |
-    # grep 9a53fc27 |
-    #head -n5 |
     awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i,$10}' |
+    # Remove deletion
+    sed "s/\([-|+|=|*]\)/ \1/g" |
+    awk '{seq="";
+        for(i=1; i<=NF-1;i++) if($i !~ /-/) seq=seq$i
+        print seq, $NF}' |
+    #
     awk '{
         match($1, "~"); seq=substr($1,RSTART-50,50)
         gsub("[-|+|=]", "", seq)
@@ -98,83 +102,82 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     split -l 2 .tmp_/mutsite_split .tmp_/split/split_
     #
     printf "Align reads to joint sequence...\n"
-    find .tmp_/split/ -name split_* -type f |
-        xargs -I {} ./DAJIN/src/intact_lalign.sh .tmp_/mutation.fa {} \
-    > .tmp_/lalign.fa # 1>/dev/null 2>/dev/null
-    # cp .tmp_/lalign_test.fa .tmp_/clustalo.fa 
-    # -----------------------------------------------------------------
-    # Multiple alignment by clustal omega
-    # -----------------------------------------------------------------
-    printf "Output sequence logo at loxP loci...\n"
-    clustalo --threads=${threads:-1} -t DNA --outfmt=vie --auto -i .tmp_/lalign.fa \
-    > .tmp_/clustalo.fa 2>/dev/null
-    # -----------------------------------------------------------------
-    # REMOVE GAP
-    # -----------------------------------------------------------------
-    output_rmgap=$(echo .tmp_/clustalo.fa | sed -e "s/.fa/_rmgap.fa/g")
-    # Extract gap-enriched nucreotide location
-    true > .tmp_/remove_gaprow
-    seqnum=$(cat .tmp_/clustalo.fa | awk -F "" '{if(NR==2) print length($0)}')
-    for i in $(awk -v num=${seqnum} 'BEGIN{for(i=1;i<=num;i++) print i}'); do
-        #echo "$i ==============="  #! ===================================
-        cat .tmp_/clustalo.fa | #! ===================================
-        #cat .tmp_/lalign_test.fa | #! ===================================
-        awk -F "" -v i=${i} '{if($1!~/^>/) print $i}' |
-        sort |
-        uniq -c |
-        awk '$2!=""' |
-        awk -v i=${i} '{sum+=$1; if(max<$1) {max=$1; nuc=$2}}
-        END{print i,nuc,max/sum*100}' |
-        #Extract nucleotide position with gap "-" > 20%
-        awk '$2 == "-" && $3>20' |
-        cut -d " " -f 1 >> .tmp_/remove_gaprow
-    done
-    # Remove gap-enriched nucreotide location
-    cat .tmp_/remove_gaprow |
-    sed -e "s/^/\$/g" \
-    -e 's/$/="";@/g' |
-    tr -d "\n" |
-    sed -e "s/@/ /g" \
-    -e 's/^/{if($1 !~ "^>"){/g' \
-    -e "s/$/ print} else print}/g" \
-    > .tmp_/remove_gap.awk
     #
-    cat .tmp_/clustalo.fa |
-    awk -F "" -f .tmp_/remove_gap.awk |
-    sed "s/ //g" \
-    > ${output_rmgap}
+    { for direction in Fw Rv; do
+    true > .tmp_/tmp_lalign_${direction} &&
+        for file in $(find .tmp_/split/ -name split_* -type f); do
+            ./DAJIN/src/test_intact_lalign.sh \
+            .tmp_/mutation_${direction}.fa ${file} \
+            >> .tmp_/tmp_lalign_${direction}
+        done &&
+    echo $direction &
+    done } 1>/dev/null 2>/dev/null
+    wait 1>/dev/null 2>/dev/null
     #
-    # Output sequence logo
-    ## PNG
-    { weblogo --title "${barcode}: Joint sequence" \
-    --revcomp \
-    --scale-width no -n 100 --errorbars no -c classic --format png_print \
-    < ${output_rmgap} > results/figures/png/seqlogo/${barcode}.png & } 1>/dev/null 2>/dev/null
-    ## SVG
-    { weblogo --title "${barcode}: Joint sequence" \
-    --revcomp \
-    --scale-width no -n 100 --errorbars no -c classic --format svg \
-    < ${output_rmgap} > results/figures/svg/seqlogo/${barcode}.svg & } 1>/dev/null 2>/dev/null
+    { for direction in Fw Rv; do
+        output=".tmp_/lalign_test_${direction}.fa" &&
+        #
+        per=$(cat .tmp_/tmp_lalign_${direction} |
+            awk '{percentile[NR]=$1}
+            END{asort(percentile)
+            print percentile[int(NR*0.5)]}'
+        ) &&
+        #
+        cat .tmp_/tmp_lalign_${direction} |
+        awk -v per=${per} '$1>per' |
+        cut -d " " -f 2- |
+        sed "s/ /\n/g" \
+        #awk '{print substr($0,0,50)}' \ #?--------------
+        > ${output} & # 1>/dev/null
+    done } 2>/dev/null
+    wait 1>/dev/null 2>/dev/null
+    #
+    { for direction in Fw Rv; do
+        input=".tmp_/lalign_test_${direction}.fa" &&
+        output="${barcode}_test_${direction}.png" &&
+        #
+        weblogo --title "${barcode}: ${direction} joint sequence" \
+        --scale-width yes -n 100 --errorbars no -c classic --format png_print \
+        < ${input} > results/figures/png/seqlogo/${output} &
+    done } 1>/dev/null 2>/dev/null
     wait 1>/dev/null 2>/dev/null
 done
 
-i=0
-true > .tmp_/seqlogo_postion.fa
-while [ $i -lt 1000 ] ;do
-    cat ".tmp_/mutation.fa" >> .tmp_/seqlogo_postion.fa
-    i=$((i+1))
+# ======================================
+## Positive control
+# ======================================
+
+for direction in Fw Rv; do
+    i=0
+    true > .tmp_/seqlogo_postion_${direction}.fa
+    while [ $i -lt 100 ] ;do
+        cat ".tmp_/mutation_${direction}.fa" \
+        >> .tmp_/seqlogo_postion_${direction}.fa
+        i=$((i+1))
+    done
 done
 
-## Positive control PNG
-{ weblogo --title "Expected Joint sequence" \
---revcomp \
---scale-width no -n 50 --errorbars no -c classic --format png_print \
-< .tmp_/seqlogo_postion.fa > results/figures/png/seqlogo/expected.png & } 1>/dev/null 2>/dev/null
-## Positive control SVG
-{ weblogo --title "Expected Joint sequence" \
---revcomp \ 
---scale-width no -n 50 --errorbars no -c classic --format svg \
-< .tmp_/seqlogo_postion.fa > results/figures/svg/seqlogo/expected.svg & } 1>/dev/null 2>/dev/null
-wait 1>/dev/null 2>/dev/null
+for direction in Fw Rv; do
+    ## PNG
+    { weblogo \
+        --title "${barcode}: ${direction} Expected Joint sequence" \
+        -n 50 \
+        --errorbars no -c classic \
+        --format png_print \
+        < .tmp_/seqlogo_postion_${direction}.fa \
+    > results/figures/png/seqlogo/${barcode}_${direction}_expected.png & } \
+    1>/dev/null 2>/dev/null
+    ## SVG
+    { weblogo \
+        --title "${barcode}: ${direction} Expected Joint sequence" \
+        -n 50 \
+        --errorbars no \
+        -c classic \
+        --format svg \
+        < .tmp_/seqlogo_postion_${direction}.fa \
+        > results/figures/svg/seqlogo/${barcode}_${direction}_expected.svg & } \
+    1>/dev/null 2>/dev/null
+    wait 1>/dev/null 2>/dev/null
+done
 
 exit 0
