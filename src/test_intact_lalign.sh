@@ -38,10 +38,13 @@ query=".tmp_/split/tmp_${file_name}"
 if [ "$start" -gt "$end" ]; then
     cat .tmp_/split/tmp_${file_name} | awk '{print $NF}' \
     > .tmp_/split/tmp_${file_name}_seq
+    #
     revseq=$(./DAJIN/src/revcomp.sh .tmp_/split/tmp_${file_name}_seq)
+    #
     cat .tmp_/split/tmp_${file_name} | sed "s/${seq}/${revseq}/g" |
     awk -v s=${start} -v e=${end} '{$2=e;$3=s; print}' \
     > .tmp_/split/tmp_${file_name}_rev
+    #
     query=".tmp_/split/tmp_${file_name}_rev"
 fi
 #
@@ -60,55 +63,3 @@ awk -v mut_len=${mut_length} '{
     #print s_seq, e_seq
     print $1,$6,s_seq""$NF""e_seq
 }'
-# Extract 5(50-6+1) and 12(50-38)
-# awk -v mut_len=${mut_length} '{
-#     if($0 ~ "similar") {
-#         # Score store
-#         score=$0
-#         sub("% similar.*", "", score)
-#         # Sequence imputation
-#         s_seq=""; e_seq=""
-#         start=$NF
-#         sub("\\(", "", start)
-#         sub("-.*", "", start)
-#         start=start-1
-#         for(i=1;i<=int(start);i++) s_seq=s_seq"-"
-#         #
-#         end=$NF
-#         sub("^.*-", "", end)
-#         for(i=1;i<=int(mut_len-end);i++) e_seq=e_seq"-"
-#         # print start, int(mut_len-end), s_seq, e_seq
-#     }
-#     else if($0 ~ "^>mut") {match($2, /\-+/); for(i=1;i<=RLENGTH;i++) e_seq=e_seq"-"; print $1, s_seq$2e_seq, score }
-#     else {print $1, s_seq$2e_seq, score}
-# }'
-
-
-
-
-
-
-# # Extract 5(50-6+1) and 12(50-38)
-# awk -v mut_len=${mut_length} '{
-#     if($0 ~ "identity") {
-#         # Score store
-#         score=$0
-#         sub("% identity.*", "", score)
-#         # Sequence imputation
-#         s_seq=""; e_seq=""
-#         start=$NF
-#         sub("\\(", "", start)
-#         sub("-.*", "", start)
-#         start=start-1
-#         for(i=1;i<=int(start);i++) s_seq=s_seq"-"
-#         #
-#         end=$NF
-#         sub("^.*-", "", end)
-#         for(i=1;i<=int(mut_len-end);i++) e_seq=e_seq"-"
-#         print start, int(mut_len-end), s_seq, e_seq
-#     }
-#     else if($0 !~ "^>") {allseq=s_seq$0e_seq; print allseq}
-#     else {gsub(" ..", "", $0); print $0"_"score}
-#     }'
-
-

@@ -67,6 +67,8 @@ sed "s/^/>mut\n/g" \
 ./DAJIN/src/revcomp.sh .tmp_/mutation_Fw.fa \
 > .tmp_/mutation_Rv.fa
 
+mut_length=$(cat .tmp_/mutation_Fw.fa | tail -n 1 | awk '{print length($0)}')
+
 # ======================================
 # Extract Joint sequence 
 # ======================================
@@ -126,58 +128,59 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
         cat .tmp_/tmp_lalign_${direction} |
         awk -v per=${per} '$1>per' |
         cut -d " " -f 2- |
-        sed "s/ /\n/g" \
-        #awk '{print substr($0,0,50)}' \ #?--------------
+        sed "s/ /\n/g" |
+        awk -v mut_len=${mut_length} '{print substr($0,0,mut_len)}' \
         > ${output} & # 1>/dev/null
     done } 2>/dev/null
     wait 1>/dev/null 2>/dev/null
     #
     { for direction in Fw Rv; do
         input=".tmp_/lalign_test_${direction}.fa" &&
-        output="${barcode}_test_${direction}.png" &&
+        output="${barcode}_${direction}.png" &&
         #
         weblogo --title "${barcode}: ${direction} joint sequence" \
         --scale-width yes -n 100 --errorbars no -c classic --format png_print \
         < ${input} > results/figures/png/seqlogo/${output} &
     done } 1>/dev/null 2>/dev/null
     wait 1>/dev/null 2>/dev/null
-done
 
-# ======================================
-## Positive control
-# ======================================
-
-for direction in Fw Rv; do
-    i=0
-    true > .tmp_/seqlogo_postion_${direction}.fa
-    while [ $i -lt 100 ] ;do
-        cat ".tmp_/mutation_${direction}.fa" \
-        >> .tmp_/seqlogo_postion_${direction}.fa
-        i=$((i+1))
+    # ======================================
+    ## Positive control
+    # ======================================
+    #
+    for direction in Fw Rv; do
+        i=0
+        true > .tmp_/seqlogo_postion_${direction}.fa
+        while [ $i -lt 100 ] ;do
+            cat ".tmp_/mutation_${direction}.fa" \
+            >> .tmp_/seqlogo_postion_${direction}.fa
+            i=$((i+1))
+        done
     done
-done
-
-for direction in Fw Rv; do
-    ## PNG
-    { weblogo \
-        --title "${barcode}: ${direction} Expected Joint sequence" \
-        -n 50 \
-        --errorbars no -c classic \
-        --format png_print \
-        < .tmp_/seqlogo_postion_${direction}.fa \
-    > results/figures/png/seqlogo/${barcode}_${direction}_expected.png & } \
-    1>/dev/null 2>/dev/null
-    ## SVG
-    { weblogo \
-        --title "${barcode}: ${direction} Expected Joint sequence" \
-        -n 50 \
-        --errorbars no \
-        -c classic \
-        --format svg \
-        < .tmp_/seqlogo_postion_${direction}.fa \
-        > results/figures/svg/seqlogo/${barcode}_${direction}_expected.svg & } \
-    1>/dev/null 2>/dev/null
-    wait 1>/dev/null 2>/dev/null
+    #
+    for direction in Fw Rv; do
+        ## PNG
+        { weblogo \
+            --title "${barcode}: ${direction} Expected Joint sequence" \
+            -n 50 \
+            --errorbars no -c classic \
+            --format png_print \
+            < .tmp_/seqlogo_postion_${direction}.fa \
+        > results/figures/png/seqlogo/${barcode}_${direction}_expected.png & } \
+        1>/dev/null 2>/dev/null
+        ## SVG
+        { weblogo \
+            --title "${barcode}: ${direction} Expected Joint sequence" \
+            -n 50 \
+            --errorbars no \
+            -c classic \
+            --format svg \
+            < .tmp_/seqlogo_postion_${direction}.fa \
+            > results/figures/svg/seqlogo/${barcode}_${direction}_expected.svg & } \
+        1>/dev/null 2>/dev/null
+        wait 1>/dev/null 2>/dev/null
+    done
+    #
 done
 
 exit 0
