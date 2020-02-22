@@ -143,44 +143,44 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
         < ${input} > results/figures/png/seqlogo/${output} &
     done } 1>/dev/null 2>/dev/null
     wait 1>/dev/null 2>/dev/null
+    #
+done
 
-    # ======================================
-    ## Positive control
-    # ======================================
-    #
-    for direction in Fw Rv; do
-        i=0
-        true > .tmp_/seqlogo_postion_${direction}.fa
-        while [ $i -lt 100 ] ;do
-            cat ".tmp_/mutation_${direction}.fa" \
-            >> .tmp_/seqlogo_postion_${direction}.fa
-            i=$((i+1))
-        done
+# ======================================
+## Positive control
+# ======================================
+#
+for direction in Fw Rv; do
+    i=0
+    true > .tmp_/seqlogo_postion_${direction}.fa
+    while [ $i -lt 100 ] ;do
+        cat ".tmp_/mutation_${direction}.fa" \
+        >> .tmp_/seqlogo_postion_${direction}.fa
+        i=$((i+1))
     done
-    #
-    for direction in Fw Rv; do
-        ## PNG
-        { weblogo \
-            --title "${barcode}: ${direction} Expected Joint sequence" \
-            -n 50 \
-            --errorbars no -c classic \
-            --format png_print \
-            < .tmp_/seqlogo_postion_${direction}.fa \
-        > results/figures/png/seqlogo/${barcode}_${direction}_expected.png & } \
-        1>/dev/null 2>/dev/null
-        ## SVG
-        { weblogo \
-            --title "${barcode}: ${direction} Expected Joint sequence" \
-            -n 50 \
-            --errorbars no \
-            -c classic \
-            --format svg \
-            < .tmp_/seqlogo_postion_${direction}.fa \
-            > results/figures/svg/seqlogo/${barcode}_${direction}_expected.svg & } \
-        1>/dev/null 2>/dev/null
-        wait 1>/dev/null 2>/dev/null
-    done
-    #
+done
+#
+for direction in Fw Rv; do
+    ## PNG
+    { weblogo \
+        --title "${direction} Expected Joint sequence" \
+        -n 50 \
+        --errorbars no -c classic \
+        --format png_print \
+        < .tmp_/seqlogo_postion_${direction}.fa \
+    > results/figures/png/seqlogo/Expected_${direction}.png & } \
+    1>/dev/null 2>/dev/null
+    ## SVG
+    { weblogo \
+        --title "${direction} Expected Joint sequence" \
+        -n 50 \
+        --errorbars no \
+        -c classic \
+        --format svg \
+        < .tmp_/seqlogo_postion_${direction}.fa \
+        > results/figures/svg/seqlogo/Expected_${direction}.svg & } \
+    1>/dev/null 2>/dev/null
+    wait 1>/dev/null 2>/dev/null
 done
 
 exit 0
