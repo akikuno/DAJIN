@@ -140,17 +140,7 @@ print(device_lib.list_local_devices())" \
 if test "$?" -eq 1; then error_exit 1 'GPU is not recognized'; fi
 set -e
 
-# Define threads
-set +eu
-# Linux and similar...
-[ -z "$threads" ] && threads=$(getconf _NPROCESSORS_ONLN 2>/dev/null | awk '{print int($0/2)}')
-# FreeBSD and similar...
-[ -z "$threads" ] && threads=$(getconf NPROCESSORS_ONLN | awk '{print int($0/2)}')
-# Solaris and similar...
-[ -z "$threads" ] && threads=$(ksh93 -c 'getconf NPROCESSORS_ONLN' | awk '{print int($0/2)}')
-# Give up...
-[ -z "$threads" ] && threads=1
-set -eu
+
 
 # ======================================
 # Setting Directory
@@ -305,16 +295,27 @@ awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' \
 true > data_for_ml/${output_file:=sequence_MIDS}.txt
 
 for input in ./fasta_ont/*; do
-    output=$(echo ${input} | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
+    for reference in $(ls fasta/* | grep -v "fasta/[0-9]"); do
+        output=$(echo ${input} | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
+        ref=$(cat ${reference} | grep "^>" | sed "s/>//g")
+        true > .tmp_/${output_file:sequence_MIDS}_${ref}
+        #
+        minimap2 -t ${threads:-1} --cs=long -ax splice ${reference} ${input} 2>/dev/null |
+        awk -v ref=${ref} '$3 == ref' \
+        > .tmp_/${output}
+        #
+        ./DAJIN/src/mids_convertion.sh .tmp_/${output} |
+        sort -k 3,3 \
+        >> .tmp_/${output_file}_${ref}
+        #
+        rm .tmp_/${output}
+    done
     #
-    minimap2 -t ${threads:-1} --cs=long -ax splice ${reference} ${input} 2>/dev/null |
-    awk '$3 == "wt"' \
-    > .tmp_/${output}
+    paste .tmp_/${output_file}_* |
+    awk '{seq="";for(i=1;i<=NF;i++) if( (i+1)%3==0  ) seq=seq$i; print $1,seq,$3}' \
+    >> data_for_ml/${output_file:=sequence_MIDS}.txt
     #
-    ./DAJIN/src/mids_convertion.sh .tmp_/${output} \
-    >> data_for_ml/${output_file}.txt
-    #
-    rm .tmp_/${output}
+    rm .tmp_/${output_file}_*
 done
 
 cat data_for_ml/${output_file}.txt |

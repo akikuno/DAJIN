@@ -26,7 +26,7 @@ if [ "$second_flank" -gt "$reflength" ]; then second_flank=$(($reflength)); fi
 # echo $first_flank $second_flank
 
 label=$(echo ${1} | sed -e "s#.*/##g" -e "s#\..*##g")
-printf "${label} is now processing...\n" 1>&2
+# printf "${label} is now processing...\n" 1>&2
 
 # ======================================
 # MIDS conversion
@@ -129,6 +129,6 @@ awk -v reflen=${reflength} '{
     seqlen=length($3);
     end="";
     if(seqlen>reflen) {print substr($3,1,reflen),$1}
-    else {for(i=seqlen; i < reflen; i++) end=end"="; print $3""end,$1}
+    else {for(i=seqlen; i < reflen; i++) end=end"="; print $1,$3""end}
 }' |
-sed -e "s/^/${label}\t/g" -e "s/ /\t/g"
+sed -e "s/$/\t${label}/g" -e "s/ /\t/g"
