@@ -295,8 +295,9 @@ awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' \
 true > data_for_ml/${output_file:=sequence_MIDS}.txt
 
 for input in ./fasta_ont/*; do
+    output=$(echo ${input} | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
+    echo ${output}
     for reference in $(ls fasta/* | grep -v "fasta/[0-9]"); do
-        output=$(echo ${input} | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
         ref=$(cat ${reference} | grep "^>" | sed "s/>//g")
         true > .tmp_/${output_file:sequence_MIDS}_${ref}
         #
@@ -304,21 +305,36 @@ for input in ./fasta_ont/*; do
         awk -v ref=${ref} '$3 == ref' \
         > .tmp_/${output}
         #
-        ./DAJIN/src/mids_convertion.sh .tmp_/${output} |
-        sort -k 3,3 \
+        ./DAJIN/src/mids_convertion.sh .tmp_/${output} ${ref} |
+        sort \
         >> .tmp_/${output_file}_${ref}
         #
         rm .tmp_/${output}
     done
     #
-    paste .tmp_/${output_file}_* |
-    awk '{seq="";for(i=1;i<=NF;i++) if( (i+1)%3==0  ) seq=seq$i; print $1,seq,$3}' \
+    find .tmp_/${output_file}_* |
+    sed "s/^/ /g" |
+    tr -d "\n" |
+    awk -v out=${output_file} \
+    '{
+        join="join "
+        for (i=1;i<NF;i++) {
+            out= "> tmp && mv tmp "out_$(i+1)
+            print join" "$i" "$(i+1), out
+        }
+        print "cat "$i
+    }' |
+    sh -E - |
+    awk '{seq=""
+        for(i=2;i<=NF;i++) if( i%2==0  ) seq=seq$i
+        print $3,seq,$1}' \
     >> data_for_ml/${output_file:=sequence_MIDS}.txt
     #
     rm .tmp_/${output_file}_*
 done
 
 cat data_for_ml/${output_file}.txt |
+sed "s/ /\t/g" |
 sort -k 3,3 |
 gzip -c \
 > data_for_ml/${output_file}.txt.gz

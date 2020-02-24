@@ -14,16 +14,21 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # ======================================
 # Identify mutation sites
 # ======================================
-
-reference=fasta/wt.fa
-
-ext=${ext:=100}
+reference=fasta/${2}.fa
 reflength=$(cat ${reference} | grep -v "^>" | awk '{print length($0)}')
-first_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{print $1-ext}')
-second_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{if(NF==2) print $2+ext; else print $1+ext}')
-if [ "$first_flank" -lt 1 ]; then first_flank=1; fi
-if [ "$second_flank" -gt "$reflength" ]; then second_flank=$(($reflength)); fi
-# echo $first_flank $second_flank
+ext=${ext:=100}
+#
+if [ "${2}" = "wt" ]; then
+    #
+    first_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{print $1-ext}')
+    second_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{if(NF==2) print $2+ext; else print $1+ext}')
+    if [ "$first_flank" -lt 1 ]; then first_flank=1; fi
+    if [ "$second_flank" -gt "$reflength" ]; then second_flank=$(($reflength)); fi
+    # echo $first_flank $second_flank
+else
+    first_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{print $1-ext}')
+    second_flank=$((${first_flank}+${ext}*2))
+fi
 
 label=$(echo ${1} | sed -e "s#.*/##g" -e "s#\..*##g")
 # printf "${label} is now processing...\n" 1>&2
@@ -54,6 +59,7 @@ if($2<=first && $3>=second) print $1}' |
 sort > .tmp_/tmp_sequenceID
 #
 cat ${1} |
+# cat .tmp_/wt_simulated | #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 sort |
 join - .tmp_/tmp_sequenceID |
 # append alignment info
@@ -128,7 +134,7 @@ awk '{start=""; for(i=1; i < $2; i++) start=start"="; print $1,$2,start""$3}' |
 awk -v reflen=${reflength} '{
     seqlen=length($3);
     end="";
-    if(seqlen>reflen) {print substr($3,1,reflen),$1}
+    if(seqlen>reflen) {print $1,substr($3,1,reflen)}
     else {for(i=seqlen; i < reflen; i++) end=end"="; print $1,$3""end}
 }' |
 sed -e "s/$/\t${label}/g" -e "s/ /\t/g"
