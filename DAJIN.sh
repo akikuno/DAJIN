@@ -296,48 +296,68 @@ true > data_for_ml/${output_file:=sequence_MIDS}.txt
 
 for input in ./fasta_ont/*; do
     output=$(echo ${input} | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
-    echo ${output}
-    for reference in $(ls fasta/* | grep -v "fasta/[0-9]"); do
-        ref=$(cat ${reference} | grep "^>" | sed "s/>//g")
-        true > .tmp_/${output_file:sequence_MIDS}_${ref}
-        #
-        minimap2 -t ${threads:-1} --cs=long -ax splice ${reference} ${input} 2>/dev/null |
-        awk -v ref=${ref} '$3 == ref' \
-        > .tmp_/${output}
-        #
-        ./DAJIN/src/mids_convertion.sh .tmp_/${output} ${ref} |
-        sort \
-        >> .tmp_/${output_file}_${ref}
-        #
-        rm .tmp_/${output}
-    done
+    ref=$(cat ${reference} | grep "^>" | sed "s/>//g")
     #
-    find .tmp_/${output_file}_* |
-    sed "s/^/ /g" |
-    tr -d "\n" |
-    awk -v out=${output_file} \
-    '{
-        join="join "
-        for (i=1;i<NF;i++) {
-            out= "> tmp && mv tmp "out_$(i+1)
-            print join" "$i" "$(i+1), out
-        }
-        print "cat "$i
-    }' |
-    sh -E - |
-    awk '{seq=""
-        for(i=2;i<=NF;i++) if( i%2==0  ) seq=seq$i
-        print $3,seq,$1}' \
-    >> data_for_ml/${output_file:=sequence_MIDS}.txt
+    minimap2 -t ${threads:-1} --cs=long -ax splice ${reference} ${input} 2>/dev/null |
+    awk '$3 == "wt"' \
+    > .tmp_/${output}
     #
-    rm .tmp_/${output_file}_*
+    ./DAJIN/src/mids_convertion.sh .tmp_/${output} ${ref} \
+    >> data_for_ml/${output_file}.txt
+    #
+    rm .tmp_/${output}
 done
 
 cat data_for_ml/${output_file}.txt |
-sed "s/ /\t/g" |
+awk 'BEGIN{OFS="\t"}{print $3,$2,$1}' |
 sort -k 3,3 |
 gzip -c \
 > data_for_ml/${output_file}.txt.gz
+
+# for input in ./fasta_ont/*; do
+#     output=$(echo ${input} | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
+#     echo ${output}
+#     for reference in $(ls fasta/* | grep -v "fasta/[0-9]"); do
+#         ref=$(cat ${reference} | grep "^>" | sed "s/>//g")
+#         true > .tmp_/${output_file:sequence_MIDS}_${ref}
+#         #
+#         minimap2 -t ${threads:-1} --cs=long -ax splice ${reference} ${input} 2>/dev/null |
+#         awk -v ref=${ref} '$3 == ref' \
+#         > .tmp_/${output}
+#         #
+#         ./DAJIN/src/mids_convertion.sh .tmp_/${output} ${ref} |
+#         sort \
+#         >> .tmp_/${output_file}_${ref}
+#         #
+#         rm .tmp_/${output}
+#     done
+#     #
+#     find .tmp_/${output_file}_* |
+#     sed "s/^/ /g" |
+#     tr -d "\n" |
+#     awk -v out=${output_file} \
+#     '{
+#         join="join "
+#         for (i=1;i<NF;i++) {
+#             out= "> tmp && mv tmp "out_$(i+1)
+#             print join" "$i" "$(i+1), out
+#         }
+#         print "cat "$i
+#     }' |
+#     sh -E - |
+#     awk '{seq=""
+#         for(i=2;i<=NF;i++) if( i%2==0  ) seq=seq$i
+#         print $3,seq,$1}' \
+#     >> data_for_ml/${output_file:=sequence_MIDS}.txt
+#     #
+#     rm .tmp_/${output_file}_*
+# done
+
+# cat data_for_ml/${output_file}.txt |
+# sed "s/ /\t/g" |
+# sort -k 3,3 |
+# gzip -c \
+# > data_for_ml/${output_file}.txt.gz
 
 printf "Finished.\n${output_file}.txt.gz is generated.\n"
 

@@ -100,7 +100,9 @@ for input in $(ls bam/*bam) ; do
     sed -e "s#.*/#bam/bam_${read_num}reads/#g")
     # echo "${output} is now generating..."
     ####
-    samtools view -h ${input} | awk '$1 ~ /^@/ || $2 == 0 || $2 == 16'| head -n $((${read_num}+5)) |
+    samtools view -h ${input} 2>/dev/null |
+    awk '$1 ~ /^@/ || $2 == 0 || $2 == 16'|
+    head -n $((${read_num}+5)) |
     samtools sort -@ ${threads:-1} - 2>/dev/null > ${output}
     samtools index -@ ${threads:-1} ${output}
 done
