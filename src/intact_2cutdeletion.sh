@@ -73,7 +73,7 @@ mut_length=$(cat .tmp_/mutation_Fw.fa | tail -n 1 | awk '{print length($0)}')
 # Extract Joint sequence 
 # ======================================
 
-barcode=barcode03
+barcode=barcode04
 mkdir -p results/figures/png/seqlogo/ results/figures/svg/seqlogo/
 for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     bam=bam/${barcode}.bam
@@ -81,8 +81,8 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     # -----------------------------------------------------------------
     samtools view ${bam} |
     sort |
-    join -1 1 - -2 2 .tmp_/sorted_prediction_result |
-    awk '$2==0 || $2==16' |
+    join -1 1 - -2 2 .tmp_/sorted_prediction_result | #* Num of target reads
+    awk '$2==0 || $2==16' | #* Num of primary reads
     awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i,$10}' |
     # Remove deletion
     sed "s/\([-|+|=|*]\)/ \1/g" |
@@ -117,12 +117,12 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     wait 1>/dev/null 2>/dev/null
     #
     { for direction in Fw Rv; do
-        output=".tmp_/lalign_test_${direction}.fa" &&
+        output=".tmp_/tmp_lalign_${direction}.fa" &&
         #
         per=$(cat .tmp_/tmp_lalign_${direction} |
             awk '{percentile[NR]=$1}
             END{asort(percentile)
-            print percentile[int(NR*0.5)]}'
+            print percentile[int(NR*0.50)]}'
         ) &&
         #
         cat .tmp_/tmp_lalign_${direction} |
@@ -135,14 +135,42 @@ for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
     wait 1>/dev/null 2>/dev/null
     #
     { for direction in Fw Rv; do
-        input=".tmp_/lalign_test_${direction}.fa" &&
-        output="${barcode}_${direction}.png" &&
+        joint_seq=$(cat .tmp_/mutation_${direction}.fa | 
+        sed 1d | awk -F "" '{print substr($0,int(NF)/2-4,8)}') &&
         #
-        weblogo --title "${barcode}: ${direction} joint sequence" \
-        --scale-width yes -n 100 --errorbars no -c classic --format png_print \
-        < ${input} > results/figures/png/seqlogo/${output} &
-    done } 1>/dev/null 2>/dev/null
+        cat .tmp_/tmp_lalign_${direction}.fa |
+        sed -e "s/>/HOGE>/g" -e "s/$/FUGA/g" |
+        tr -d "\n" |
+        sed "s/HOGE/\n/g" | 
+        sed "s/FUGA/\t/g" |
+        grep ${joint_seq} |
+        sed "s/\t/\n/g" |
+        grep -v "^$" > .tmp_/tmp1_${direction}.fa &&
+        #
+        cat .tmp_/tmp_lalign_${direction}.fa |
+        sed -e "s/>/HOGE>/g" -e "s/$/FUGA/g" |
+        tr -d "\n" |
+        sed "s/HOGE/\n/g" | 
+        sed "s/FUGA/\t/g" |
+        grep -v ${joint_seq} |
+        sed "s/\t/\n/g" |
+        grep -v "^$" > .tmp_/tmp2_${direction}.fa &
+        #
+    done } 2>/dev/null
     wait 1>/dev/null 2>/dev/null
+    #
+    for direction in Fw Rv; do
+        for fasta in tmp1 tmp2; do
+            #input=".tmp_/tmp_lalign_${direction}.fa" &&
+            input=.tmp_/${fasta}_${direction}.fa
+            output="${barcode}_${direction}.png"
+            #
+            weblogo --title "${barcode}: ${direction} joint sequence" \
+            --scale-width yes -n 100 --errorbars no -c classic --format pdf \
+            < ${input} > hoge_${fasta}.pdf #results/figures/png/seqlogo/${output} &
+        done
+    done #} 1>/dev/null 2>/dev/null
+    #wait 1>/dev/null 2>/dev/null
     #
 done
 
