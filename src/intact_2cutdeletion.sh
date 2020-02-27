@@ -39,176 +39,87 @@ sort -k 2,2 \
 # ======================================
 # Positive controls
 # ======================================
-#./DAJIN/src/revcomp.sh .tmp_/target.fa > .tmp_/target_rev.fa
-# STRECHER
-## compare original and revcomp
-# score1=$(stretcher -asequence .tmp_/ref.fa -bsequence .tmp_/target.fa \
-# -outfile stdout 2>/dev/null | grep Score | awk '{print $NF}')
-# score2=$(stretcher -asequence .tmp_/ref.fa -bsequence .tmp_/target_rev.fa \
-# -outfile stdout 2>/dev/null | grep Score | awk '{print $NF}')
-# query=.tmp_/target.fa
-# [ "$score2" -gt "$score1" ] && query=.tmp_/target_rev.fa
-
-# stretcher -asequence .tmp_/ref.fa -bsequence ${query} \
-# -outfile stdout -aformat sam 2>/dev/null|
-# grep -v "^@" |
-# cut -f 6,10 |
-# awk '{gsub(/[A-Z].*/,"",$1)
-#     print $1 > ".tmp_/joint_site"
-#     print ">mut\n"substr($2,$1-24,50) > ".tmp_/mutation.fa"}'
 
 minimap2 -ax map-ont fasta/wt.fa fasta/target.fa 2>/dev/null |
 awk '$1 !~ "@"' |
 awk '{sub("M.*","",$6)
-    print substr($10,$6-24,50)}' |
+    print substr($10,$6-25,50)}' |
 sed "s/^/>mut\n/g" \
-> .tmp_/mutation_Fw.fa
+> .tmp_/mutation.fa
 
-./DAJIN/src/revcomp.sh .tmp_/mutation_Fw.fa \
-> .tmp_/mutation_Rv.fa
 
-mut_length=$(cat .tmp_/mutation_Fw.fa | tail -n 1 | awk '{print length($0)}')
-
-# ======================================
+# ============================================================================
 # Extract Joint sequence 
-# ======================================
+# ============================================================================
 
-barcode=barcode04
-mkdir -p results/figures/png/seqlogo/ results/figures/svg/seqlogo/
-for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
-    bam=bam/${barcode}.bam
-    printf " ----------------------- \n ${bam} is processing... \n ----------------------- \n"
-    # -----------------------------------------------------------------
-    samtools view ${bam} |
-    sort |
-    join -1 1 - -2 2 .tmp_/sorted_prediction_result | #* Num of target reads
-    awk '$2==0 || $2==16' | #* Num of primary reads
-    awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i,$10}' |
-    # Remove deletion
-    sed "s/\([-|+|=|*]\)/ \1/g" |
-    awk '{seq="";
-        for(i=1; i<=NF-1;i++) if($i !~ /-/) seq=seq$i
-        print seq, $NF}' |
-    #
-    awk '{
-        match($1, "~"); seq=substr($1,RSTART-50,50)
-        gsub("[-|+|=]", "", seq)
-        gsub("*[a-z]", "", seq)
-        seq=toupper(seq)
-        match($2,seq); seq=substr($2,RSTART+length(seq)-100,200)
-        print ">"NR"\n"seq}' \
-    > .tmp_/mutsite_split
-    #
-    rm -rf .tmp_/split 2>/dev/null 1>/dev/null
-    mkdir -p .tmp_/split
-    split -l 2 .tmp_/mutsite_split .tmp_/split/split_
-    #
-    printf "Align reads to joint sequence...\n"
-    #
-    { for direction in Fw Rv; do
-    true > .tmp_/tmp_lalign_${direction} &&
-        for file in $(find .tmp_/split/ -name split_* -type f); do
-            ./DAJIN/src/test_intact_lalign.sh \
-            .tmp_/mutation_${direction}.fa ${file} \
-            >> .tmp_/tmp_lalign_${direction}
-        done &&
-    echo $direction &
-    done } 1>/dev/null 2>/dev/null
-    wait 1>/dev/null 2>/dev/null
-    #
-    { for direction in Fw Rv; do
-        output=".tmp_/tmp_lalign_${direction}.fa" &&
-        #
-        per=$(cat .tmp_/tmp_lalign_${direction} |
-            awk '{percentile[NR]=$1}
-            END{asort(percentile)
-            print percentile[int(NR*0.50)]}'
-        ) &&
-        #
-        cat .tmp_/tmp_lalign_${direction} |
-        awk -v per=${per} '$1>per' |
-        cut -d " " -f 2- |
-        sed "s/ /\n/g" |
-        awk -v mut_len=${mut_length} '{print substr($0,0,mut_len)}' \
-        > ${output} & # 1>/dev/null
-    done } 2>/dev/null
-    wait 1>/dev/null 2>/dev/null
-    #
-    { for direction in Fw Rv; do
-        joint_seq=$(cat .tmp_/mutation_${direction}.fa | 
-        sed 1d | awk -F "" '{print substr($0,int(NF)/2-4,8)}') &&
-        #
-        cat .tmp_/tmp_lalign_${direction}.fa |
-        sed -e "s/>/HOGE>/g" -e "s/$/FUGA/g" |
-        tr -d "\n" |
-        sed "s/HOGE/\n/g" | 
-        sed "s/FUGA/\t/g" |
-        grep ${joint_seq} |
-        sed "s/\t/\n/g" |
-        grep -v "^$" > .tmp_/tmp1_${direction}.fa &&
-        #
-        cat .tmp_/tmp_lalign_${direction}.fa |
-        sed -e "s/>/HOGE>/g" -e "s/$/FUGA/g" |
-        tr -d "\n" |
-        sed "s/HOGE/\n/g" | 
-        sed "s/FUGA/\t/g" |
-        grep -v ${joint_seq} |
-        sed "s/\t/\n/g" |
-        grep -v "^$" > .tmp_/tmp2_${direction}.fa &
-        #
-    done } 2>/dev/null
-    wait 1>/dev/null 2>/dev/null
-    #
-    for direction in Fw Rv; do
-        for fasta in tmp1 tmp2; do
-            #input=".tmp_/tmp_lalign_${direction}.fa" &&
-            input=.tmp_/${fasta}_${direction}.fa
-            output="${barcode}_${direction}.png"
-            #
-            weblogo --title "${barcode}: ${direction} joint sequence" \
-            --scale-width yes -n 100 --errorbars no -c classic --format pdf \
-            < ${input} > hoge_${fasta}.pdf #results/figures/png/seqlogo/${output} &
-        done
-    done #} 1>/dev/null 2>/dev/null
-    #wait 1>/dev/null 2>/dev/null
-    #
-done
+#seqlogo barcode04
+#barcode=barcode04
+
+cat .tmp_/prediction_barcodelist | sed "s/@@@//g" |
+awk '{print "./DAJIN/src/test_seqlogo.sh",$0, "&"}' |
+awk -v th=${threads:-1} '{
+    if (NR%th==0) gsub("&","&\nwait",$0)
+    print}' |
+sed -e "$ a wait" |
+sh -E -
+
+# mkdir -p results/figures/png/seqlogo/ results/figures/svg/seqlogo/
+# for barcode in $(cat .tmp_/prediction_barcodelist | sed "s/@@@//g"); do
+# echo $barcode
+# done
+
+
+
+#
+# for direction in Fw Rv; do
+#     for fasta in tmp1 tmp2; do
+#         #input=".tmp_/tmp_lalign.fa" &&
+#         input=.tmp_/${fasta}.fa
+#         output="${barcode}.png"
+#         #
+#         weblogo --title "${barcode}: ${direction} joint sequence" \
+#         --scale-width yes -n 100 --errorbars no -c classic --format pdf \
+#         < ${input} > hoge_${fasta}.pdf #results/figures/png/seqlogo/${output} &
+#     done
+# done #} 1>/dev/null 2>/dev/null
+#wait 1>/dev/null 2>/dev/null
+#
 
 # ======================================
 ## Positive control
 # ======================================
 #
-for direction in Fw Rv; do
-    i=0
-    true > .tmp_/seqlogo_postion_${direction}.fa
-    while [ $i -lt 100 ] ;do
-        cat ".tmp_/mutation_${direction}.fa" \
-        >> .tmp_/seqlogo_postion_${direction}.fa
-        i=$((i+1))
-    done
-done
-#
-for direction in Fw Rv; do
-    ## PNG
-    { weblogo \
-        --title "${direction} Expected Joint sequence" \
-        -n 50 \
-        --errorbars no -c classic \
-        --format png_print \
-        < .tmp_/seqlogo_postion_${direction}.fa \
-    > results/figures/png/seqlogo/Expected_${direction}.png & } \
-    1>/dev/null 2>/dev/null
-    ## SVG
-    { weblogo \
-        --title "${direction} Expected Joint sequence" \
-        -n 50 \
-        --errorbars no \
-        -c classic \
-        --format svg \
-        < .tmp_/seqlogo_postion_${direction}.fa \
-        > results/figures/svg/seqlogo/Expected_${direction}.svg & } \
-    1>/dev/null 2>/dev/null
-    wait 1>/dev/null 2>/dev/null
-done
+# for direction in Fw Rv; do
+#     i=0
+#     true > .tmp_/seqlogo_postion.fa
+#     while [ $i -lt 100 ] ;do
+#         cat ".tmp_/mutation.fa" \
+#         >> .tmp_/seqlogo_postion.fa
+#         i=$((i+1))
+#     done
+# done
+# #
+# for direction in Fw Rv; do
+#     ## PNG
+#     { weblogo \
+#         --title "${direction} Expected Joint sequence" \
+#         -n 50 \
+#         --errorbars no -c classic \
+#         --format png_print \
+#         < .tmp_/seqlogo_postion.fa \
+#     > results/figures/png/seqlogo/Expected.png & } \
+#     1>/dev/null 2>/dev/null
+#     ## SVG
+#     { weblogo \
+#         --title "${direction} Expected Joint sequence" \
+#         -n 50 \
+#         --errorbars no \
+#         -c classic \
+#         --format svg \
+#         < .tmp_/seqlogo_postion.fa \
+#         > results/figures/svg/seqlogo/Expected.svg & } \
+#     1>/dev/null 2>/dev/null
+#     wait 1>/dev/null 2>/dev/null
+# done
 
 exit 0

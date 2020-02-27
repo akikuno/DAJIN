@@ -1,8 +1,8 @@
 #!/bin/sh
 
-# ======================================
+# ============================================================================
 # Initialize shell environment
-# ======================================
+# ============================================================================
 
 set -eu
 umask 0022
@@ -14,9 +14,9 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 uname -a | grep Microsoft 1>/dev/null 2>/dev/null &&
 alias python="python.exe"
 
-# ======================================
+# ============================================================================
 # Define the functions for printing usage and error message
-# ======================================
+# ============================================================================
 
 print_usage_and_exit () {
 cat <<-USAGE 1>&2
@@ -59,9 +59,9 @@ warning() {
     ${1+:} false && echo "${0##*/}: $1" 1>&2
 }
 
-# ======================================
+# ============================================================================
 # Parse arguments
-# ======================================
+# ============================================================================
 
 [ $# -eq 0 ] && print_usage_and_exit; fi
 
@@ -118,9 +118,9 @@ if [ $(grep -i '>target' $fasta | wc -l) -ne 1 -a $(grep -i '>wt' $fasta | wc -l
 fi
 set -e
 
-# ======================================
+# ============================================================================
 # Prerequisit
-# ======================================
+# ============================================================================
 set +e
 type python 1>/dev/null 2>/dev/null
 if test "$?" -eq 1; then error_exit 1 'Please install Python'; fi
@@ -140,19 +140,17 @@ print(device_lib.list_local_devices())" \
 if test "$?" -eq 1; then error_exit 1 'GPU is not recognized'; fi
 set -e
 
-
-
-# ======================================
+# ============================================================================
 # Setting Directory
-# ======================================
+# ============================================================================
 
 dirs="fasta fasta_ont bam data_for_ml results .tmp_ results/figures/svg results/figures/png results/igvjs"
 rm -rf ${dirs} .tmp_/NanoSim
 mkdir -p ${dirs}
 
-# ======================================
+# ============================================================================
 # Format FASTA file
-# ======================================
+# ============================================================================
 
 # CRLF to LF
 cat ${fasta} |
@@ -199,9 +197,9 @@ if [ $(cat .tmp_/revcomp) -eq 1 ] ; then
     done
 fi
 
-# ======================================
+# ============================================================================
 # Format ONT reads into FASTA file
-# ======================================
+# ============================================================================
 # Check wheather the files are binary:
 set +e
 for input in ${ont}/* ; do
@@ -219,9 +217,9 @@ done
 set -e
 ont_ref=$(echo $ont_ref | sed -e "s#.*/#fasta_ont/#g" -e "s#\..*#.fa#g")
 
-# ======================================
+# ============================================================================
 # Setting NanoSim (v2.5.0)
-# ======================================
+# ============================================================================
 
 printf "
 +++++++++++++++++++++
@@ -261,22 +259,22 @@ rm -rf .tmp_/NanoSim \
 printf 'Success!!\nSimulation is finished\n'
 
 
-# ======================================
+# ============================================================================
 # Mapping by minimap2 for IGV visualization
-# ======================================
+# ============================================================================
 printf \
 "+++++++++++++++++++++
 Generate BAM files
 +++++++++++++++++++++\n"
 
-./DAJIN/src/igvjs.sh ${genome} ${threads:-1}
+./DAJIN/src/igvjs.sh ${genome:-mm10} ${threads:-1}
 
 printf "BAM files are saved at bam\n"
 printf "Next converting BAM to MIDS format...\n"
 
-# ======================================
+# ============================================================================
 # MIDS conversion
-# ======================================
+# ============================================================================
 printf \
 "++++++++++++
 Converting ACGT into MIDS format
@@ -361,9 +359,9 @@ gzip -c \
 
 printf "Finished.\n${output_file}.txt.gz is generated.\n"
 
-# ======================================
+# ============================================================================
 # Prediction
-# ======================================
+# ============================================================================
 
 mutation_type=$(
     minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
@@ -372,7 +370,7 @@ mutation_type=$(
     )
 
 printf "Start allele prediction...\n"
-# python DAJIN/src/allele_prediction.py data_for_ml/${output_file}.txt.gz
+#
 python DAJIN/src/anomaly_detection.py data_for_ml/${output_file}.txt.gz
 #
 if [ $(echo ${mutation_type}) -eq 1 ]; then
@@ -384,17 +382,18 @@ fi
 python DAJIN/src/prediction.py data_for_ml/${output_file}.txt.gz
 printf "Prediction was finished...\n"
 
-# ======================================
+# ============================================================================
 # Joint sequence logo in 2-cut Exon deletion
-# ======================================
+# ============================================================================
+
 if [ $(echo ${mutation_type}) -eq 1 ]; then
     printf "Check the intactness of a joint sequence of deletion...\n"
-    ./DAJIN/src/intact_2cutdeletion.sh ${threads}
+    ./DAJIN/src/intact_2cutdeletion.sh ${threads:-1}
 fi
 
-# ======================================
+# ============================================================================
 # KI sequence intactness
-# ======================================
+# ============================================================================
 reference=fasta/wt.fa
 query=fasta/target.fa
 
@@ -415,9 +414,9 @@ if [ $? -eq 0 ]; then
 fi
 set -e
 
-# ======================================
+# ============================================================================
 # Alignment viewing
-# ======================================
+# ============================================================================
 
 printf "Visualizing alignment reads...\n"
 printf "Browser will be launched. Click 'igvjs.html'.\n"

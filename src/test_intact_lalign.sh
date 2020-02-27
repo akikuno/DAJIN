@@ -5,7 +5,7 @@
 # grep ">7737" .tmp_/split/*
 
 mut_length=$(cat "${1}" | tail -n 1 | awk '{print length($0)}')
-file_name=$(echo "${2}" | sed "s#.*/##g")
+file_name=$(echo "${2}"_tmp)
 # lalign36 -m 3 .tmp_/mutation.fa .tmp_/split/split_zevq |
 lalign36 -m 3 "${1}" "${2}" |
 sed -n "/identity/,/^$/p" |
@@ -24,28 +24,28 @@ grep -v "^$" |
 sort -n |
 tail -n 1 |
 awk -v mut_len=${mut_length} 'length($NF)>mut_len-10' \
-> .tmp_/split/tmp_${file_name}
+> ${file_name}
 #
 # Reverse complement
 #
- [ ! -s .tmp_/split/tmp_${file_name} ] && exit 1
+ [ ! -s ${file_name} ] && exit 1
 
-start=$(cat .tmp_/split/tmp_${file_name} | cut -d " " -f 2)
-end=$(cat .tmp_/split/tmp_${file_name} | cut -d " " -f 3)
-seq=$(cat .tmp_/split/tmp_${file_name} | awk '{print $NF}')
-query=".tmp_/split/tmp_${file_name}"
+start=$(cat ${file_name} | cut -d " " -f 2)
+end=$(cat ${file_name} | cut -d " " -f 3)
+seq=$(cat ${file_name} | awk '{print $NF}')
+query="${file_name}"
 
 if [ "$start" -gt "$end" ]; then
-    cat .tmp_/split/tmp_${file_name} | awk '{print $NF}' \
-    > .tmp_/split/tmp_${file_name}_seq
+    cat ${file_name} | awk '{print $NF}' \
+    > ${file_name}_seq
     #
-    revseq=$(./DAJIN/src/revcomp.sh .tmp_/split/tmp_${file_name}_seq)
+    revseq=$(./DAJIN/src/revcomp.sh ${file_name}_seq)
     #
-    cat .tmp_/split/tmp_${file_name} | sed "s/${seq}/${revseq}/g" |
+    cat ${file_name} | sed "s/${seq}/${revseq}/g" |
     awk -v s=${start} -v e=${end} '{$2=e;$3=s; print}' \
-    > .tmp_/split/tmp_${file_name}_rev
+    > ${file_name}_rev
     #
-    query=".tmp_/split/tmp_${file_name}_rev"
+    query="${file_name}_rev"
 fi
 #
 cat ${query} |
