@@ -10,20 +10,20 @@ printf "${barcode} is now processing...\n"
 #
 # ----------------------------------------
 input="bam/${barcode}.bam"
-output=".tmp_/mutsite_split_${barcode}"
+output=".tmp_/mutation_locus_${barcode}"
 # ----------------------------------------
 samtools view ${input} |
 sort |
-join -1 1 - -2 2 .tmp_/sorted_prediction_result | #* Num of target reads
-awk '$2==0 || $2==16' | #* Num of primary reads
+join -1 1 - -2 2 .tmp_/sorted_prediction_result |
+awk '$2==0 || $2==16' |
 awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i,$10}' |
 # Remove deletion
 sed "s/\([-|+|=|*]\)/ \1/g" |
 awk '{seq="";
     for(i=1; i<=NF-1;i++) if($i !~ /-/) seq=seq$i
     print seq, $NF}' |
-awk '{
-    match($1, "~"); seq=substr($1,RSTART-50,50)
+# Extract joint sequence
+awk '{match($1, "~"); seq=substr($1,RSTART-50,50)
     gsub("[-|+|=]", "", seq)
     gsub("*[a-z]", "", seq)
     seq=toupper(seq)
@@ -42,7 +42,7 @@ output=".tmp_/split_${barcode}"
 rm -rf ${output} 2>/dev/null
 mkdir -p ${output}
 split -l 2 ${input} ${output}"/split_"
-# ----------------------------------------
+# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 #
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Align reads to joint sequence
@@ -51,12 +51,11 @@ split -l 2 ${input} ${output}"/split_"
 input=".tmp_/split_${barcode}"
 output=".tmp_/tmp_lalign_${barcode}"
 # ----------------------------------------
-true > ${output}
-for file in $(find ${input}/ -name split_* -type f); do
-    ./DAJIN/src/test_intact_lalign.sh \
-    .tmp_/mutation.fa ${file} \
-    >> ${output}
-done
+#
+find ${input}/ -name split_* -type f |
+xargs -I @ ./DAJIN/src/test_intact_lalign.sh \
+    .tmp_/mutation.fa @ > ${output}
+#
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 #
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -118,6 +117,8 @@ sed "s/\t/\n/g" |
 grep -v "^$" \
 > ${output_nonintact}
 #
+# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Report read alignment and ratio of intact/nonintact
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -127,20 +128,13 @@ output_intact_ratio=".tmp_/numseq_intact_${barcode}"
 # ----------------------------------------
 true > ${output_alignment}
 true > ${output_intact_ratio}
-
+#
 cat ".tmp_/mutsite_split_${barcode}" | grep -v "^>" | wc -l >> ${output_alignment}
 cat ".tmp_/tmp_lalign_${barcode}" | grep -v "^>" | wc -l >> ${output_alignment}
 cat ${output_intact} | grep -v "^>" | wc -l >> ${output_intact_ratio}
 cat ${output_nonintact} | grep -v "^>" | wc -l >> ${output_intact_ratio}
-
-# #numseq_original=$(cat ".tmp_/mutsite_split_${barcode}" | grep -v "^>" | wc -l)
-# #numseq_lalign=$(cat ".tmp_/tmp_lalign_${barcode}" | wc -l)
-# # ----------------------------------------
-# numseq_intact=$(cat ${output_intact} | grep -v "^>" | wc -l)
-# numseq_nonintact=$(cat ${output_nonintact} | grep -v "^>" | wc -l)
-
-# cat ${numseq_original} ${numseq_lalign}
-# ${numseq_intact} ${numseq_nonintact}
+#
+# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 #
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Report sequence logo
@@ -153,3 +147,5 @@ arg4=${output_alignment}
 arg5=${output_intact_ratio}
 # ----------------------------------------
 python DAJIN/src/test_logomaker.py ${arg1} ${arg2} ${arg3} ${arg4} ${arg5}
+
+exit 0

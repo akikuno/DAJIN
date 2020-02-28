@@ -1,8 +1,4 @@
 #!/bin/sh
-# TGATGCTCGGC ref >2655 zczc >4703 zfzw
-# TGATGCTCGGT mut >249 jo >5147 zgqy
-# grep ">8546" .tmp_/split/*
-# grep ">7737" .tmp_/split/*
 
 mut_length=$(cat "${1}" | tail -n 1 | awk '{print length($0)}')
 file_name=$(echo "${2}"_tmp)
@@ -52,7 +48,7 @@ cat ${query} |
 awk -v mut_len=${mut_length} '{
     score=$1
     start=$2-1
-    ## design end with gap consideration
+    ## design end with gap consideration ----
     match($5,"-+")
     if(RLENGTH != -1) end=mut_len-$3-RLENGTH
     else end=mut_len-$3
@@ -63,3 +59,5 @@ awk -v mut_len=${mut_length} '{
     #print s_seq, e_seq
     print $1,$6,s_seq""$NF""e_seq
 }'
+
+exit 0
