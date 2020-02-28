@@ -17,10 +17,10 @@ alignment = pd.read_csv(args[4], sep="\t", header=None)
 intact_ratio = pd.read_csv(args[5], sep="\t", header=None)
 #
 alignment = alignment.T
-alignment.columns = ["all", "align"]
-alignment["non-align"] = alignment["all"] - alignment["align"]
-alignment["per_align"] = alignment["align"]/alignment["all"]*100
-alignment["per_non-align"] = alignment["non-align"]/alignment["all"]*100
+alignment.columns = ["all", "aligned"]
+alignment["non-aligned"] = alignment["all"] - alignment["aligned"]
+alignment["per_align"] = alignment["aligned"]/alignment["all"]*100
+alignment["per_non-align"] = alignment["non-aligned"]/alignment["all"]*100
 #
 intact_ratio = intact_ratio.T
 intact_ratio.columns = ["intact", "non-intact"]
@@ -48,10 +48,10 @@ output_figname = re.sub(".fa", "", output_figname)
 #                            sep="\t", header=None, names=[""])
 # #
 # alignment = alignment.T
-# alignment.columns = ["all", "align"]
-# alignment["non-align"] = alignment["all"] - alignment["align"]
-# alignment["per_align"] = alignment["align"]/alignment["all"]*100
-# alignment["per_non-align"] = alignment["non-align"]/alignment["all"]*100
+# alignment.columns = ["all", "aligned"]
+# alignment["non-aligned"] = alignment["all"] - alignment["aligned"]
+# alignment["per_align"] = alignment["aligned"]/alignment["all"]*100
+# alignment["per_non-align"] = alignment["non-aligned"]/alignment["all"]*100
 
 # intact_ratio = intact_ratio.T
 # intact_ratio.columns = ["intact", "non-intact"]
@@ -116,8 +116,8 @@ ax5 = fig.add_subplot(gs_3_4_5[2, :])
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 fig.suptitle(output_figname, fontsize=35)
-ax1.set_ylabel("Read counts", fontsize=20)
-ax2.set_ylabel("Read counts", fontsize=20)
+ax1.set_ylabel("The number of reads", fontsize=20)
+ax2.set_ylabel("The number of reads", fontsize=20)
 ax3.set_title("Expected joint sequence")
 ax4.set_title("Probable intact sequence")
 ax4.set_ylabel("Counts", fontsize=20)
@@ -128,7 +128,7 @@ ax5.set_xlabel("Position", fontsize=20)
 # Create figures
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Stacked plot
-alignment[["align", "non-align"]].plot.bar(
+alignment[["aligned", "non-aligned"]].plot.bar(
     stacked=False, ax=ax1,
     color=["darkorange", "steelblue"]).legend(
     bbox_to_anchor=(0.5, -0.2), loc="lower center", framealpha=1)
