@@ -2,12 +2,11 @@
 
 barcode=${1}
 [ -z "${barcode}" ] && exit 1
-printf "${barcode} is now processing...\n"
+# printf "${barcode} is now processing...\n"
+
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Extract 200 bp where includes joint sequence
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-#
-#
 # ----------------------------------------
 input="bam/${barcode}.bam"
 output=".tmp_/mutation_locus_${barcode}"
@@ -120,7 +119,7 @@ grep -v "^$" \
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 #
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# Report read alignment and ratio of intact/nonintact
+# Output read alignment and ratio of intact/nonintact
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # ----------------------------------------
 output_alignment=".tmp_/numseq_alignment_${barcode}"
@@ -137,7 +136,7 @@ cat ${output_nonintact} | grep -v "^>" | wc -l >> ${output_intact_ratio}
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 #
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# Report sequence logo
+# Report the results of Sequence logo
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # ----------------------------------------
 arg1=".tmp_/mutation.fa"

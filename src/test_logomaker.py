@@ -34,12 +34,10 @@ output_figname = re.sub(r".*_intact_", "", args[2])
 output_figname = re.sub(".fa", "", output_figname)
 
 # TEST =====================================
-# TEST =====================================
-# barcode = "barcode04"  # ! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
+# barcode = "barcode02"
 # fasta_expected = pd.read_csv(".tmp_/mutation.fa", sep="\t", header=None)
 # fasta_intact = pd.read_csv(
-#     f".tmp_/lalign_nonintact_{barcode}.fa", sep="\t", header=None)
+#     f".tmp_/lalign_intact_{barcode}.fa", sep="\t", header=None)
 # fasta_nonintact = pd.read_csv(
 #     f".tmp_/lalign_nonintact_{barcode}.fa", sep="\t", header=None)
 # alignment = pd.read_csv(f".tmp_/numseq_alignment_{barcode}",
@@ -61,6 +59,39 @@ output_figname = re.sub(".fa", "", output_figname)
 
 # output_figname = re.sub(r".*_intact_", "", f".tmp_/lalign_intact_{barcode}.fa")
 # output_figname = re.sub(".fa", "", output_figname)
+# TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+# TEST =====================================
+barcode = "barcode02"
+site = "right"
+fasta_expected = pd.read_csv(
+    f".tmp_/cutting_sites_{site}.fa", sep="\t", header=None)
+fasta_intact = pd.read_csv(
+    f".tmp_/lalign_intact_{barcode}_{site}.fa", sep="\t", header=None)
+fasta_nonintact = pd.read_csv(
+    f".tmp_/lalign_nonintact_{barcode}_{site}.fa", sep="\t", header=None)
+alignment = pd.read_csv(f".tmp_/numseq_alignment_{barcode}_{site}",
+                        sep="\t", header=None, names=[""])
+intact_ratio = pd.read_csv(f".tmp_/numseq_intact_{barcode}_{site}",
+                           sep="\t", header=None, names=[""])
+#
+alignment = alignment.T
+alignment.columns = ["all", "aligned"]
+alignment["non-aligned"] = alignment["all"] - alignment["aligned"]
+alignment["per_align"] = alignment["aligned"]/alignment["all"]*100
+alignment["per_non-align"] = alignment["non-aligned"]/alignment["all"]*100
+
+intact_ratio = intact_ratio.T
+intact_ratio.columns = ["intact", "non-intact"]
+intact_all = intact_ratio["intact"] + intact_ratio["non-intact"]
+intact_ratio["per_intact"] = intact_ratio["intact"]/intact_all*100
+intact_ratio["per_non-intact"] = intact_ratio["non-intact"]/intact_all*100
+
+output_figname = re.sub(
+    r".*_intact_", "", f".tmp_/lalign_intact_{barcode}_{site}.fa")
+output_figname = re.sub(".fa", "", output_figname)
+title_figname = re.sub(
+    r"_", " ", output_figname)
 # TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 # TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -115,10 +146,10 @@ ax5 = fig.add_subplot(gs_3_4_5[2, :])
 # Title, labels
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-fig.suptitle(output_figname, fontsize=35)
+fig.suptitle(title_figname, fontsize=35)
 ax1.set_ylabel("The number of reads", fontsize=20)
 ax2.set_ylabel("The number of reads", fontsize=20)
-ax3.set_title("Expected joint sequence")
+ax3.set_title("Expected sequence")
 ax4.set_title("Probable intact sequence")
 ax4.set_ylabel("Counts", fontsize=20)
 ax5.set_title("Probable non-intact sequence")
