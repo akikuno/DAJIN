@@ -250,7 +250,7 @@ for input in $(ls fasta/* | grep -v igv); do
         -rg $input -n 3000 -t ${threads:-1} \
         -min ${len} \
         -o ${output}_simulated
-    rm fasta_ont/*_error_* # fasta_ont/*_unaligned_*
+    rm fasta_ont/*_error_* fasta_ont/*_unaligned_* 2>/dev/null
 done
 
 rm -rf .tmp_/NanoSim \
