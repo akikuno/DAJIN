@@ -57,11 +57,11 @@ cat .tmp_/cutting_sites | tail -n 1 | awk '{print ">right" "\n" $2}' > .tmp_/cut
 # ============================================================================
 
 cat .tmp_/prediction_barcodelist | sed "s/@@@//g" |
-awk '{print "./DAJIN/src/test_seqlogo.sh",$0, "&"}' |
+awk '{print "./DAJIN/src/test_wt_seqlogo.sh",$0, "&"}' |
 awk -v th=${threads:-1} '{
     if (NR%th==0) gsub("&","&\nwait",$0)
     print}' |
 sed -e "$ a wait" |
-sh -E -
+sh -
 
 exit 0

@@ -9,7 +9,8 @@ barcode=${1}
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # ----------------------------------------
 input="bam/${barcode}.bam"
-output=".tmp_/mutation_locus_${barcode}"
+# output=".tmp_/mutation_locus_${barcode}"
+output=".tmp_/mutsite_split_${barcode}"
 # ----------------------------------------
 samtools view ${input} |
 sort |

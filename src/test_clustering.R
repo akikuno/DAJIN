@@ -11,30 +11,29 @@ pacman::p_load(tidyverse, dbscan)
 # Import data
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-df_cont <- read_csv("test_cont.csv", col_names = F)
-df <- read_csv("test.csv", col_names = F)
-label <- read_tsv("test_labels.txt", col_names = c("id", "label"))
+df_ref <- read_csv("test_cont.csv", col_names = F)
+df_que <- read_csv("test.csv", col_names = F)
+df_label <- read_tsv("test_labels.txt", col_names = c("id", "label"))
 
-df_cont <- t(df_cont)
-df <- t(df)
+df_ref <- t(df_ref)
+df_que <- t(df_que)
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # PCA
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-data <- data.frame(df) %>% bind_cols(label = label$id)
-# data <- data[, colSums(data %>% select(-label)) > 0]
+input_ <- df_que
+output_ <- "pca_res_reduction"
+# //////////////////////////////////////////////////////////
 
-tmp <- data %>%
-  select(-label) %>%
-  as.matrix()
-# which(apply(tmp, 2, var) == 0)
-# which(apply(tmp, 2, sum) == 0)
-pca_res <- prcomp(tmp, scale. = F)
-pca_res_reduction <- pca_res$x[, 1:5]
+pca_res <- prcomp(input_, scale. = F)
+assign(output_, pca_res$x[, 1:10])
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # HDBSCAN
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+input_ <- pca_res_reduction
+output_ <- "cl$cluster"
+# //////////////////////////////////////////////////////////
 cl_nums <- c()
 i <- 1
 for (cl_num in seq(2, 500, by = 25)) {
@@ -49,51 +48,57 @@ cl_nums %>% table()
 cl_num_opt <- cl_nums %>%
   table() %>%
   which.max() %>%
-  names()
+  names() #
 cl_num_opt <- which(cl_nums == cl_num_opt) %>% min()
 cl_num_opt
 cl_num_opt <- seq(2, 500, by = 25)[cl_num_opt]
 cl <- hdbscan(pca_res_reduction, minPts = cl_num_opt)
 cl$cluster %>% table()
 
+
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Extract feature nucleotide position
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+input_df <- df
+input_cont <- df_ref
+output_df <- NULL
+# //////////////////////////////////////////////////////////
+
 zero_to_one <- function(x) (x - min(x)) / (max(x) - min(x))
 
-df_cont_norm <- df_cont %>%
+df_ref_norm <- input_cont %>%
   as_tibble() %>%
   summarise_all(sum) %>%
   zero_to_one()
 #
-df_sum_before <- tibble(loc = c(1:ncol(df_cont)), cluster = "cont", score = t(df_cont_norm[1, ]))
+# df_sum_before <- tibble(loc = seq_len(ncol(df_ref)), cluster = "cont", score = t(df_ref_norm[1, ]))
 
-# data <- data %>% bind_cols(cluster = cl$cluster + 1)
-for (i in unique(cl$cluster + 1)) {
-  tmp <- data[cl$cluster + 1 == i, ] %>%
-    select(-label) %>%
-    colSums() %>%
-    zero_to_one()
-  #
-  tmp_df <- tibble(loc = c(1:ncol(df_cont)), cluster = sprintf("cluster%d", i), score = tmp)
-  df_sum_before <- df_sum_before %>% bind_rows(tmp_df)
-}
-df_sum_before <- df_sum_before %>% mutate(size = ifelse(cluster == "cont", 5, 1))
-g1 <- ggplot(df_sum_before, aes(x = loc, y = score)) +
-  geom_point(aes(color = cluster, size = size))
-g1
+# # data <- data %>% bind_cols(cluster = cl$cluster + 1)
+# for (i in unique(cl$cluster + 1)) {
+#   tmp <- data[cl$cluster + 1 == i, ] %>%
+#     select(-label) %>%
+#     colSums() %>%
+#     zero_to_one()
+#   #
+#   tmp_df <- tibble(loc = seq_len(ncol(df_ref)), cluster = sprintf("allele%d", i), score = tmp)
+#   df_sum_before <- df_sum_before %>% bind_rows(tmp_df)
+# }
+
+# df_sum_before <- df_sum_before %>% mutate(size = ifelse(cluster == "cont", 5, 1))
+# g1 <- ggplot(df_sum_before, aes(x = loc, y = score)) +
+#   geom_point(aes(color = cluster, size = size))
+# g1
 
 # subtract from control ------------------------------------
-df_sum_after <- tibble(loc = c(1:ncol(df_cont)), cluster = "cont", score = t(df_cont_norm[1, ]))
+df_sum_after <- tibble(loc = seq_len(ncol(df_ref)), cluster = "cont", score = t(df_ref_norm[1, ]))
 for (i in unique(cl$cluster + 1)) {
-  tmp <- data[cl$cluster + 1 == i, ] %>%
-    select(-label) %>%
+  tmp <- df[cl$cluster + 1 == i, ] %>%
     colSums() %>%
     zero_to_one()
   #
-  tmp <- tmp - df_cont_norm
+  tmp <- tmp - df_ref_norm
   tmp[tmp < 0] <- 0
-  tmp_df <- tibble(loc = c(1:ncol(df_cont)), cluster = sprintf("cl%d", i), score = t(tmp[1, ]))
+  tmp_df <- tibble(loc = seq_len(ncol(df_ref)), cluster = sprintf("allele%d", i), score = t(tmp[1, ]))
   df_sum_after <- df_sum_after %>% bind_rows(tmp_df)
 }
 
@@ -106,51 +111,94 @@ df_sum_after <- df_sum_after %>% mutate(size = ifelse(cluster == "cont", 3, 2))
 #   geom_point(aes(color = cluster, size = size))
 # g3
 
-
 # df_sum_before %>% filter(loc == 549)
 # df_sum_after %>% filter(loc == 549)
 
-df_cont_blacklist <- df_sum_after %>%
+df_ref_blacklist <- df_sum_after %>%
   filter(cluster == "cont") %>%
   filter(score > quantile(score, 0.99))
 
-df_filtered <- df_sum_after %>%
-  group_by(cluster) %>%
-  filter(score > quantile(score, 0.99)) %>%
-  filter(!(loc %in% df_cont_blacklist$loc))
+output_df <- df_sum_after %>%
+  # group_by(cluster) %>%
+  # filter(score > quantile(score, 0.99)) %>%
+  filter(!(loc %in% df_ref_blacklist$loc))
 
 # df_c2 <- df_sum_after %>%
 #   filter(cluster == "cluster2") %>%
 #   filter(score > quantile(score, 0.99)) %>%
-#   filter(!(loc %in% df_cont_blacklist$loc))
+#   filter(!(loc %in% df_ref_blacklist$loc))
 # plot(df_c2$score)
 
 # df_c3 <- df_sum_after %>%
 #   filter(cluster == "cluster3") %>%
 #   filter(score > quantile(score, 0.99)) %>%
-#   filter(!(loc %in% df_cont_blacklist$loc))
+#   filter(!(loc %in% df_ref_blacklist$loc))
 # plot(df_c3$score)
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# Cosine similarity to merge similar clusters
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+input_ <- output_df
+output_df <- NULL
+output_cl <- sprintf("allele%d", cl$cluster + 1)
+# //////////////////////////////////////////////////////////
+cosine_sim <- function(a, b) crossprod(a, b) / sqrt(crossprod(a) * crossprod(b))
+
+cluster <- input_ %>%
+  filter(cluster != "cont") %>%
+  group_by(cluster) %>%
+  count() %>%
+  select(cluster)
+
+if (nrow(cluster) > 1) {
+  cl_combn <- combn(cluster$cluster, nrow(cluster) - 1)
+  df_cossim <- NULL
+  for (i in seq_len(ncol(cl_combn))) {
+    df_1 <- input_ %>%
+      filter(cluster == cl_combn[1, i]) %>%
+      select(score)
+    #
+    df_2 <- input_ %>%
+      filter(cluster == cl_combn[2, i]) %>%
+      select(score)
+    #
+    df_ <- tibble(one = cl_combn[1, i], two = cl_combn[2, i], score = cosine_sim(df_1$score, df_2$score))
+    df_cossim <- bind_rows(df_cossim, df_)
+  }
+  df_cossim <- df_cossim %>% filter(score > 0.9)
+  #
+  for (i in seq_len(nrow(df_cossim))) {
+    pattern_ <- df_cossim[i, ]$two
+    query_ <- df_cossim[i, ]$one
+    input_$cluster <- input_$cluster %>% str_replace(pattern_, query_)
+    output_cl <- output_cl %>% str_replace(pattern_, query_)
+  }
+}
+
+output_df <- input_ %>%
+  filter(cluster != "cont") %>%
+  group_by(cluster) %>%
+  filter(score > quantile(score, 0.99)) %>%
+  filter(!(loc %in% df_ref_blacklist$loc)) %>%
+  select(loc, cluster) %>%
+  distinct(loc) %>%
+  arrange(cluster)
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Output results
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-g <- ggplot(
-  data = as.data.frame(pca_res_reduction[, c(1, 2)]),
-  aes(
-    x = PC1, y = PC2,
-    color = factor(cl$cluster + 1)
-  )
-) +
-  geom_point(size = 3) +
-  theme_bw(base_size = 20) +
-  theme(legend.position = "none")
-
-ggsave(plot = g, filename = "test.png", width = 10, height = 8)
+# g <- ggplot(
+#   data = as.data.frame(pca_res_reduction[, c(1, 2)]),
+#   aes(
+#     x = PC1, y = PC2,
+#     color = factor(cl$cluster + 1)
+#   )
+# ) +
+#   geom_point(size = 3) +
+#   theme_bw(base_size = 20) +
+#   theme(legend.position = "none")
+# ggsave(plot = g, filename = "test.png", width = 10, height = 8)
 #
-result <- df_filtered %>%
-  select(loc, cluster) %>%
-  arrange(cluster)
-write_tsv(result, "test_position.txt", col_names = F)
+write_tsv(output_df, "test_position.txt", col_names = F)
 #
-result <- tibble(read_id = label$id, sprintf("cl%d", cl$cluster + 1)) %>% arrange(read_id)
+result <- tibble(read_id = label$id, output_cl)
 write_tsv(result, "test_result.txt", col_names = F)
