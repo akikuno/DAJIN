@@ -46,20 +46,20 @@ awk 'BEGIN{OFS="\t"}{
     gsub("[0-9]*H","",cigar);
     gsub("M|D|I|N","\t",cigar);
     gsub("+$","",cigar);
-print $1, $4, cigar}' |
+    print $1, $4, cigar}' |
 awk '{sum=0; for(i=3; i<=NF; i++){ sum+=$i }; print $1,$2,$2+sum}' |
 sort -t " " -n |
 awk '{if(length(min[$1])==0) min[$1]="inf";
     if(min[$1]>$2) min[$1]=$2;
     if(max[$1]<$3) max[$1]=$3}
-END{for(key in min) print key, min[key], max[key]}' |
+    END{for(key in min) print key, min[key], max[key]}' |
 sort -t " " -n |
 awk -v first=${first_flank} -v second=${second_flank} '{
-if($2<=first && $3>=second) print $1}' |
+    if($2<=first && $3>=second) print $1}' |
 sort > .tmp_/tmp_sequenceID
 #
 cat ${1} |
-# cat .tmp_/wt_simulated | #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# cat .tmp_/wt_simulated |
 sort |
 join - .tmp_/tmp_sequenceID |
 # append alignment info
@@ -138,3 +138,5 @@ awk -v reflen=${reflength} '{
     else {for(i=seqlen; i < reflen; i++) end=end"="; print $1,$3""end}
 }' |
 sed -e "s/$/\t${label}/g" -e "s/ /\t/g"
+
+exit 0

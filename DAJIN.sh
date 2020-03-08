@@ -123,21 +123,21 @@ set -e
 # ============================================================================
 set +e
 type python 1>/dev/null 2>/dev/null
-if test "$?" -eq 1; then error_exit 1 'Please install Python'; fi
+[ "$?" -eq 1 ] && error_exit 1 'Please install Python'
 type git 1>/dev/null 2>/dev/null
-if test "$?" -eq 1; then error_exit 1 'Please install git'; fi
+[ "$?" -eq 1 ] && error_exit 1 'Please install git'
 type samtools 1>/dev/null 2>/dev/null
-if test "$?" -eq 1; then error_exit 1 'Please install samtools'; fi
+[ "$?" -eq 1 ] &&  error_exit 1 'Please install samtools'
 type minimap2 1>/dev/null 2>/dev/null
-if test "$?" -eq 1; then error_exit 1 'Please install minimap2'; fi
+[ "$?" -eq 1 ] &&  error_exit 1 'Please install minimap2'
 type bgzip 1>/dev/null 2>/dev/null
-if test "$?" -eq 1; then error_exit 1 'Please install bgzip'; fi
+[ "$?" -eq 1 ] && error_exit 1 'Please install bgzip'
 #
 python -c \
 "from tensorflow.python.client import device_lib;
 print(device_lib.list_local_devices())" \
 1>/dev/null 2>/dev/null
-if test "$?" -eq 1; then error_exit 1 'GPU is not recognized'; fi
+[ "$?" -eq 1 ] &&  error_exit 1 'GPU is not recognized'
 set -e
 
 # ============================================================================
@@ -154,10 +154,10 @@ mkdir -p ${dirs}
 
 # CRLF to LF
 cat ${fasta} |
-sed -e "s/\r$//" |
+tr -d "\r" |
 grep -v "^$" \
 > .tmp_/fasta.fa
-fasta=.tmp_/fasta.fa
+fasta=".tmp_/fasta.fa"
 
 # Separate multiple-FASTA into FASTA files
 cat ${fasta} |
@@ -176,24 +176,25 @@ cp fasta/target.fa .tmp_/
 # right flanking than left flanking,   reverse complementにする。
 # convert a sequence into its reverse-complement
 
-ref_seqlength=$(cat .tmp_/wt.fa | sed 1d | awk '{print length($0)}')
-minimap2 -ax splice .tmp_/wt.fa .tmp_/target.fa --cs 2>/dev/null |
+ref_seqlength=$(cat .tmp_/wt.fa | awk '!/[>|@]/ {print length($0)}')
+
+conv_revcomp=$(minimap2 -ax splice .tmp_/wt.fa .tmp_/target.fa --cs 2>/dev/null |
 awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
 sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
 tr -d "\~\*\-\+atgc" |
 awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
 awk -v ref_seqlength="$ref_seqlength" \
-'{if(ref_seqlength-$2>$1) print 0; else print 1}' \
-> .tmp_/revcomp
+'{if(ref_seqlength-$2>$1) print 0; else print 1}')
 
-if [ $(cat .tmp_/revcomp) -eq 1 ] ; then
+if [ $(echo "$conv_revcomp") -eq 1 ] ; then
     ./DAJIN/src/revcomp.sh "${fasta}" \
-    > .tmp_/fasta_revcomp.fa && fasta=".tmp_/fasta_revcomp.fa"
+    > .tmp_/fasta_revcomp.fa &&
+    fasta=".tmp_/fasta_revcomp.fa"
     #
     cat ${fasta} | sed "s/^/@/g" | tr -d "\n" | sed -e "s/@>/\n>/g" -e "s/$/\n/g" | grep -v "^$" |
     while read input; do
-        output=$(echo $input | sed -e "s/@.*//g" -e "s#>#fasta/#g" -e "s/$/.fa/g")
-        echo $input | sed "s/@/\n/g" > $output
+        output=$(echo "${input}" | sed -e "s/@.*//g" -e "s#>#fasta/#g" -e "s/$/.fa/g")
+        echo "${input}" | sed "s/@/\n/g" > $output
     done
 fi
 
@@ -203,19 +204,24 @@ fi
 # Check wheather the files are binary:
 set +e
 for input in ${ont}/* ; do
-    output=$(echo $input | sed -e "s#.*/#fasta_ont/#g" -e "s#\..*#.fa#g")
+    output=$(echo ${input} | sed -e "s#.*/#fasta_ont/#g" -e "s#\..*#.fa#g")
     printf "${output} is now generating...\n"
     #
     if [ $(file ${input} | grep compressed | wc -l) -eq 1 ]; then
         cat ${input} | bgzip -dc |
-        awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' > .tmp_/tmp_$$
+        awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' \
+        > .tmp_/tmp_$$
     else
-        cat ${input} | awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' > .tmp_/tmp_$$
+        cat ${input} |
+        awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' \
+        > .tmp_/tmp_$$
     fi
     mv .tmp_/tmp_$$ ${output}
 done
 set -e
-ont_ref=$(echo $ont_ref | sed -e "s#.*/#fasta_ont/#g" -e "s#\..*#.fa#g")
+#
+ont_ref=$(echo ${ont_ref} |
+    sed -e "s#.*/#fasta_ont/#g" -e "s#\..*#.fa#g")
 
 # ============================================================================
 # Setting NanoSim (v2.5.0)
@@ -233,16 +239,16 @@ printf "Read analysis...\n"
     -t ${threads:-1} \
     -o .tmp_/NanoSim/training
 
-ref_seqlength=$(cat fasta/wt.fa | sed 1d | awk '{print length($0)}')
-for input in $(ls fasta/* | grep -v igv); do
+ref_seqlength=$(cat fasta/wt.fa | awk '!/[>|@]/ {print length($0)}')
+for input in fasta/*; do
     printf "${input} is now simulating...\n"
     output=$(echo $input | sed -e "s#fasta/#fasta_ont/#g" -e "s/.fasta$//g" -e "s/.fa$//g")
-    input_seqlength=$(cat $input | sed 1d | awk '{print length($0)-100}')
+    input_seqlength=$(cat ${input} | sed 1d | awk '{print length($0)-100}')
     ## For deletion allele
-    if [ $input_seqlength -lt $ref_seqlength ]; then
-        len=$input_seqlength
+    if [ "$input_seqlength" -lt "$ref_seqlength" ]; then
+        len=${input_seqlength}
     else
-        len=$ref_seqlength
+        len=${ref_seqlength}
     fi
     ##
     ./DAJIN/utils/NanoSim/src/simulator.py genome \
@@ -250,6 +256,7 @@ for input in $(ls fasta/* | grep -v igv); do
         -rg $input -n 3000 -t ${threads:-1} \
         -min ${len} \
         -o ${output}_simulated
+    ##
     rm fasta_ont/*_error_* fasta_ont/*_unaligned_* 2>/dev/null
 done
 
@@ -290,14 +297,14 @@ tr -d "\~\*\-\+atgc" |
 awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' \
 > .tmp_/mutation_points
 
-true > data_for_ml/${output_file:=sequence_MIDS}.txt
+true > data_for_ml/${output_file:=DAJIN}.txt
 
-for input in ./fasta_ont/*; do
+for input in fasta_ont/*; do
     output=$(echo ${input} | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
     ref=$(cat ${reference} | grep "^>" | sed "s/>//g")
     #
     minimap2 -t ${threads:-1} --cs=long -ax splice ${reference} ${input} 2>/dev/null |
-    awk '$3 == "wt"' \
+    awk -v ref=${ref} '$3 == ref' \
     > .tmp_/${output}
     #
     ./DAJIN/src/mids_convertion.sh .tmp_/${output} ${ref} \
@@ -309,79 +316,35 @@ done
 cat data_for_ml/${output_file}.txt |
 awk 'BEGIN{OFS="\t"}{print $3,$2,$1}' |
 sort -k 3,3 |
-gzip -c \
+bgzip -f -c \
 > data_for_ml/${output_file}.txt.gz
-
-# for input in ./fasta_ont/*; do
-#     output=$(echo ${input} | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
-#     echo ${output}
-#     for reference in $(ls fasta/* | grep -v "fasta/[0-9]"); do
-#         ref=$(cat ${reference} | grep "^>" | sed "s/>//g")
-#         true > .tmp_/${output_file:sequence_MIDS}_${ref}
-#         #
-#         minimap2 -t ${threads:-1} --cs=long -ax splice ${reference} ${input} 2>/dev/null |
-#         awk -v ref=${ref} '$3 == ref' \
-#         > .tmp_/${output}
-#         #
-#         ./DAJIN/src/mids_convertion.sh .tmp_/${output} ${ref} |
-#         sort \
-#         >> .tmp_/${output_file}_${ref}
-#         #
-#         rm .tmp_/${output}
-#     done
-#     #
-#     find .tmp_/${output_file}_* |
-#     sed "s/^/ /g" |
-#     tr -d "\n" |
-#     awk -v out=${output_file} \
-#     '{
-#         join="join "
-#         for (i=1;i<NF;i++) {
-#             out= "> tmp && mv tmp "out_$(i+1)
-#             print join" "$i" "$(i+1), out
-#         }
-#         print "cat "$i
-#     }' |
-#     sh -E - |
-#     awk '{seq=""
-#         for(i=2;i<=NF;i++) if( i%2==0  ) seq=seq$i
-#         print $3,seq,$1}' \
-#     >> data_for_ml/${output_file:=sequence_MIDS}.txt
-#     #
-#     rm .tmp_/${output_file}_*
-# done
-
-# cat data_for_ml/${output_file}.txt |
-# sed "s/ /\t/g" |
-# sort -k 3,3 |
-# gzip -c \
-# > data_for_ml/${output_file}.txt.gz
 
 printf "Finished.\n${output_file}.txt.gz is generated.\n"
 
 # ============================================================================
 # Prediction
 # ============================================================================
-
-mutation_type=$(
-    minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
-    awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-    grep "~" | wc -l
-    )
-
 printf "Start allele prediction...\n"
 #
 python DAJIN/src/anomaly_detection.py data_for_ml/${output_file}.txt.gz
 #
-if [ $(echo ${mutation_type}) -eq 1 ]; then
-    ./DAJIN/src/anomaly_exondeletion.sh ${genome} ${threads}
-    else \
-    cp .tmp_/anomaly_classification.txt .tmp_/anomaly_classification_revised.txt
-fi
+# mutation_type=$(
+#     minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
+#     awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
+#     grep "~" | wc -l)
+#
+# if [ $(echo ${mutation_type}) -eq 1 ]; then
+#     ./DAJIN/src/anomaly_exondeletion.sh ${genome} ${threads}
+# else
+#     cp .tmp_/anomaly_classification.txt .tmp_/anomaly_classification_revised.txt
+# fi
+#
+cp .tmp_/anomaly_classification.txt .tmp_/anomaly_classification_revised.txt
 #
 python DAJIN/src/prediction.py data_for_ml/${output_file}.txt.gz
+#
 printf "Prediction was finished...\n"
-
+#
 # ============================================================================
 # Joint sequence logo in 2-cut Exon deletion
 # ============================================================================

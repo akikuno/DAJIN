@@ -1,28 +1,26 @@
-import os
+from keras.utils import np_utils
+from keras.models import Model, Sequential, load_model
+from keras.layers import (Activation, Conv1D, Dense, Flatten,
+                          MaxPooling1D)
+from keras import regularizers
+import keras
+from tqdm import tqdm
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn.model_selection import train_test_split
+import seaborn as sns
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 import re
 import sys
 import warnings
 from functools import partial
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import seaborn as sns
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder
-from tqdm import tqdm
-
-import keras
-import tensorflow as tf
-from keras import Model, regularizers
-from keras.backend import tensorflow_backend
-from keras.layers import (Activation, Conv1D, Dense, Dropout, Flatten,
-                          MaxPooling1D)
-from keras.models import Model, Sequential, load_model
-from keras.utils import np_utils
-from tensorflow.python.client import device_lib
-
 warnings.filterwarnings('ignore')
+
+
+# import tensorflow as tf
+# from keras.backend import tensorflow_backend
+
 
 # ====================================
 # Input and format data
@@ -30,14 +28,8 @@ warnings.filterwarnings('ignore')
 
 args = sys.argv
 file_name = args[1]
-# file_name = "data_for_ml/sequence_MIDS.txt.gz"
+# file_name = "data_for_ml/DAJIN.txt.gz"
 fig_dirs = ["results/figures/png", "results/figures/svg"]
-
-for fig_dir in fig_dirs:
-    os.makedirs(fig_dir, exist_ok=True)
-
-os.makedirs("data_for_ml/model", exist_ok=True)
-os.makedirs("results", exist_ok=True)
 
 output_npz = file_name.replace(".txt.gz", ".npz").replace(
     "data_for_ml/", "data_for_ml/model/")
@@ -110,37 +102,38 @@ print("One-hot encording simulated reads...")
 X_sim = X_onehot(df_sim)
 print("One-hot encording real reads...")
 X_real = X_onehot(df_real)
-np.savez_compressed(output_npz,
-                    X_sim=X_sim,
-                    X_real=X_real
-                    )
+#
+# np.savez_compressed(output_npz,
+#                     X_sim=X_sim,
+#                     X_real=X_real
+#                     )
 
 # ====================================
 # # Load One-hot matrix
 # ====================================
-np.load = partial(np.load, allow_pickle=True)
-npz = np.load(output_npz)
+# np.load = partial(np.load, allow_pickle=True)
+# npz = np.load(output_npz)
 
-X_sim = npz["X_sim"]
-X_real = npz["X_real"]
+# X_sim = npz["X_sim"]
+# X_real = npz["X_real"]
 
-X = X_sim
+# X = X_sim
 labels, labels_index = pd.factorize(df_sim.barcodeID)
 labels_categorical = np_utils.to_categorical(labels)
 
 X_train, X_test, Y_train, Y_test = train_test_split(
-    X, labels_categorical,
+    X_sim, labels_categorical,
     test_size=0.2, shuffle=True)
 
 # ====================================
 # # Model construction
 # ====================================
 
-tf.get_logger().setLevel('INFO')
+# tf.get_logger().setLevel('INFO')
 model = Sequential()
 
 model.add(Conv1D(filters=32, kernel_size=32, activation="relu",
-                 input_shape=(X.shape[1], X.shape[2]), name="1st_Conv1D"))
+                 input_shape=(X_sim.shape[1], X_sim.shape[2]), name="1st_Conv1D"))
 model.add(MaxPooling1D(pool_size=4, name="1st_MaxPooling1D"))
 
 model.add(Conv1D(filters=32, kernel_size=16,
@@ -246,7 +239,7 @@ def cosine_similarity(x1, x2):
     return cosine_sim
 
 
-X_all = np.concatenate((X_sim, X_real))
+X_all = np.concatenate([X_sim, X_real])
 cos_all, normal_vector, predict_vector = get_score_cosine(
     model, X_train[0:1000], X_all)
 
