@@ -1,20 +1,22 @@
-from keras.utils import np_utils
-from keras.models import Model, Sequential, load_model
-from keras.layers import (Activation, Conv1D, Dense, Flatten,
-                          MaxPooling1D)
-from keras import regularizers
-import keras
-from tqdm import tqdm
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder
-from sklearn.model_selection import train_test_split
-import seaborn as sns
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 import re
 import sys
 import warnings
 from functools import partial
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from tqdm import tqdm
+
+from tensorflow.keras import backend as K
+from tensorflow.keras import regularizers, utils
+from tensorflow.keras.layers import (Activation, Conv1D, Dense, Flatten,
+                                     MaxPooling1D)
+from tensorflow.keras.models import Model, Sequential, load_model
+
 warnings.filterwarnings('ignore')
 
 
@@ -119,7 +121,7 @@ X_real = X_onehot(df_real)
 
 # X = X_sim
 labels, labels_index = pd.factorize(df_sim.barcodeID)
-labels_categorical = np_utils.to_categorical(labels)
+labels_categorical = utils.to_categorical(labels)
 
 X_train, X_test, Y_train, Y_test = train_test_split(
     X_sim, labels_categorical,
@@ -130,6 +132,7 @@ X_train, X_test, Y_train, Y_test = train_test_split(
 # ====================================
 
 # tf.get_logger().setLevel('INFO')
+
 model = Sequential()
 
 model.add(Conv1D(filters=32, kernel_size=32, activation="relu",
@@ -164,7 +167,7 @@ model.compile(optimizer='adam', loss='categorical_crossentropy',
 model.summary()
 # -
 
-stack = model.fit(X_train, Y_train, epochs=20, verbose=0,
+stack = model.fit(X_train, Y_train, epochs=20, verbose=1,
                   validation_split=0.2, shuffle=True)
 
 # ====================================
@@ -257,7 +260,7 @@ optimal_threshold = df_all[df_all.label == 1].cos_similarity.quantile(0.0001)
 
 df_all["abnormal_prediction"] = df_all.cos_similarity.apply(
     lambda x: 1 if x > optimal_threshold else -1)
-
+df_all = df_all._to_pandas()
 # df_unexpected = df_all[df_all.label == -1].reset_index()
 # df_unexpected["abnormal_prediction"] = df_unexpected.cos_similarity.apply(
 #     lambda x: "normal" if x > optimal_threshold else "abnormal")
@@ -272,15 +275,15 @@ plt.rcParams['font.family'] = 'Arial'
 plt.rcParams['font.size'] = '20'
 sns.set_style("whitegrid")
 
-ax = sns.boxplot(x="cos_similarity", y="barcodeID", data=df_all,
+ax = sns.boxplot(x="cos_similarity", y="barcodeID", data=df_all.sort_values(by="barcodeID"),
                  showfliers=False)
 ax.set(xlim=[0.0, 1.05])
-ax.set_title("Cosine similarity")
-ax.set_xlabel("")
+ax.set_title("Abnormal allele detection")
+ax.set_xlabel("Cosine similarity")
 ax.set_ylabel("")
 ax.axvline(x=optimal_threshold, ls="--", color="r",
            alpha=0.5, label="threshold of abnormality")
-plt.legend(loc='upper left')
+plt.legend(loc='bottom left')
 # ----------------------------
 fig_name = "cosine_similarity"
 for fig_dir in fig_dirs:
@@ -298,9 +301,9 @@ output["abnormal_prediction"] = df_all[df_all.label == -1].reset_index().cos_sim
     lambda x: "Normal" if x > optimal_threshold else "Abnormal(problematic)")
 
 output.to_csv(
-    '.tmp_/anomaly_classification.txt',
+    '.tmp_/DAJIN_anomaly_classification.txt',
     header=False, index=False, sep="\t")
 
 pd.Series(labels_index).to_csv(
-    '.tmp_/anomaly_classification_labels.txt',
+    '.tmp_/DAJIN_anomaly_classification_labels.txt',
     header=False, index=False, sep="\t")
