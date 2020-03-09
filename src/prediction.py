@@ -1,22 +1,25 @@
-import re
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
 import sys
-import warnings
+import re
 from functools import partial
-from tqdm import tqdm
+import warnings
+warnings.filterwarnings("ignore")
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import seaborn as sns
+from tqdm import tqdm
 
-import tensorflow as tf
-from tensorflow.keras import backend as K
-from tensorflow.keras import regularizers, utils
+from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import (Activation, Conv1D, Dense, Flatten,
                                      MaxPooling1D)
-from tensorflow.keras.models import Sequential, load_model
-from keras.models import Model
-warnings.filterwarnings('ignore')
+from tensorflow.keras import regularizers, utils
+from tensorflow.keras import backend as K
+from tensorflow.keras.models import Model
+
 
 # ====================================
 # # Import data
@@ -57,6 +60,7 @@ model = load_model(output_model + '.h5')
 # ====================================
 # # Prediction
 # ====================================
+print("Predict allele types...")
 iter_ = 1000
 predict = np.zeros(X_real.shape[0], dtype="uint8")
 for i in tqdm(range(0, X_real.shape[0], iter_)):
@@ -75,17 +79,10 @@ df_result = pd.DataFrame({"barcodeID": df_anomaly.iloc[:, 0],
                           "anomaly": df_anomaly.iloc[:, 2]})
 
 df_result.predict = df_result.predict.mask(
-    df_result.anomaly.str.contains("Abnormal"), df_result.anomaly)
+    df_result.anomaly.str.contains("abnormal"), df_result.anomaly)
 
 del df_result["anomaly"]
 # df_result = df_result.head(1000)
-
-# ====================================
-# ## Output result
-# ====================================
-
-df_result.to_csv('.tmp_/DAJIN_prediction_result.txt',
-                 sep='\t', index=False, header=False)
 
 # ====================================
 # ## Visualization of allele profile
@@ -108,7 +105,7 @@ counts = df_stacked.apply(lambda x: x.dropna(
 ).value_counts() / len(x.dropna())).transpose()
 
 tmp0 = pd.Series(["target", "wt"])
-tmp1 = counts.columns[counts.columns.str.startswith(("Abnormal"))].values
+tmp1 = counts.columns[counts.columns.str.startswith(("abnormal"))].values
 tmp10 = pd.concat([tmp0, pd.Series(tmp1)])
 
 tmp2 = counts.drop(tmp10, axis=1).columns.values
@@ -138,3 +135,11 @@ for fig_dir in fig_dirs:
     fig_type = re.sub(".*/", "", fig_dir)
     plt.savefig(f"{fig_dir}/{output_figure}_{fig_name}.{fig_type}",
                 dpi=350, bbox_inches="tight")
+
+# ====================================
+# ## Output result
+# ====================================
+
+df_result.to_csv('.tmp_/DAJIN_prediction_result.txt',
+                 sep='\t', index=False, header=False)
+

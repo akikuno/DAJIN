@@ -340,7 +340,7 @@ printf "Finished.\n${output_file}.txt.gz is generated.\n"
 # ============================================================================
 printf "Start allele prediction...\n"
 #
-python DAJIN/src/anomaly_detection.py data_for_ml/${output_file}.txt.gz
+python DAJIN/src/anomaly_detection.py data_for_ml/${output_file:-DAJIN}.txt.gz
 #
 # mutation_type=$(
 #     minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
@@ -353,9 +353,9 @@ python DAJIN/src/anomaly_detection.py data_for_ml/${output_file}.txt.gz
 #     cp .tmp_/anomaly_classification.txt .tmp_/anomaly_classification_revised.txt
 # fi
 #
-cp .tmp_/anomaly_classification.txt .tmp_/anomaly_classification_revised.txt
+# cp .tmp_/anomaly_classification.txt .tmp_/anomaly_classification_revised.txt
 #
-python DAJIN/src/prediction.py data_for_ml/${output_file}.txt.gz
+python DAJIN/src/prediction.py data_for_ml/${output_file:-DAJIN}.txt.gz
 #
 printf "Prediction was finished...\n"
 #
