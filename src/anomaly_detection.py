@@ -34,6 +34,18 @@ df.columns = ["seqID", "barcodeID"]
 df_sim = df[df.barcodeID.str.endswith("simulated")].reset_index(drop=True)
 df_real = df[~df.barcodeID.str.endswith("simulated")].reset_index(drop=True)
 
+
+# Output names
+fig_dirs = ["results/figures/png", "results/figures/svg"]
+output_npz = file_name.replace(".txt.gz", ".npz").replace(
+    "data_for_ml/", "data_for_ml/model/")
+output_figure = file_name.replace(".txt.gz", "").replace("data_for_ml/", "")
+output_model = file_name.replace(".txt.gz", "").replace(
+    "data_for_ml", "data_for_ml/model")
+
+# # ====================================
+# # Save One-hot matrix
+# # ====================================
 # Load One-hot matrix...
 df_temp = pd.read_csv(".tmp_/onehot_M.txt.gz",
                       header=None, sep=" ", dtype="uint8")
@@ -54,19 +66,6 @@ X_sim = X_temp[df.barcodeID.str.endswith("simulated"), :, :]
 X_real = X_temp[~df.barcodeID.str.endswith("simulated"), :, :]
 del X_temp
 
-# Output names
-fig_dirs = ["results/figures/png", "results/figures/svg"]
-output_npz = file_name.replace(".txt.gz", ".npz").replace(
-    "data_for_ml/", "data_for_ml/model/")
-output_figure = file_name.replace(".txt.gz", "").replace("data_for_ml/", "")
-output_model = file_name.replace(".txt.gz", "").replace(
-    "data_for_ml", "data_for_ml/model")
-
-
-# # ====================================
-# # Save One-hot matrix
-# # ====================================
-
 np.savez_compressed(output_npz,
                     X_sim=X_sim,
                     X_real=X_real
@@ -78,7 +77,6 @@ labels_categorical = utils.to_categorical(labels)
 X_train, X_test, Y_train, Y_test = train_test_split(
     X_sim, labels_categorical,
     test_size=0.2, shuffle=True)
-
 # ====================================
 # # Model construction
 # ====================================
@@ -249,7 +247,7 @@ for fig_dir in fig_dirs:
 
 df_anomaly = df_real[["barcodeID", "seqID"]]
 df_anomaly["abnormal_prediction"] = df_all[df_all.label == -1].reset_index().cos_similarity.apply(
-    lambda x: "Normal" if x > optimal_threshold else "abnormal")
+    lambda x: "normal" if x > optimal_threshold else "abnormal")
 
 df_anomaly.to_csv(
     '.tmp_/DAJIN_anomaly_classification.txt',
