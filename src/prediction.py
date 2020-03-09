@@ -99,8 +99,8 @@ for i in barcode_list:
     df_stacked[i] = data[data.barcodeID == i]["predict"].reset_index(drop=True)
 
 # ## Plot figures
-colorlist = ["#FF4500", "#D3D3D3", "#ADD8E6"]  # #88CCEE #0072B2 # ccffff
-colorlist = ["#FF4500", "#FFFFFF", "#D3D3D3"]  # #88CCEE #0072B2 #
+colorlist = ["#FF4500", "#DDDDDD", "#ADD8E6"]  # #88CCEE #0072B2 # ccffff
+colorlist = ["#FF4500", "#DDDDDD", "#B0E0E6"]  # #88CCEE #0072B2 #
 # colorlist = ["#FF4500", "#D3D3D3", "#FFF9B0", "#ADD8E6"]
 colorlist.extend(list(sns.color_palette("Accent", 24).as_hex()))
 
