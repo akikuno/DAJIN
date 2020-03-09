@@ -2,17 +2,20 @@ import re
 import sys
 import warnings
 from functools import partial
+from tqdm import tqdm
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 
-import keras
 import tensorflow as tf
-from keras.backend import tensorflow_backend
-from keras.models import load_model
-
+from tensorflow.keras import backend as K
+from tensorflow.keras import regularizers, utils
+from tensorflow.keras.layers import (Activation, Conv1D, Dense, Flatten,
+                                     MaxPooling1D)
+from tensorflow.keras.models import Sequential, load_model
+from keras.models import Model
 warnings.filterwarnings('ignore')
 
 # ====================================
@@ -21,14 +24,14 @@ warnings.filterwarnings('ignore')
 
 args = sys.argv
 file_name = args[1]
-# file_name = "data_for_ml/sequence_MIDS.txt.gz"
+# file_name = "data_for_ml/DAJIN.txt.gz"
 
-# df_anomaly = pd.read_csv(args[2], header=None, sep='\t')
-df_anomaly = pd.read_csv(".tmp_/anomaly_classification_revised.txt",
+df_anomaly = pd.read_csv(".tmp_/DAJIN_anomaly_classification.txt",
                          header=None, sep='\t')
 labels_index = pd.read_csv(
-    ".tmp_/anomaly_classification_labels.txt",
+    ".tmp_/DAJIN_anomaly_classification_labels.txt",
     header=None, sep='\t')
+labels_index.columns = ["label"]
 
 fig_dirs = ["results/figures/png", "results/figures/svg"]
 
@@ -49,22 +52,21 @@ X_real = npz["X_real"]
 # # Load model
 # ====================================
 
-tf.get_logger().setLevel('INFO')
 model = load_model(output_model + '.h5')
 
 # ====================================
 # # Prediction
 # ====================================
-
-print("Predict labels...")
-predict = model.predict(X_real, verbose=1, batch_size=1)
-# predict = model.predict(X_real[0:1000], verbose=1, batch_size=1)
-
-predict = np.argmax(predict, axis=1)
+iter_ = 1000
+predict = np.zeros(X_real.shape[0], dtype="uint8")
+for i in tqdm(range(0, X_real.shape[0], iter_)):
+    predict_ = model.predict(X_real[i: i + iter_, :, :].astype("float16"),
+                             verbose=0, batch_size=32)
+    predict[i:i+iter_] = np.argmax(predict_, axis=1)
 
 df_predict = pd.Series(predict, dtype="str") + "_"
 
-for i, j in enumerate(labels_index.squeeze().str.replace("_simulated", "")):
+for i, j in enumerate(labels_index["label"].str.replace("_simulated", "")):
     df_predict = df_predict.str.replace(str(i)+"_", j)
 
 df_result = pd.DataFrame({"barcodeID": df_anomaly.iloc[:, 0],
@@ -82,7 +84,7 @@ del df_result["anomaly"]
 # ## Output result
 # ====================================
 
-df_result.to_csv('.tmp_/prediction_result.txt',
+df_result.to_csv('.tmp_/DAJIN_prediction_result.txt',
                  sep='\t', index=False, header=False)
 
 # ====================================
@@ -97,8 +99,9 @@ for i in barcode_list:
     df_stacked[i] = data[data.barcodeID == i]["predict"].reset_index(drop=True)
 
 # ## Plot figures
-colorlist = ["#FF4500", "#D3D3D3", "#ADD8E6"]  # #88CCEE #0072B2
-colorlist = ["#FF4500", "#D3D3D3", "#FFF9B0", "#ADD8E6"]
+colorlist = ["#FF4500", "#D3D3D3", "#ADD8E6"]  # #88CCEE #0072B2 # ccffff
+colorlist = ["#FF4500", "#FFFFFF", "#D3D3D3"]  # #88CCEE #0072B2 #
+# colorlist = ["#FF4500", "#D3D3D3", "#FFF9B0", "#ADD8E6"]
 colorlist.extend(list(sns.color_palette("Accent", 24).as_hex()))
 
 counts = df_stacked.apply(lambda x: x.dropna(

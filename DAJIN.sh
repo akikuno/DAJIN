@@ -313,11 +313,25 @@ for input in fasta_ont/*; do
     rm .tmp_/${output}
 done
 
-cat data_for_ml/${output_file}.txt |
-awk 'BEGIN{OFS="\t"}{print $3,$2,$1}' |
-sort -k 3,3 |
+for i in M I D S; do
+    { cat data_for_ml/DAJIN.txt |
+    cut -f 1,2 |
+    sort -k 1,1 |
+    cut -f 2 |
+    sed -e "s/^/MIDS=/" |
+    sed -e "s/[^${i}]/0 /g" |
+    sed -e "s/${i}/1 /g" |
+    sed -e "s/ $//" |
+    bgzip -c \
+    > .tmp_/onehot_${i}.txt.gz & } 1>/dev/null 2>/dev/null
+done
+
+{ cat data_for_ml/${output_file}.txt |
+cut -f 1,3 | # awk 'BEGIN{OFS="\t"}{print $3,$2,$1}' |
+sort -k 1,1 |
 bgzip -f -c \
-> data_for_ml/${output_file}.txt.gz
+> data_for_ml/${output_file}.txt.gz & } 1>/dev/null 2>/dev/null
+time wait 2>/dev/null
 
 printf "Finished.\n${output_file}.txt.gz is generated.\n"
 

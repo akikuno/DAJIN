@@ -5,12 +5,12 @@ from functools import partial
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
+import modin.pandas as pd
 import seaborn as sns
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from tqdm import tqdm
 
+import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras import regularizers, utils
 from tensorflow.keras.layers import (Activation, Conv1D, Dense, Flatten,
@@ -20,10 +20,6 @@ from tensorflow.keras.models import Model, Sequential, load_model
 warnings.filterwarnings('ignore')
 
 
-# import tensorflow as tf
-# from keras.backend import tensorflow_backend
-
-
 # ====================================
 # Input and format data
 # ====================================
@@ -31,95 +27,51 @@ warnings.filterwarnings('ignore')
 args = sys.argv
 file_name = args[1]
 # file_name = "data_for_ml/DAJIN.txt.gz"
-fig_dirs = ["results/figures/png", "results/figures/svg"]
 
+df = pd.read_csv(file_name, header=None, sep='\t')
+df.columns = ["seqID", "barcodeID"]
+
+df_sim = df[df.barcodeID.str.endswith("simulated")].reset_index(drop=True)
+df_real = df[~df.barcodeID.str.endswith("simulated")].reset_index(drop=True)
+
+# Load One-hot matrix...
+df_temp = pd.read_csv(".tmp_/onehot_M.txt.gz",
+                      header=None, sep=" ", dtype="uint8")
+X_temp = np.zeros((df_temp.shape[0], df_temp.shape[1], 4), dtype="uint8")
+X_temp[:, :, 0] = df_temp
+df_temp = pd.read_csv(".tmp_/onehot_I.txt.gz",
+                      header=None, sep=" ", dtype="uint8")
+X_temp[:, :, 1] = df_temp
+df_temp = pd.read_csv(".tmp_/onehot_D.txt.gz",
+                      header=None, sep=" ", dtype="uint8")
+X_temp[:, :, 2] = df_temp
+df_temp = pd.read_csv(".tmp_/onehot_S.txt.gz",
+                      header=None, sep=" ", dtype="uint8")
+X_temp[:, :, 3] = df_temp
+del df_temp
+
+X_sim = X_temp[df.barcodeID.str.endswith("simulated"), :, :]
+X_real = X_temp[~df.barcodeID.str.endswith("simulated"), :, :]
+del X_temp
+
+# Output names
+fig_dirs = ["results/figures/png", "results/figures/svg"]
 output_npz = file_name.replace(".txt.gz", ".npz").replace(
     "data_for_ml/", "data_for_ml/model/")
 output_figure = file_name.replace(".txt.gz", "").replace("data_for_ml/", "")
 output_model = file_name.replace(".txt.gz", "").replace(
     "data_for_ml", "data_for_ml/model")
 
-df = pd.read_csv(file_name, header=None, sep='\t')
-df.columns = ["barcodeID", "sequence", "seqID"]
 
-if "ACGT" in file_name:
-    df.sequence = "ACGT=" + df.sequence
-    # print("ACGT")
-else:
-    df.sequence = "MIDS=" + df.sequence
-    # print("MIDS")
+# # ====================================
+# # Save One-hot matrix
+# # ====================================
 
-df_sim = df[df.barcodeID.str.endswith("simulated")].reset_index(drop=True)
-df_real = df[~df.barcodeID.str.endswith("simulated")].reset_index(drop=True)
+np.savez_compressed(output_npz,
+                    X_sim=X_sim,
+                    X_real=X_real
+                    )
 
-# ====================================
-# Define One-hot encording
-# ====================================
-
-
-class hot_dna:
-    def __init__(self, fasta):
-        if re.search(">", fasta):
-            name = re.split("\n", fasta)[0]
-            sequence = re.split("\n", fasta)[1]
-        else:
-            name = 'unknown_sequence'
-            sequence = fasta
-        seq_array = np.array(list(sequence))
-        label_encoder = LabelEncoder()
-        integer_encoded_seq = label_encoder.fit_transform(seq_array)
-        # one hot the sequence
-        onehot_encoder = OneHotEncoder(sparse=False, categories='auto')
-        integer_encoded_seq = integer_encoded_seq.reshape(
-            len(integer_encoded_seq), 1)
-        onehot_encoded_seq = onehot_encoder.fit_transform(integer_encoded_seq)
-        self.name = name
-        self.sequence = fasta
-        self.integer = integer_encoded_seq
-        self.onehot = onehot_encoded_seq
-
-
-def X_onehot(X_data):
-    import collections
-    char_num = np.zeros(10)
-    for i in range(10):
-        tmp = list(X_data.iloc[i][1])
-        tmp = collections.Counter(tmp).values()
-        char_num[i] = len(tmp)
-    char_num = int(char_num.max())
-    #
-    X = np.empty((X_data.shape[0], len(
-        X_data.iloc[1, 1]), char_num), dtype="uint8")
-    for i in tqdm(range(0, X_data.shape[0])):
-        X[i] = hot_dna(X_data.iloc[i, 1]).onehot[0:len(X_data.iloc[1, 1])]
-    X = X[:, :, 1:]
-    return(X)
-
-# ====================================
-# Save One-hot matrix
-# ====================================
-
-
-print("One-hot encording simulated reads...")
-X_sim = X_onehot(df_sim)
-print("One-hot encording real reads...")
-X_real = X_onehot(df_real)
-#
-# np.savez_compressed(output_npz,
-#                     X_sim=X_sim,
-#                     X_real=X_real
-#                     )
-
-# ====================================
-# # Load One-hot matrix
-# ====================================
-# np.load = partial(np.load, allow_pickle=True)
-# npz = np.load(output_npz)
-
-# X_sim = npz["X_sim"]
-# X_real = npz["X_real"]
-
-# X = X_sim
 labels, labels_index = pd.factorize(df_sim.barcodeID)
 labels_categorical = utils.to_categorical(labels)
 
@@ -131,7 +83,7 @@ X_train, X_test, Y_train, Y_test = train_test_split(
 # # Model construction
 # ====================================
 
-# tf.get_logger().setLevel('INFO')
+tf.get_logger().setLevel('INFO')
 
 model = Sequential()
 
@@ -167,8 +119,10 @@ model.compile(optimizer='adam', loss='categorical_crossentropy',
 model.summary()
 # -
 
-stack = model.fit(X_train, Y_train, epochs=20, verbose=1,
+stack = model.fit(X_train, Y_train, epochs=20, verbose=0,
                   validation_split=0.2, shuffle=True)
+
+# evaluate = model.evaluate(X_test, Y_test)
 
 # ====================================
 # ## Save the model
@@ -216,13 +170,13 @@ for fig_dir in fig_dirs:
 # ====================================
 
 def get_score_cosine(model, train, test):
-    model = Model(model.get_layer(index=0).input,
-                  model.get_layer(index=-2).output)  # Delete FC layer
-    # print(model.summary())
+    model_ = Model(model.get_layer(index=0).input,
+                   model.get_layer(index=-2).output)  # Delete FC layer
+    # print(model_.summary())
     print("Obtain vectors from 1000 simulated reads...")
-    normal_vector = model.predict(train, verbose=1, batch_size=1)
+    normal_vector = model_.predict(train, verbose=1, batch_size=32)
     print("Obtain vectors of each reads...")
-    predict_vector = model.predict(test, verbose=1, batch_size=1)
+    predict_vector = model_.predict(test, verbose=1, batch_size=32)
     score_len = len(predict_vector)
     score = np.zeros(score_len)
     print("Calculate cosine similarity to detect abnormal allele ...")
@@ -256,14 +210,11 @@ df_all.columns = ["barcodeID", "seqID", "cos_similarity"]
 df_all["label"] = df_all.barcodeID.apply(
     lambda x: 1 if x.endswith("simulated") else -1)
 
-optimal_threshold = df_all[df_all.label == 1].cos_similarity.quantile(0.0001)
+optimal_threshold = df_all[df_all.label == 1].cos_similarity.quantile(0.001)
 
 df_all["abnormal_prediction"] = df_all.cos_similarity.apply(
     lambda x: 1 if x > optimal_threshold else -1)
 df_all = df_all._to_pandas()
-# df_unexpected = df_all[df_all.label == -1].reset_index()
-# df_unexpected["abnormal_prediction"] = df_unexpected.cos_similarity.apply(
-#     lambda x: "normal" if x > optimal_threshold else "abnormal")
 
 # ====================================
 # ## Plot cosine similarity
@@ -296,11 +247,11 @@ for fig_dir in fig_dirs:
 # ## the detection of non-probrematic anomaly
 # ====================================
 
-output = df_real[["barcodeID", "seqID"]]
-output["abnormal_prediction"] = df_all[df_all.label == -1].reset_index().cos_similarity.apply(
-    lambda x: "Normal" if x > optimal_threshold else "Abnormal(problematic)")
+df_anomaly = df_real[["barcodeID", "seqID"]]
+df_anomaly["abnormal_prediction"] = df_all[df_all.label == -1].reset_index().cos_similarity.apply(
+    lambda x: "Normal" if x > optimal_threshold else "abnormal")
 
-output.to_csv(
+df_anomaly.to_csv(
     '.tmp_/DAJIN_anomaly_classification.txt',
     header=False, index=False, sep="\t")
 
