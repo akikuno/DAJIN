@@ -306,9 +306,12 @@ awk -v th=${threads:-1} '{
     print}
     END{print "wait"}' |
 sh -
+#
 cat .tmp_/MIDS_* |
 sort -k 1,1 \
 > data_for_ml/${output_file:=DAJIN}.txt
+
+rm .tmp_/MIDS_*
 
 # One-hot encording...
 for i in M I D S; do
@@ -393,16 +396,31 @@ awk '{print $1, int($3*100/$2+0.5),$4}' \
 # Clustering within each allele type
 # ============================================================================
 
-barcode=barcode30
+barcode=barcode02
+control=barcode30 #! define "barcode30" by automate manner
 allele=wt
+./DAJIN/src/test_clustering.sh ${barcode} ${control} ${allele} data_for_ml/${output_file:-DAJIN}.txt
+cat .tmp_/clustering_results_* > test_result.csv
+
+#
 cat .tmp_/DAJIN_prediction_allele_percentage |
 cut -d " " -f 1,3 |
+awk -v cont=${control} -v data="data_for_ml/${output_file:-DAJIN}.txt" \
+    '{print "./DAJIN/src/test_clustering.sh",$0, cont, data, "&"}' |
+awk -v th=${threads:-1} '{
+    if (NR%th==0) gsub("&","&\nwait",$0)
+    print}
+    END{print "wait"}' |
+sh -
+#
+
 while read input; do
     barcode=$(echo ${input} | cut -d " " -f 1)
     allele=$(echo ${input} | cut -d " " -f 2)
     #
-
 done
+
+
 # ============================================================================
 # Joint sequence logo in 2-cut Exon deletion
 # ============================================================================

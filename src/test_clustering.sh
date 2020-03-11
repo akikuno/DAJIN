@@ -1,25 +1,59 @@
 #!/bin/sh
 
+# ============================================================================
+# Initialize shell environment
+# ============================================================================
+
+set -eu
+umask 0022
+export LC_ALL=C
+type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
+export UNIX_STD=2003  # to make HP-UX conform to POSIX
+
+# ============================================================================
+# Parse auguments
+# ============================================================================
+
+barcode="${1}"
+control="${2}"
+alleletype="${3}"
+MIDS_file="${4}"
+
+# barcode="barcode04"
+# control="barcode30"
+# alleletype="target"
+# MIDS_file="data_for_ml/DAJIN.txt"
+suffix="${barcode}"_"${alleletype}"
+
+# ============================================================================
+# Sort prediction results
+# ============================================================================
+
+cat .tmp_/DAJIN_prediction_result.txt |
+grep -e "${barcode}" -e "${control}" |
+awk -v atype="${alleletype}" '$3==atype' |
+sort -k 2,2 \
+> .tmp_/clustering_prediction_result_"${suffix}"
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # test barcode02
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # ----------------------------------------
-barcode="barcode02"
-output_label="test_labels.txt"
-output_seq="test_seq"
+output_label=".tmp_/clustering_labels_${suffix}"
+output_seq=".tmp_/clustering_seq_${suffix}"
 # ----------------------------------------
-zcat data_for_ml/sequence_MIDS.txt.gz |
-grep ${barcode} |
-join -1 3 -2 2 - .tmp_/sorted_prediction_result |
-cut -d " " -f 1,2 |
+cat "${MIDS_file}" |
+grep "${barcode}" |
+join -1 1 -2 2 - ".tmp_/clustering_prediction_result_${suffix}" |
+cut -d " " -f 1,3 |
 sed "s/ /\t/g" \
-> ${output_label}
+> "${output_label}"
 
-zcat data_for_ml/sequence_MIDS.txt.gz |
-grep ${barcode} |
-join -1 3 -2 2 - .tmp_/sorted_prediction_result |
-cut -d " " -f 3 |
+#
+cat "${MIDS_file}" |
+grep "${barcode}" |
+join -1 1 -2 2 - .tmp_/clustering_prediction_result_${suffix} |
+cut -d " " -f 2 |
 awk -F "" '{
     for(i=1; i<=NF; i++){
         if($i=="I") num=num+1
@@ -36,8 +70,8 @@ sed -e "s/I//g" -e "s/ //g" \
 
 # Output \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 # ----------------------------------------
-input="test_seq"
-output="test.csv"
+input=".tmp_/clustering_seq_${suffix}"
+output_que=".tmp_/clustering_score_${suffix}"
 # ----------------------------------------
 #
 seqnum=$(cat ${input} |
@@ -59,7 +93,6 @@ awk -F "" 'BEGIN{OFS=","}{
     totalI=gsub(/[1-9]|[a-z]/,"@",$0)
     totalD=gsub("D","D",$0)
     totalS=gsub("S","S",$0)
-    total_result=""
     for(i=1; i<=NF; i++){
         if($i=="=") $i=0
         else if($i=="M") $i=0
@@ -69,27 +102,20 @@ awk -F "" 'BEGIN{OFS=","}{
     }
     # print $0,totalGap,totalM,totalI,totalD,totalS
     print $0}' \
-> ${output}
+> ${output_que}
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # barcode30 for control
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # ----------------------------------------
-barcode="barcode30"
+#barcode="barcode30"
 # output_label="test_labels.txt"
-output_seq="test_seq_cont"
+output_ref=".tmp_/clustering_score_control_${suffix}"
 # ----------------------------------------
-# zcat data_for_ml/sequence_MIDS.txt.gz |
-# grep ${barcode} |
-# join -1 3 -2 2 - .tmp_/sorted_prediction_result |
-# cut -d " " -f 1,2 |
-# sed "s/ /\t/g" \
-# > ${output_label}
-
-zcat data_for_ml/sequence_MIDS.txt.gz |
-grep ${barcode} |
-join -1 3 -2 2 - .tmp_/sorted_prediction_result |
-cut -d " " -f 3 |
+cat "${MIDS_file}" |
+grep ${control} |
+join -1 1 -2 2 - .tmp_/clustering_prediction_result_${suffix} |
+cut -d " " -f 2 |
 awk -F "" '{
     for(i=1; i<=NF; i++){
         if($i=="I") num=num+1
@@ -101,23 +127,8 @@ awk -F "" '{
             $(i+1)=num; num=0}
         }
     print $0}' |
-sed -e "s/I//g" -e "s/ //g" \
-> ${output_seq}
-
-# Output \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-# ----------------------------------------
-input="test_seq_cont"
-output="test_cont.csv"
-# ----------------------------------------
+sed -e "s/I//g" -e "s/ //g" |
 #
-# seqnum=$(cat ${input} |
-#     grep -v "^$" |
-#     awk -F "" 'BEGIN{min="inf"} \
-#     {if(min>length($0)) min=length($0)} \
-#     END{print min}')
-#
-cat ${input} |
-# grep a | head -n 1 | grep a |
 awk -F "" -v seqnum=${seqnum} \
     '{for(i=1;i<=seqnum;i++) {
     seq[i]=seq[i]$i
@@ -129,7 +140,6 @@ awk -F "" 'BEGIN{OFS=","}{
     totalI=gsub(/[1-9]|[a-z]/,"@",$0)
     totalD=gsub("D","D",$0)
     totalS=gsub("S","S",$0)
-    total_result=""
     for(i=1; i<=NF; i++){
         if($i=="=") $i=0
         else if($i=="M") $i=0
@@ -139,17 +149,24 @@ awk -F "" 'BEGIN{OFS=","}{
     }
     # print $0,totalGap,totalM,totalI,totalD,totalS
     print $0}' \
-> ${output}
+> ${output_ref}
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # HDBSCAN
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
-Rscript clustering.R
+printf "Clustering... \n"
+Rscript DAJIN/src/test_clustering.R \
+${output_ref} ${output_que} ${output_label} 2>/dev/null
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Extract nucreotide
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+input_feat=".tmp_/clustering_features_${suffix}"
+input_id=".tmp_/clustering_id_${suffix}"
+#
+output=".tmp_/clustering_results_${suffix}"
+output_tmp=".tmp_/clustering_tmpresult_${suffix}"
+# -----------------------------------------
 left=$(cat .tmp_/mutation_points | cut -d " " -f 1)
 right=$(cat .tmp_/mutation_points | cut -d " " -f 2)
 
@@ -157,21 +174,19 @@ genome=mm10
 chr=$(cat .tmp_/gggenome_location | cut -f 1)
 start=$(cat .tmp_/gggenome_location | cut -f 2)
 #
-cluster=allele2
-output="test_alleletype.csv"
-true > ${output}
-for cluster in $(cat test_position.txt | cut -f 2 | sort -u); do
-    percent=$(paste test_seq test_result.txt |
+# cluster=allele2
+for cluster in $(cat ${input_id} | cut -f 2 | sort -u); do
+    percent=$(paste .tmp_/clustering_seq_${suffix} ${input_id} |
     grep "${cluster}" |
-    wc -l test_seq  - |
+    wc -l .tmp_/clustering_seq_${suffix}  - |
     grep -v total |
     tr -d "\n" |
     awk '{printf "%.1f\n", ($3/$1*100)}')
     #
-    paste test_seq test_result.txt |
+    paste .tmp_/clustering_seq_${suffix} ${input_id} |
     grep "${cluster}" |
     sort -k 3,3 |
-    join -1 3 -2 2 - test_position.txt |
+    join -1 3 -2 2 - ${input_feat} |
     awk '{ID[$NF]=ID[$NF]","substr($2,$NF,1)}
     END{for(key in ID) print key, ID[key]}' |
     awk '{ID=$1; seq=$2
@@ -231,15 +246,16 @@ for cluster in $(cat test_position.txt | cut -f 2 | sort -u); do
         print $2"-"$4""$3, genome, chr":"s"-"e}}' |
     sed "s/^/${barcode} ${cluster} ${percent} /g" |
     sort -k 1,1 -k 6,6 |
-    sed "s/ /,/g" > .tmp_/clustering_result
+    sed "s/ /,/g" > ${output_tmp}_${cluster}
     #
-    if [ -s .tmp_/clustering_resut ]; then
-      .tmp_/clustering_resut >> ${output}
+    if [ -s ${output_tmp}_${cluster} ]; then
+      cat ${output_tmp}_${cluster} > ${output}_${cluster}
     else
-      printf "${barcode}, ${cluster}, ${percent}, Left/Right WT\n" >> ${output}
+      printf "${barcode}, ${cluster}, ${percent}, Left/Right WT\n" > ${output}_${cluster}
     fi
 done
 
+printf "${barcode} is finished...\n"
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Separate BAM files
@@ -248,35 +264,35 @@ done
 # cat fasta_ont/wt* > fasta_ont/wt_merged.fa
 # ./DAJIN/src/igvjs.sh ${genome:-mm10} ${threads:-1}
 
-barcode=barcode02
-cat test_result.txt | cut -f 2 | sort | uniq -c
+#barcode=barcode02
+#cat ${input_id} | cut -f 2 | sort | uniq -c
 #
-rm ${barcode}*.bam* 2>/dev/null
-for i in $(cat test_result.txt | cut -f 2 | sort -u);do
-    cat test_result.txt | grep ${i}$ | cut -f 1 | sort > tmp_id
-    samtools view -h bam/${barcode}.bam | grep "^@" > tmp_header 
-    #
-    samtools view bam/${barcode}.bam |
-    sort |
-    join - tmp_id |
-    sed "s/ /\t/g" |
-    head -n 10 \
-    >> tmp_header
-    #
-    samtools sort tmp_header > ${barcode}_${i}.bam
-    samtools index ${barcode}_${i}.bam
-done
+# rm ${barcode}*.bam* 2>/dev/null
+# for i in $(cat ${input_id} | cut -f 2 | sort -u);do
+#     cat ${input_id} | grep ${i}$ | cut -f 1 | sort > tmp_id
+#     samtools view -h bam/${barcode}.bam | grep "^@" > tmp_header 
+#     #
+#     samtools view bam/${barcode}.bam |
+#     sort |
+#     join - tmp_id |
+#     sed "s/ /\t/g" |
+#     head -n 10 \
+#     >> tmp_header
+#     #
+#     samtools sort tmp_header > ${barcode}_${i}.bam
+#     samtools index ${barcode}_${i}.bam
+# done
 
-samtools view -h bam/${barcode}.bam | grep "^@" > tmp_header 
-#
-samtools view bam/${barcode}.bam |
-sort |
-join - tmp_id |
-sed "s/ /\t/g" |
-head -n 100 \
->> tmp_header
-#
-samtools sort tmp_header > ${barcode}_all.bam
-samtools index ${barcode}_all.bam
+# samtools view -h bam/${barcode}.bam | grep "^@" > tmp_header 
+# #
+# samtools view bam/${barcode}.bam |
+# sort |
+# join - tmp_id |
+# sed "s/ /\t/g" |
+# head -n 100 \
+# >> tmp_header
+# #
+# samtools sort tmp_header > ${barcode}_all.bam
+# samtools index ${barcode}_all.bam
 
-rm tmp_*
+# rm tmp_*
