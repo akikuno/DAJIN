@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     args = sys.argv
     file_name = args[1]
-    # file_name = "data_for_ml/DAJIN.txt.gz"
+    # file_name = "data_for_ml/DAJIN.txt"
 
     df = pd.read_csv(file_name, header=None, sep='\t')
     df.columns = ["seqID", "barcodeID"]
@@ -40,10 +40,10 @@ if __name__ == "__main__":
 
     # Output names
     fig_dirs = ["results/figures/png", "results/figures/svg"]
-    output_npz = file_name.replace(".txt.gz", ".npz").replace(
+    output_npz = file_name.replace(".txt", ".npz").replace(
         "data_for_ml/", "data_for_ml/model/")
-    output_figure = file_name.replace(".txt.gz", "").replace("data_for_ml/", "")
-    output_model = file_name.replace(".txt.gz", "").replace(
+    output_figure = file_name.replace(".txt", "").replace("data_for_ml/", "")
+    output_model = file_name.replace(".txt", "").replace(
         "data_for_ml", "data_for_ml/model")
 
     # # ====================================
@@ -53,22 +53,13 @@ if __name__ == "__main__":
     print("Load MIDS data...")
     for i in tqdm(range(4)):
         MIDS_id = "MIDS"[i]
-        df_temp = pd.read_csv(f".tmp_/onehot_{MIDS_id}.txt.gz",
+        df_temp = pd.read_csv(f".tmp_/onehot_{MIDS_id}.txt",
                             header=None, sep=" ", dtype="uint8")
         try:
             X_temp = X_temp
         except NameError:
             X_temp = np.zeros((df_temp.shape[0], df_temp.shape[1], 4), dtype="uint8")
         X_temp[:, :, i] = df_temp
-    # df_temp = pd.read_csv(".tmp_/onehot_I.txt.gz",
-    #                     header=None, sep=" ", dtype="uint8")
-    # X_temp[:, :, 1] = df_temp
-    # df_temp = pd.read_csv(".tmp_/onehot_D.txt.gz",
-    #                     header=None, sep=" ", dtype="uint8")
-    # X_temp[:, :, 2] = df_temp
-    # df_temp = pd.read_csv(".tmp_/onehot_S.txt.gz",
-    #                     header=None, sep=" ", dtype="uint8")
-    # X_temp[:, :, 3] = df_temp
 
     X_sim = X_temp[df.barcodeID.str.endswith("simulated"), :, :]
     X_real = X_temp[~df.barcodeID.str.endswith("simulated"), :, :]
