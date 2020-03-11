@@ -360,6 +360,37 @@ python DAJIN/src/prediction.py data_for_ml/${output_file:-DAJIN}.txt.gz
 printf "Prediction was finished...\n"
 #
 # ============================================================================
+# Filter low-percent alleles
+# ============================================================================
+#
+cat .tmp_/DAJIN_prediction_result.txt  | cut -f 1,3 | sort | uniq -c > .tmp_/tmp_prediction
+#
+cat .tmp_/tmp_prediction |
+awk '{barcode[$2]+=$1} END{for(key in barcode) print key,barcode[key]}' |
+sort |
+join -1 1 -2 2 - .tmp_/tmp_prediction |
+awk '{print $1, int($3/$2*100+0.5), $4}' \
+> .tmp_/tmp1_prediction
+
+per_refab=$(cat .tmp_/tmp1_prediction | 
+    grep barcode30 | #! define "barcode30" by automate manner
+    grep abnormal |
+    cut -d " " -f 2)
+
+cat .tmp_/tmp1_prediction |
+awk -v refab=${per_refab} \
+    '{if( !($2<refab+5 && $3 == "abnormal") && ($2>5) ) print $0}' \
+> .tmp_/tmp_prediction_filtered
+
+cat .tmp_/tmp_prediction_filtered |
+awk '{array[$1]+=$2}
+    END{for(key in array) print key, array[key]}' |
+sort |
+join - .tmp_/tmp_prediction_filtered |
+awk '{print $1, int($3*100/$2+0.5),$4}' \
+> .tmp_/DAJIN_prediction_allele_percentage
+
+# ============================================================================
 # Joint sequence logo in 2-cut Exon deletion
 # ============================================================================
 
