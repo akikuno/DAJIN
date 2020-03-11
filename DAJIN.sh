@@ -130,8 +130,8 @@ type samtools 1>/dev/null 2>/dev/null
 [ "$?" -eq 1 ] &&  error_exit 1 'Please install samtools'
 type minimap2 1>/dev/null 2>/dev/null
 [ "$?" -eq 1 ] &&  error_exit 1 'Please install minimap2'
-type bgzip 1>/dev/null 2>/dev/null
-[ "$?" -eq 1 ] && error_exit 1 'Please install bgzip'
+type gzip 1>/dev/null 2>/dev/null
+[ "$?" -eq 1 ] && error_exit 1 'Please install gzip'
 #
 python -c \
 "from tensorflow.python.client import device_lib;
@@ -208,7 +208,7 @@ for input in ${ont}/* ; do
     printf "${output} is now generating...\n"
     #
     if [ $(file ${input} | grep compressed | wc -l) -eq 1 ]; then
-        cat ${input} | bgzip -dc |
+        cat ${input} | gzip -dc |
         awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' \
         > .tmp_/tmp_$$
     else
@@ -290,6 +290,7 @@ Converting ACGT into MIDS format
 reference=fasta/wt.fa
 query=fasta/target.fa
 
+# Get mutation loci...
 minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
 awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
 sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
@@ -297,51 +298,47 @@ tr -d "\~\*\-\+atgc" |
 awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' \
 > .tmp_/mutation_points
 
-true > data_for_ml/${output_file:=DAJIN}.txt
+# MIDS conversion...
+find fasta_ont -type f | sort |
+awk '{print "./DAJIN/src/mids_convertion.sh",$0, "&"}' |
+awk -v th=${threads:-1} '{
+    if (NR%th==0) gsub("&","&\nwait",$0)
+    print}
+    END{print "wait"}' |
+sh -
+cat .tmp_/MIDS_* |
+sort -k 1,1 \
+> data_for_ml/${output_file:=DAJIN}.txt
 
-for input in fasta_ont/*; do
-    output=$(echo ${input} | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
-    ref=$(cat ${reference} | grep "^>" | sed "s/>//g")
-    #
-    minimap2 -t ${threads:-1} --cs=long -ax splice ${reference} ${input} 2>/dev/null |
-    awk -v ref=${ref} '$3 == ref' \
-    > .tmp_/${output}
-    #
-    ./DAJIN/src/mids_convertion.sh .tmp_/${output} ${ref} \
-    >> data_for_ml/${output_file}.txt
-    #
-    rm .tmp_/${output}
-done
-
+# One-hot encording...
 for i in M I D S; do
-    { cat data_for_ml/DAJIN.txt |
-    cut -f 1,2 |
-    sort -k 1,1 |
+    { cat data_for_ml/${output_file}.txt |
     cut -f 2 |
     sed -e "s/^/MIDS=/" |
     sed -e "s/[^${i}]/0 /g" |
     sed -e "s/${i}/1 /g" |
-    sed -e "s/ $//" |
-    bgzip -c \
-    > .tmp_/onehot_${i}.txt.gz & } 1>/dev/null 2>/dev/null
+    sed -e "s/ $//" \
+    > .tmp_/onehot_${i}.txt & } 1>/dev/null 2>/dev/null
 done
+wait 2>/dev/null
 
-{ cat data_for_ml/${output_file}.txt |
-cut -f 1,3 | # awk 'BEGIN{OFS="\t"}{print $3,$2,$1}' |
-sort -k 1,1 |
-bgzip -f -c \
-> data_for_ml/${output_file}.txt.gz & } 1>/dev/null 2>/dev/null
-time wait 2>/dev/null
+cat data_for_ml/${output_file}.txt |
+cut -f 1,3 \
+> data_for_ml/${output_file}_trimmed.txt
+#
+# bgzip -f data_for_ml/${output_file}.txt & 1>/dev/null 2>/dev/null
+# wait 2>/dev/null
 
-printf "Finished.\n${output_file}.txt.gz is generated.\n"
+printf "Finished.\n${output_file}.txt is generated.\n"
 
 # ============================================================================
 # Prediction
 # ============================================================================
 printf "Start allele prediction...\n"
 #
-python DAJIN/src/anomaly_detection.py data_for_ml/${output_file:-DAJIN}.txt.gz
+python DAJIN/src/anomaly_detection.py data_for_ml/${output_file:-DAJIN}_trimmed.txt
 #
+rm .tmp_/onehot_*
 # mutation_type=$(
 #     minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
 #     awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
@@ -360,7 +357,7 @@ python DAJIN/src/prediction.py data_for_ml/${output_file:-DAJIN}.txt.gz
 printf "Prediction was finished...\n"
 #
 # ============================================================================
-# Filter low-percent alleles
+# Report allele percentage
 # ============================================================================
 #
 cat .tmp_/DAJIN_prediction_result.txt  | cut -f 1,3 | sort | uniq -c > .tmp_/tmp_prediction
@@ -377,11 +374,13 @@ per_refab=$(cat .tmp_/tmp1_prediction |
     grep abnormal |
     cut -d " " -f 2)
 
+# Filter low-percent alleles ------------------------------------------------
 cat .tmp_/tmp1_prediction |
 awk -v refab=${per_refab} \
     '{if( !($2<refab+5 && $3 == "abnormal") && ($2>5) ) print $0}' \
 > .tmp_/tmp_prediction_filtered
 
+# Report allele percentage ------------------------------------------------
 cat .tmp_/tmp_prediction_filtered |
 awk '{array[$1]+=$2}
     END{for(key in array) print key, array[key]}' |
@@ -390,6 +389,20 @@ join - .tmp_/tmp_prediction_filtered |
 awk '{print $1, int($3*100/$2+0.5),$4}' \
 > .tmp_/DAJIN_prediction_allele_percentage
 
+# ============================================================================
+# Clustering within each allele type
+# ============================================================================
+
+barcode=barcode30
+allele=wt
+cat .tmp_/DAJIN_prediction_allele_percentage |
+cut -d " " -f 1,3 |
+while read input; do
+    barcode=$(echo ${input} | cut -d " " -f 1)
+    allele=$(echo ${input} | cut -d " " -f 2)
+    #
+
+done
 # ============================================================================
 # Joint sequence logo in 2-cut Exon deletion
 # ============================================================================

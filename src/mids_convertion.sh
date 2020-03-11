@@ -12,32 +12,56 @@ export PATH="$(command -p getconf PATH)${PATH+:}${PATH-}"
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 # ======================================
+# Parse arguments
+# ======================================
+
+# label=barcode23
+# reference=fasta/wt.fa
+# input_data=test.sam
+
+input=${1}
+
+output=$(echo ${input} | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
+output_MIDS=".tmp_/MIDS_${output}"
+tmp_mapping=".tmp_/${output}_mapping"
+tmp_seqID=".tmp_/${output}_seqID"
+
+# ======================================
+# Mapping
+# ======================================
+
+reference=fasta/wt.fa
+ref=$(cat ${reference} | grep "^>" | sed "s/>//g")
+#
+minimap2 -t 1 --cs=long -ax splice ${reference} ${input} 2>/dev/null |
+awk -v ref=${ref} '$3 == ref' > ${tmp_mapping}
+
+# ======================================
 # Identify mutation sites
 # ======================================
-reference=fasta/${2}.fa
 reflength=$(cat ${reference} | grep -v "^>" | awk '{print length($0)}')
 ext=${ext:=100}
 #
-if [ "${2}" = "wt" ]; then
+# if [ "${2}" = "wt" ]; then
     #
-    first_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{print $1-ext}')
-    second_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{if(NF==2) print $2+ext; else print $1+ext}')
-    if [ "$first_flank" -lt 1 ]; then first_flank=1; fi
-    if [ "$second_flank" -gt "$reflength" ]; then second_flank=$(($reflength)); fi
-    # echo $first_flank $second_flank
-else
-    first_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{print $1-ext}')
-    second_flank=$((${first_flank}+${ext}*2))
-fi
-
-label=$(echo ${1} | sed -e "s#.*/##g" -e "s#\..*##g")
-# printf "${label} is now processing...\n" 1>&2
+first_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{print $1-ext}')
+second_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{if(NF==2) print $2+ext; else print $1+ext}')
+if [ "$first_flank" -lt 1 ]; then first_flank=1; fi
+if [ "$second_flank" -gt "$reflength" ]; then second_flank=$(($reflength)); fi
+# echo $first_flank $second_flank
+# else
+#     first_flank=$(cat .tmp_/mutation_points | awk -v ext=${ext} '{print $1-ext}')
+#     second_flank=$((${first_flank}+${ext}*2))
+# fi
 
 # ======================================
 # MIDS conversion
 # ======================================
 
-cat ${1} |
+label=$(echo ${input} | sed -e "s#.*/##g" -e "s#\..*##g")
+# printf "${label} is now processing...\n" 1>&2
+
+cat ${tmp_mapping} |
 grep -v "^@" |
 # fetch sequence start and end sites
 awk 'BEGIN{OFS="\t"}{
@@ -56,12 +80,12 @@ awk '{if(length(min[$1])==0) min[$1]="inf";
 sort -t " " -n |
 awk -v first=${first_flank} -v second=${second_flank} '{
     if($2<=first && $3>=second) print $1}' |
-sort > .tmp_/tmp_sequenceID
+sort > ${tmp_seqID}
 #
-cat ${1} |
+cat ${tmp_mapping} |
 # cat .tmp_/wt_simulated |
 sort |
-join - .tmp_/tmp_sequenceID |
+join - ${tmp_seqID} |
 # append alignment info
 awk '{
     if($2==0 || $2==16) {alignment="primary"} else {alignment="secondary"};
@@ -137,6 +161,11 @@ awk -v reflen=${reflength} '{
     if(seqlen>reflen) {print $1,substr($3,1,reflen)}
     else {for(i=seqlen; i < reflen; i++) end=end"="; print $1,$3""end}
 }' |
-sed -e "s/$/\t${label}/g" -e "s/ /\t/g"
+sed -e "s/$/\t${label}/g" -e "s/ /\t/g" \
+> ${output_MIDS}
+#
+rm ${tmp_mapping} ${tmp_seqID}
+
+printf "${output} is now converted...\n"
 
 exit 0
