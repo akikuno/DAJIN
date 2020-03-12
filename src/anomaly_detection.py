@@ -30,13 +30,13 @@ if __name__ == "__main__":
 
     args = sys.argv
     file_name = args[1]
-    # file_name = "data_for_ml/DAJIN.txt"
+    # file_name = "data_for_ml/DAJIN_trimmed.txt"
 
     df = pd.read_csv(file_name, header=None, sep='\t')
     df.columns = ["seqID", "barcodeID"]
 
-    df_sim = df[df.barcodeID.str.endswith("simulated")].reset_index(drop=True)
-    df_real = df[~df.barcodeID.str.endswith("simulated")].reset_index(drop=True)
+    df_sim = df[df.barcodeID.str.contains("simulated")].reset_index(drop=True)
+    df_real = df[~df.barcodeID.str.contains("simulated")].reset_index(drop=True)
 
     # Output names
     fig_dirs = ["results/figures/png", "results/figures/svg"]
@@ -61,11 +61,11 @@ if __name__ == "__main__":
             X_temp = np.zeros((df_temp.shape[0], df_temp.shape[1], 4), dtype="uint8")
         X_temp[:, :, i] = df_temp
 
-    X_sim = X_temp[df.barcodeID.str.endswith("simulated"), :, :]
-    X_real = X_temp[~df.barcodeID.str.endswith("simulated"), :, :]
+    X_sim = X_temp[df.barcodeID.str.contains("simulated"), :, :]
+    X_real = X_temp[~df.barcodeID.str.contains("simulated"), :, :]
     del df_temp
     del X_temp
-    
+
     # ====================================
     # ## Train test split
     # ====================================
@@ -119,7 +119,7 @@ if __name__ == "__main__":
                     validation_split=0.2, shuffle=True)
 
 
-    # evaluate = model.evaluate(X_test, Y_test)
+    # evaluate = model.evaluate(X_test, Y_test, verbose=0)
 
     # ====================================
     # ## Plot loss and Accuracy
@@ -200,7 +200,7 @@ if __name__ == "__main__":
     df_all.columns = ["barcodeID", "seqID", "cos_similarity"]
 
     df_all["label"] = df_all.barcodeID.apply(
-        lambda x: 1 if x.endswith("simulated") else -1)
+        lambda x: 1 if "simulated" in x else -1)
 
     optimal_threshold = df_all[df_all.label == 1].cos_similarity.quantile(0.001)
 
@@ -238,12 +238,12 @@ if __name__ == "__main__":
     # Output the results
     # ====================================
     # Save One-hot matrix
-    np.savez_compressed(output_npz,
-                        X_sim=X_sim,
-                        X_real=X_real
-                        )
-    # Save the model
-    model.save(output_model + '.h5')
+np.savez_compressed(output_npz,
+                    X_sim=X_sim,
+                    X_real=X_real
+                    )
+# Save the model
+model.save(output_model + '.h5')
 
     # Save Anomaly annotation
     df_anomaly = df_real[["barcodeID", "seqID"]]
