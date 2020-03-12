@@ -12,13 +12,12 @@ args <- commandArgs(trailingOnly = TRUE)
 df_ref <- vroom(args[1], col_names = F)
 df_que <- vroom(args[2], col_names = F)
 df_label <- vroom(args[3], col_names = c("id", "label"))
-
-# df_ref <- vroom(".tmp_/clustering_score_control_barcode04_target", col_names = F)
-# df_que <- vroom(".tmp_/clustering_score_barcode04_target", col_names = F)
-# df_label <- vroom(".tmp_/clustering_labels_barcode04_target", col_names = c("id", "label"))
-# output_suffix <- ".tmp_/clustering_labels_barcode04_target" %>% str_remove(".*labels_")
-
 output_suffix <- args[3] %>% str_remove(".*labels_")
+
+# df_ref <- vroom(".tmp_/clustering_score_control_target_merged_target", col_names = F)
+# df_que <- vroom(".tmp_/clustering_score_target_merged_target", col_names = F)
+# df_label <- vroom(".tmp_/clustering_labels_target_merged_target", col_names = c("id", "label"))
+# output_suffix <- ".tmp_/clustering_labels_target_merged_target" %>% str_remove(".*labels_")
 
 df_ref <- t(df_ref)
 df_que <- t(df_que)
@@ -67,6 +66,14 @@ input_ref <- df_ref
 input_que <- df_que
 output_df <- NULL
 # //////////////////////////////////////////////////////////
+tmp <- input_ref %>%
+  as_tibble() %>%
+  summarise_all(sum, na.rm = TRUE) %>%
+  t()
+png("test.png")
+plot(tmp[,1])
+dev.off()
+
 
 zero_to_one <- function(x) (x - min(x)) / (max(x) - min(x))
 
@@ -81,18 +88,21 @@ df_sum_after <- tibble(
   cluster = "cont", score = t(input_ref_norm[1, ])
 )
 
-for (i in unique(cl$cluster + 1)) {
-  tmp <- input_que[cl$cluster + 1 == i, ] %>%
+for (i in unique(cl$cluster)) {
+  tmp <- input_que[cl$cluster == i, ] %>%
     colSums() %>%
     zero_to_one()
   #
   tmp <- tmp - input_ref_norm
   tmp[tmp < 0] <- 0
-  tmp_df <- tibble(loc = seq_len(ncol(input_ref)), cluster = sprintf("allele%d", i), score = t(tmp[1, ]))
+  tmp_df <- tibble(
+    loc = seq_len(ncol(input_ref)),
+    cluster = sprintf("allele%d", i + 1),
+    score = t(tmp[1, ])
+  )
   df_sum_after <- df_sum_after %>% bind_rows(tmp_df)
 }
-
-df_sum_after <- df_sum_after %>% mutate(size = ifelse(cluster == "cont", 3, 2))
+# df_sum_after %>% group_by(cluster) %>% count()
 
 df_ref_blacklist_1 <- df_sum_after %>%
   filter(cluster == "cont") %>%
@@ -101,12 +111,15 @@ df_ref_blacklist_1 <- df_sum_after %>%
 df_ref_blacklist_2 <- df_sum_after %>%
   filter(cluster == "cont") %>%
   filter(score != 1) %>%
-  filter(score > quantile(score, 0.9))
+  filter(score > quantile(score, 0.95))
+# plot(df_sum_after[df_sum_after$cluster == "cont", ]$score)
 
 df_ref_blacklist <- bind_rows(df_ref_blacklist_1, df_ref_blacklist_2)
 
 output_df <- df_sum_after %>%
   filter(!(loc %in% df_ref_blacklist$loc))
+
+# output_df %>% group_by(cluster) %>% count()
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Cosine similarity to merge similar clusters
@@ -124,9 +137,9 @@ cluster <- input_ %>%
   select(cluster)
 
 if (nrow(cluster) > 1) {
-  cl_combn <- combn(cluster$cluster, nrow(cluster) - 1)
+  cl_combn <- combn(cluster$cluster, 2)
   df_cossim <- NULL
-  i <- 3
+  i <- 1
   for (i in seq_len(ncol(cl_combn))) {
     df_1 <- input_ %>%
       filter(cluster == cl_combn[1, i]) %>%
@@ -143,7 +156,7 @@ if (nrow(cluster) > 1) {
     )
     df_cossim <- bind_rows(df_cossim, df_)
   }
-  df_cossim <- df_cossim %>% filter(score > 0.9)
+  df_cossim <- df_cossim %>% filter(score > 0.95)
   #
   for (i in seq_len(nrow(df_cossim))) {
     pattern_ <- df_cossim[i, ]$two
@@ -164,17 +177,17 @@ output_df <- input_ %>%
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Output results
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# g <- ggplot(
-#   data = as.data.frame(pca_res_reduction[, c(1, 2)]),
-#   aes(
-#     x = PC1, y = PC2,
-#     color = factor(cl$cluster + 1)
-#   )
-# ) +
-#   geom_point(size = 3) +
-#   theme_bw(base_size = 20) +
-#   theme(legend.position = "none")
-# ggsave(plot = g, filename = "test.png", width = 10, height = 8)
+g <- ggplot(
+  data = as.data.frame(pca_res_reduction[, c(1, 2)]),
+  aes(
+    x = PC1, y = PC2,
+    color = factor(cl$cluster + 1)
+  )
+) +
+  geom_point(size = 3) +
+  theme_bw(base_size = 20) +
+  theme(legend.position = "none")
+ggsave(plot = g, filename = "test_pca.png", width = 10, height = 8)
 #
 write_tsv(output_df, sprintf(".tmp_/clustering_features_%s",output_suffix), col_names = F)
 #
