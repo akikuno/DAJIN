@@ -15,13 +15,13 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # Parse arguments
 # ======================================
 
-# label=barcode23
-# reference=fasta/wt.fa
-# input_data=test.sam
+# input="fasta/wt.fa"
+# genotype="target"
 
 input=${1}
+genotype=${2}
 
-output=$(echo ${input} | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
+output=$(echo "${input}" | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
 output_MIDS=".tmp_/MIDS_${output}"
 tmp_mapping=".tmp_/${output}_mapping"
 tmp_seqID=".tmp_/${output}_seqID"
@@ -30,11 +30,11 @@ tmp_seqID=".tmp_/${output}_seqID"
 # Mapping
 # ======================================
 
-reference=fasta/wt.fa
-ref=$(cat ${reference} | grep "^>" | sed "s/>//g")
+reference="fasta/${genotype}.fa"
+ref=$(cat "${reference}" | grep "^>" | sed "s/>//g")
 #
-minimap2 -t 1 --cs=long -ax splice ${reference} ${input} 2>/dev/null |
-awk -v ref=${ref} '$3 == ref' > ${tmp_mapping}
+minimap2 -t 1 --cs=long -ax map-ont ${reference} ${input} 2>/dev/null |
+awk -v ref="${ref}" '$3 == ref' > ${tmp_mapping}
 
 # ======================================
 # Identify mutation sites
@@ -136,35 +136,35 @@ awk '{gsub(/\*[a|t|g|c]*/, "S", $3); print $0}' |
 awk '{gsub(/[a|t|g|c]/, "D", $3); print $0}' |
 # erase remained symbols
 awk '{gsub(/[-|+|=]/, "", $3); print $0}' |
-# replace splice sites to "D"
-awk '{seq=cstag=$3;
-    gsub("~","",cstag);
-    gsub("[^0-9~]","",seq);
-    sub("^~","",seq);
-    count=split(seq, splice_num, "~");
-    for (i=1; i<=count; i++){
-        SPLICE="D"
-        for (j=1; j<splice_num[i]; j++){
-            SPLICE=SPLICE"D"
-        }
-        sub(splice_num[i],SPLICE,cstag)
-    }
-    print $1,$2,toupper(cstag)
-}' |
+# # replace splice sites to "D"
+# awk '{seq=cstag=$3;
+#     gsub("~","",cstag);
+#     gsub("[^0-9~]","",seq);
+#     sub("^~","",seq);
+#     count=split(seq, splice_num, "~");
+#     for (i=1; i<=count; i++){
+#         SPLICE="D"
+#         for (j=1; j<splice_num[i]; j++){
+#             SPLICE=SPLICE"D"
+#         }
+#         sub(splice_num[i],SPLICE,cstag)
+#     }
+#     print $1,$2,toupper(cstag)
+# }' |
 # complement seqences to match sequence length (insert "=")
 ## start
 awk '{start=""; for(i=1; i < $2; i++) start=start"="; print $1,$2,start""$3}' |
 ## end
-awk -v reflen=${reflength} '{
+awk -v reflen="${reflength}" '{
     seqlen=length($3);
     end="";
     if(seqlen>reflen) {print $1,substr($3,1,reflen)}
     else {for(i=seqlen; i < reflen; i++) end=end"="; print $1,$3""end}
 }' |
 sed -e "s/$/\t${label}/g" -e "s/ /\t/g" \
-> ${output_MIDS}
+> "${output_MIDS}"
 #
-rm ${tmp_mapping} ${tmp_seqID}
+rm "${tmp_mapping}" "${tmp_seqID}"
 
 printf "${output} is now converted...\n"
 
