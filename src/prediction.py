@@ -27,7 +27,7 @@ from tensorflow.keras.models import Model
 
 args = sys.argv
 file_name = args[1]
-# file_name = "data_for_ml/DAJIN.txt.gz"
+# file_name = "data_for_ml/DAJIN_trimmed.txt"
 
 df_anomaly = pd.read_csv(".tmp_/DAJIN_anomaly_classification.txt",
                          header=None, sep='\t')
@@ -38,10 +38,10 @@ labels_index.columns = ["label"]
 
 fig_dirs = ["results/figures/png", "results/figures/svg"]
 
-output_npz = file_name.replace(".txt.gz", ".npz").replace(
+output_npz = file_name.replace(".txt", ".npz").replace(
     "data_for_ml/", "data_for_ml/model/")
-output_figure = file_name.replace(".txt.gz", "").replace("data_for_ml/", "")
-output_model = file_name.replace(".txt.gz", "").replace(
+output_figure = file_name.replace(".txt", "").replace("data_for_ml/", "")
+output_model = file_name.replace(".txt", "").replace(
     "data_for_ml", "data_for_ml/model")
 
 # ====================================
@@ -70,7 +70,7 @@ for i in tqdm(range(0, X_real.shape[0], iter_)):
 
 df_predict = pd.Series(predict, dtype="str") + "_"
 
-for i, j in enumerate(labels_index["label"].str.replace("_simulated", "")):
+for i, j in enumerate(labels_index["label"].str.replace("_simulated.*$", "")):
     df_predict = df_predict.str.replace(str(i)+"_", j)
 
 df_result = pd.DataFrame({"barcodeID": df_anomaly.iloc[:, 0],
