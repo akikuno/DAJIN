@@ -17,13 +17,14 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 barcode="${1}"
 control="${2}"
 alleletype="${3}"
-MIDS_file="${4}"
+# MIDS_file="${4}"
+suffix="${barcode}"_"${alleletype}"
 
-# barcode="barcode04"
+# barcode="target_merged"
 # control="barcode30"
 # alleletype="target"
 # MIDS_file="data_for_ml/DAJIN.txt"
-suffix="${barcode}"_"${alleletype}"
+# suffix="${barcode}"_"${alleletype}"
 
 # ============================================================================
 # Sort prediction results
@@ -31,10 +32,37 @@ suffix="${barcode}"_"${alleletype}"
 
 cat .tmp_/DAJIN_prediction_result.txt |
 grep -e "${barcode}" -e "${control}" |
-awk -v atype="${alleletype}" '$3==atype' |
+awk -v barcode="${barcode}" -v control="${control}" \
+    -v que="${alleletype}" -v ref="wt" \
+    '($1==barcode && $3==que) || ($1==control && $3==ref)' |
 sort -k 2,2 \
 > .tmp_/clustering_prediction_result_"${suffix}"
 
+# cat .tmp_/DAJIN_prediction_result.txt |
+# grep -e "${barcode}" -e "${control}" |
+# awk -v atype="${alleletype}" '$3==atype' |
+# sort -k 2,2 \
+# > .tmp_/clustering_prediction_result_"${suffix}"
+
+
+# ============================================================================
+# MIDS conversion
+# ============================================================================
+find fasta_ont/ -type f | grep "${barcode}" |
+# find fasta/ -type f | grep target_1 |
+xargs -I @ ./DAJIN/src/mids_convertion.sh @ "$alleletype" &&
+mv .tmp_/MIDS_"${barcode}" .tmp_/MIDS_"${suffix}"
+#
+MIDS_que=.tmp_/MIDS_"${suffix}"
+#
+# If no control MIDS files, output... 
+if [ ! -s .tmp_/MIDS_"${control}"_"${alleletype}" ]; then
+    find fasta_ont/ -type f | grep "${control}" |
+    xargs -I @ ./DAJIN/src/mids_convertion.sh @ "$alleletype" &&
+    mv .tmp_/MIDS_"${control}" .tmp_/MIDS_"${control}"_"${alleletype}"
+fi
+MIDS_ref=.tmp_/MIDS_"${control}"_"${alleletype}"
+#
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # test barcode02
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -42,17 +70,19 @@ sort -k 2,2 \
 output_label=".tmp_/clustering_labels_${suffix}"
 output_seq=".tmp_/clustering_seq_${suffix}"
 # ----------------------------------------
-cat "${MIDS_file}" |
+cat "${MIDS_que}" |
 grep "${barcode}" |
+sort -k 1,1 |
 join -1 1 -2 2 - ".tmp_/clustering_prediction_result_${suffix}" |
 cut -d " " -f 1,3 |
 sed "s/ /\t/g" \
 > "${output_label}"
 
 #
-cat "${MIDS_file}" |
+cat "${MIDS_que}" |
 grep "${barcode}" |
-join -1 1 -2 2 - .tmp_/clustering_prediction_result_${suffix} |
+sort -k 1,1 |
+join -1 1 -2 2 - ".tmp_/clustering_prediction_result_${suffix}" |
 cut -d " " -f 2 |
 awk -F "" '{
     for(i=1; i<=NF; i++){
@@ -60,13 +90,13 @@ awk -F "" '{
         if($i=="I" && $(i+1)!="I") {
             ### e.g) if num=10, num becomes "a"
             if(num>=10 && num<=35) num=sprintf("%c", num+87)
-            if(num>=36) num="z"
+            else if(num>=36) num="z"
             ###
             $(i+1)=num; num=0}
         }
     print $0}' |
 sed -e "s/I//g" -e "s/ //g" \
-> ${output_seq}
+> "${output_seq}"
 
 # Output \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 # ----------------------------------------
@@ -102,38 +132,39 @@ awk -F "" 'BEGIN{OFS=","}{
     }
     # print $0,totalGap,totalM,totalI,totalD,totalS
     print $0}' \
-> ${output_que}
+> "${output_que}"
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# barcode30 for control
+# Control
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# ----------------------------------------
-#barcode="barcode30"
-# output_label="test_labels.txt"
 output_ref=".tmp_/clustering_score_control_${suffix}"
 # ----------------------------------------
-cat "${MIDS_file}" |
+cat "${MIDS_ref}" |
 grep ${control} |
-join -1 1 -2 2 - .tmp_/clustering_prediction_result_${suffix} |
+sort -k 1,1 |
+join -1 1 -2 2 - ".tmp_/clustering_prediction_result_${suffix}" |
+head | #? ===================================================
 cut -d " " -f 2 |
 awk -F "" '{
     for(i=1; i<=NF; i++){
         if($i=="I") num=num+1
         if($i=="I" && $(i+1)!="I") {
             ### e.g) if num=10, num becomes "a"
-            if(num>=10 && num<=35) num=sprintf("%c", num+87)
-            if(num>=36) num="z"
+            if(num>=10 && num<=35) {num=sprintf("%c", num+87)}
+            else if(num>=36) num="z"
             ###
             $(i+1)=num; num=0}
         }
-    print $0}' |
-sed -e "s/I//g" -e "s/ //g" |
+    print $0
+    }' |
 #
+sed -e "s/I//g" -e "s/ //g" |
 awk -F "" -v seqnum=${seqnum} \
     '{for(i=1;i<=seqnum;i++) {
     seq[i]=seq[i]$i
 }}
 END{for(key in seq) print seq[key]}' |
+head -n 1 | #? ===================================================
 awk -F "" 'BEGIN{OFS=","}{
     totalGap=gsub("=","=",$0)
     totalM=gsub("M","M",$0)
@@ -149,7 +180,7 @@ awk -F "" 'BEGIN{OFS=","}{
     }
     # print $0,totalGap,totalM,totalI,totalD,totalS
     print $0}' \
-> ${output_ref}
+> "${output_ref}"
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # HDBSCAN
@@ -176,17 +207,17 @@ start=$(cat .tmp_/gggenome_location | cut -f 2)
 #
 # cluster=allele2
 for cluster in $(cat ${input_id} | cut -f 2 | sort -u); do
-    percent=$(paste .tmp_/clustering_seq_${suffix} ${input_id} |
+    percent=$(paste ".tmp_/clustering_seq_${suffix}" "${input_id}" |
     grep "${cluster}" |
-    wc -l .tmp_/clustering_seq_${suffix}  - |
+    wc -l ".tmp_/clustering_seq_${suffix}"  - |
     grep -v total |
     tr -d "\n" |
     awk '{printf "%.1f\n", ($3/$1*100)}')
     #
-    paste .tmp_/clustering_seq_${suffix} ${input_id} |
+    paste ".tmp_/clustering_seq_${suffix}" "${input_id}" |
     grep "${cluster}" |
     sort -k 3,3 |
-    join -1 3 -2 2 - ${input_feat} |
+    join -1 3 -2 2 - "${input_feat}" |
     awk '{ID[$NF]=ID[$NF]","substr($2,$NF,1)}
     END{for(key in ID) print key, ID[key]}' |
     awk '{ID=$1; seq=$2
@@ -195,6 +226,7 @@ for cluster in $(cat ${input_id} | cut -f 2 | sort -u); do
         totalI=gsub(/[1-9]|[a-z]/,"@",seq)
         totalD=gsub("D","",$2)
         totalS=gsub("S","",$2)
+        print totalI
         if ( (totalM < totalI || totalM < totalD || totalM < totalS) && (totalD < totalI && totalS < totalI) ){
             print ID, totalGap, totalM, totalI, totalD, totalS, "@", $2}
         else if(totalM < totalI || totalM < totalD || totalM < totalS){
@@ -255,6 +287,7 @@ for cluster in $(cat ${input_id} | cut -f 2 | sort -u); do
     fi
 done
 
+cat .tmp_/clustering_results_target_merged*
 printf "${barcode} is finished...\n"
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

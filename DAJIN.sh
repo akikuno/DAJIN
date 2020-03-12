@@ -300,7 +300,7 @@ awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' \
 
 # MIDS conversion...
 find fasta_ont -type f | sort |
-awk '{print "./DAJIN/src/mids_convertion.sh",$0, "&"}' |
+awk '{print "./DAJIN/src/mids_convertion.sh",$0, "wt", "&"}' |
 awk -v th=${threads:-1} '{
     if (NR%th==0) gsub("&","&\nwait",$0)
     print}
@@ -328,9 +328,6 @@ wait 2>/dev/null
 cat data_for_ml/${output_file}.txt |
 cut -f 1,3 \
 > data_for_ml/${output_file}_trimmed.txt
-#
-# bgzip -f data_for_ml/${output_file}.txt & 1>/dev/null 2>/dev/null
-# wait 2>/dev/null
 
 printf "Finished.\n${output_file}.txt is generated.\n"
 
@@ -355,7 +352,7 @@ rm .tmp_/onehot_*
 #
 # cp .tmp_/anomaly_classification.txt .tmp_/anomaly_classification_revised.txt
 #
-python DAJIN/src/prediction.py data_for_ml/${output_file:-DAJIN}.txt.gz
+python DAJIN/src/prediction.py data_for_ml/${output_file:-DAJIN}_trimmed.txt
 #
 printf "Prediction was finished...\n"
 #
@@ -396,9 +393,9 @@ awk '{print $1, int($3*100/$2+0.5),$4}' \
 # Clustering within each allele type
 # ============================================================================
 
-barcode=barcode02
+barcode=target_merged
 control=barcode30 #! define "barcode30" by automate manner
-allele=wt
+allele=target
 ./DAJIN/src/test_clustering.sh ${barcode} ${control} ${allele} data_for_ml/${output_file:-DAJIN}.txt
 cat .tmp_/clustering_results_* > test_result.csv
 
