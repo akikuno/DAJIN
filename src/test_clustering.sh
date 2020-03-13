@@ -58,13 +58,15 @@ MIDS_que=.tmp_/MIDS_"${suffix}"
 # If no control MIDS files, output... 
 if [ ! -s .tmp_/MIDS_"${control}"_"${alleletype}" ]; then
     find fasta_ont/ -type f | grep "${control}" |
-    xargs -I @ ./DAJIN/src/mids_convertion.sh @ "$alleletype" &&
+    xargs -I @ ./DAJIN/src/mids_convertion.sh @ "$alleletype" "control" &&
     mv .tmp_/MIDS_"${control}" .tmp_/MIDS_"${control}"_"${alleletype}"
 fi
+# ./DAJIN/src/mids_convertion.sh fasta/wt.fa "$alleletype"
+
 MIDS_ref=.tmp_/MIDS_"${control}"_"${alleletype}"
 #
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# test barcode02
+# Mutation scoring of samples
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # ----------------------------------------
 output_label=".tmp_/clustering_labels_${suffix}"
@@ -135,7 +137,7 @@ awk -F "" 'BEGIN{OFS=","}{
 > "${output_que}"
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# Control
+# Mutation scoring of Control
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 output_ref=".tmp_/clustering_score_control_${suffix}"
 # ----------------------------------------
@@ -143,7 +145,9 @@ cat "${MIDS_ref}" |
 grep ${control} |
 sort -k 1,1 |
 join -1 1 -2 2 - ".tmp_/clustering_prediction_result_${suffix}" |
-head | #? ===================================================
+# #? ===================================================
+# head |
+# #? ===================================================
 cut -d " " -f 2 |
 awk -F "" '{
     for(i=1; i<=NF; i++){
@@ -164,7 +168,6 @@ awk -F "" -v seqnum=${seqnum} \
     seq[i]=seq[i]$i
 }}
 END{for(key in seq) print seq[key]}' |
-head -n 1 | #? ===================================================
 awk -F "" 'BEGIN{OFS=","}{
     totalGap=gsub("=","=",$0)
     totalM=gsub("M","M",$0)
@@ -220,13 +223,15 @@ for cluster in $(cat ${input_id} | cut -f 2 | sort -u); do
     join -1 3 -2 2 - "${input_feat}" |
     awk '{ID[$NF]=ID[$NF]","substr($2,$NF,1)}
     END{for(key in ID) print key, ID[key]}' |
+    #? ---------------------------
+    # head -n 1 |
+    #? ---------------------------
     awk '{ID=$1; seq=$2
         totalGap=gsub("=","",$2)
         totalM=gsub("M","",$2)
         totalI=gsub(/[1-9]|[a-z]/,"@",seq)
         totalD=gsub("D","",$2)
         totalS=gsub("S","",$2)
-        print totalI
         if ( (totalM < totalI || totalM < totalD || totalM < totalS) && (totalD < totalI && totalS < totalI) ){
             print ID, totalGap, totalM, totalI, totalD, totalS, "@", $2}
         else if(totalM < totalI || totalM < totalD || totalM < totalS){
@@ -283,11 +288,11 @@ for cluster in $(cat ${input_id} | cut -f 2 | sort -u); do
     if [ -s ${output_tmp}_${cluster} ]; then
       cat ${output_tmp}_${cluster} > ${output}_${cluster}
     else
-      printf "${barcode}, ${cluster}, ${percent}, Left/Right WT\n" > ${output}_${cluster}
+      printf "${barcode},${cluster},${percent},intact ${alleletype}\n" > ${output}_${cluster}
     fi
 done
 
-cat .tmp_/clustering_results_target_merged*
+# cat ${output}*
 printf "${barcode} is finished...\n"
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

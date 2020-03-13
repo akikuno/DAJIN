@@ -402,20 +402,15 @@ cat .tmp_/clustering_results_* > test_result.csv
 #
 cat .tmp_/DAJIN_prediction_allele_percentage |
 cut -d " " -f 1,3 |
-awk -v cont=${control} -v data="data_for_ml/${output_file:-DAJIN}.txt" \
-    '{print "./DAJIN/src/test_clustering.sh",$0, cont, data, "&"}' |
+awk -v cont=${control} \
+    '{print "./DAJIN/src/test_clustering.sh",$1, cont, $2, "&"}' |
 awk -v th=${threads:-1} '{
     if (NR%th==0) gsub("&","&\nwait",$0)
     print}
     END{print "wait"}' |
 sh -
 #
-
-while read input; do
-    barcode=$(echo ${input} | cut -d " " -f 1)
-    allele=$(echo ${input} | cut -d " " -f 2)
-    #
-done
+cat .tmp_/clustering_results_*
 
 
 # ============================================================================
