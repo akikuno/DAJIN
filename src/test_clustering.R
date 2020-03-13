@@ -116,15 +116,16 @@ df_ref_blacklist_2 <- df_sum_after %>%
 
 df_ref_blacklist <- bind_rows(df_ref_blacklist_1, df_ref_blacklist_2)
 
-output_df <- df_sum_after %>%
-  filter(!(loc %in% df_ref_blacklist$loc))
+# output_df <- df_sum_after %>%
+#   filter(!(loc %in% df_ref_blacklist$loc))
 
 # output_df %>% group_by(cluster) %>% count()
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Cosine similarity to merge similar clusters
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-input_ <- output_df
+input_ <- df_sum_after %>%
+  filter(!(loc %in% df_ref_blacklist$loc))
 output_df <- NULL
 output_cl <- sprintf("allele%d", cl$cluster + 1)
 # //////////////////////////////////////////////////////////
@@ -140,7 +141,7 @@ if (nrow(cluster) > 1) {
   cl_combn <- combn(cluster$cluster, 2)
   df_cossim <- NULL
   i <- 1
-  for (i in seq_len(ncol(cl_combn))) {
+  for (i in seq_along(ncol(cl_combn))) {
     df_1 <- input_ %>%
       filter(cluster == cl_combn[1, i]) %>%
       select(score)
@@ -158,12 +159,15 @@ if (nrow(cluster) > 1) {
   }
   df_cossim <- df_cossim %>% filter(score > 0.95)
   #
-  for (i in seq_len(nrow(df_cossim))) {
-    pattern_ <- df_cossim[i, ]$two
-    query_ <- df_cossim[i, ]$one
-    input_$cluster <- input_$cluster %>% str_replace(pattern_, query_)
-    output_cl <- output_cl %>% str_replace(pattern_, query_)
+  if (nrow(df_cossim) != 0) {
+    for (i in seq_along(nrow(df_cossim))) {
+      pattern_ <- df_cossim[i, ]$two
+      query_ <- df_cossim[i, ]$one
+      input_$cluster <- input_$cluster %>% str_replace(pattern_, query_)
+      output_cl <- output_cl %>% str_replace(pattern_, query_)
+    }
   }
+  #
 }
 
 output_df <- input_ %>%
