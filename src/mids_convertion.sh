@@ -98,6 +98,9 @@ cat ${tmp_mapping} |
 # cat .tmp_/wt_simulated |
 sort |
 join - ${tmp_seqID} |
+# Remove unpredictable long reads あまりにも長いリードは除去する
+awk -v reflen=${reflength} \
+    'length($10) < reflen*1.1' |
 # append alignment info
 awk '{
     if($2==0 || $2==16) {alignment="primary"} else {alignment="secondary"};
@@ -117,6 +120,8 @@ awk '{s=$2; alignment=$3; cstag=$4;
     if(start[$1]>s) start[$1]=s;
     }
 END {for (key in ID) print key, start[key],ID[key]}' |
+# もしSecondaryしか存在せず、全てがIになったリードがあれば除去する。
+awk '$3 !~ /^I+$/' |
 # replace matched nuc to "M"
 awk '{cstag=$3;
     gsub(/[A|C|G|T]/, "M", cstag);
