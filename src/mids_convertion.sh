@@ -20,6 +20,18 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 input=${1}
 genotype=${2}
+set +u
+if [ "${3}" = "" ]; then
+    insertion_skip=""
+else
+    insertion_skip=${3}
+fi
+set -u
+# if [ -z " ]; then
+#     insertion_skip=""
+# else
+#     insertion_skip="$3"
+# fi
 
 output=$(echo "${input}" | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
 output_MIDS=".tmp_/MIDS_${output}"
@@ -110,10 +122,15 @@ awk '{cstag=$3;
     gsub(/[A|C|G|T]/, "M", cstag);
 print $1,$2,cstag}' |
 # replace insertion to "I"
+# WT配列をDeletion配列にマップした場合（Clusteringのときのみの限定的条件）、
+# IIIIIの連続配列が邪魔をして後方の配列が取り除かれてしまう。
+# そのためIIIIの連続配列をトリムして配列長を保つ。
+if [ -z "${insertion_skip}" ]; then
 awk '{seq=cstag=$3
     insertion_num=gsub("+","+",cstag);
     if(insertion_num > 0){
-    gsub(/[=M]/,"",$3); cnt=split($3,ins,"+");
+    gsub(/[=M]/,"",$3)
+    cnt=split($3,ins,"+");
     ins_seq=""
     for(i=1;i<=cnt;i++){
         gsub("[-*][acgt]+", "", ins[i])
@@ -129,7 +146,9 @@ awk '{seq=cstag=$3
     print $1,$2,seq
     }
     else {print $0}
-}' |
+}' 
+else sed "s/+[a-z]*=//g"
+fi |
 # replace single-nuc substitution to "S"
 awk '{gsub(/\*[a|t|g|c]*/, "S", $3); print $0}' |
 # replace Deletion to "D"
