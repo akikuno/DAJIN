@@ -393,11 +393,11 @@ awk '{print $1, int($3*100/$2+0.5),$4}' \
 # Clustering within each allele type
 # ============================================================================
 
-barcode=target_merged
+barcode=barcode29
 control=barcode30 #! define "barcode30" by automate manner
-allele=target
-./DAJIN/src/test_clustering.sh ${barcode} ${control} ${allele} data_for_ml/${output_file:-DAJIN}.txt
-cat .tmp_/clustering_results_* > test_result.csv
+allele=abnormal
+./DAJIN/src/test_clustering.sh ${barcode} ${control} ${allele}
+cat .tmp_/clustering_results_*
 
 #
 cat .tmp_/DAJIN_prediction_allele_percentage |
