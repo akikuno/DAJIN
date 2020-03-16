@@ -14,16 +14,18 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # Parse auguments
 # ============================================================================
 
-# barcode="barcode02"
-# control="barcode30"
-# alleletype="wt"
-# suffix="${barcode}"_"${alleletype}"
+barcode="barcode02"
+control="barcode30"
+alleletype="wt"
+pid=1
+suffix="${barcode}"_"${alleletype}"_"${pid}"
 
 barcode="${1}"
 control="${2}"
 alleletype="${3}"
-suffix="${barcode}"_"${alleletype}"
-echo "${barcode}"_"${alleletype}"
+pid="${4}"
+suffix="${barcode}"_"${alleletype}"_"${pid}"
+echo "$suffix"
 # ============================================================================
 # Sort prediction results
 # ============================================================================
@@ -42,21 +44,23 @@ sort -k 2,2 \
 [ "$alleletype" = "abnormal" ] && alleletype="wt"
 
 find fasta_ont/ -type f | grep "${barcode}" |
-xargs -I @ ./DAJIN/src/mids_convertion.sh @ "$alleletype" &&
-mv .tmp_/MIDS_"${barcode}" .tmp_/MIDS_"${suffix}"
+xargs -I @ ./DAJIN/src/mids_convertion.sh @ "$alleletype" "${pid}" &&
+mv .tmp_/MIDS_"${barcode}"_"${pid}" .tmp_/MIDS_"${suffix}"
 #
 MIDS_que=.tmp_/MIDS_"${suffix}"
 #
 # If no control MIDS files, output... 
 if [ ! -s .tmp_/MIDS_"${control}"_"${alleletype}" ]; then
     find fasta_ont/ -type f | grep "${control}" |
-    xargs -I @ ./DAJIN/src/mids_convertion.sh @ "$alleletype" "control" &&
+    xargs -I @ ./DAJIN/src/mids_convertion.sh @ "$alleletype" "${pid}" "control" &&
     mv .tmp_/MIDS_"${control}" .tmp_/MIDS_"${control}"_"${alleletype}"
 fi
 # ./DAJIN/src/mids_convertion.sh fasta/wt.fa "$alleletype"
 
 MIDS_ref=.tmp_/MIDS_"${control}"_"${alleletype}"
 #
+# echo "MIDS conversion of ${suffix} is finished!"
+# exit 0
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Mutation scoring of samples
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -189,6 +193,9 @@ awk '{if($NF==2) $1=0
     print $1}' \
 > ${output_que}
 
+# echo "${output_ref} and ${output_que} are finished!"
+# exit 0
+
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Clustering by HDBSCAN
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -290,3 +297,8 @@ for i in $(cat ${input_id} | cut -f 2 | sort -u);do
     samtools sort tmp_header > ${barcode}_${i}.bam
     samtools index ${barcode}_${i}.bam
 done
+
+# echo "${suffix} is successfully finished!"
+# rm .tmp_/*${suffix}
+
+exit 0

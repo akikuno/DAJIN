@@ -18,9 +18,6 @@ myColors <- c("gray50", "red", "blue", "green")
 names(myColors) <- c("Match","Insertion","Deletion","Substitution")
 colScale <- scale_colour_manual(name = "mutation", values = myColors)
 
-# data %>%
-#     group_by(cluster, mutation) %>%
-#     count()
 g <- ggplot(data, aes(x = coodinate, y = value, color = mutation)) +
     geom_point(data=(data %>% filter(mutation=="Match")), aes(size = 1)) +
     geom_point(data=(data %>% filter(mutation!="Match")), aes(size = 2)) +
