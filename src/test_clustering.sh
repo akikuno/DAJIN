@@ -108,7 +108,7 @@ seq_maxnum=$(cat "${output_seq}" |
 output_ref=".tmp_/clustering_score_control_${suffix}"
 # ----------------------------------------
 cat "${MIDS_ref}" |
-grep ${control} |
+grep "${control}" |
 sort -k 1,1 |
 join -1 1 -2 2 - ".tmp_/clustering_prediction_result_${suffix}" |
 # join -1 1 -2 2 - ".tmp_/prediction_result.txt" |
@@ -129,7 +129,7 @@ awk -F "" '{
     }' |
 #
 sed -e "s/I//g" -e "s/ //g" |
-awk -F "" -v seqnum=${seq_maxnum} \
+awk -F "" -v seqnum="${seq_maxnum}" \
     '{for(i=1;i<=seqnum;i++) {
     if($i=="") $i="="
     seq[i]=seq[i]$i
@@ -149,13 +149,13 @@ awk -F "" '{
     # ControlにおいてIDSがtotalの5%を超える場合をシークエンスエラーありとする。
     per=5
     # ##
-    if(sum[3] > NF*per/100) num=2
-    else if(sum[4] > NF*per/100) num=2
-    else if(sum[5] > NF*per/100) num=2
+    if(sum[3]+sum[4]+sum[5] > NF*per/100) num=2
+    # else if(sum[4] > NF*per/100) num=2
+    # else if(sum[5] > NF*per/100) num=2
     else num=1
     print num
 }' \
-> ${output_ref}
+> "${output_ref}"
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Output Genomic coodinates (Query)
@@ -165,9 +165,9 @@ input=".tmp_/clustering_seq_${suffix}"
 output_que=".tmp_/clustering_score_${suffix}"
 # ----------------------------------------
 
-cat ${input} |
+cat "${input}" |
 # grep a | head -n 1 | grep a |
-awk -F "" -v seqnum=${seq_maxnum} \
+awk -F "" -v seqnum="${seq_maxnum}" \
     '{for(i=1;i<=seqnum;i++) {
         if($i=="") $i="="
         seq[i]=seq[i]$i
@@ -188,10 +188,10 @@ awk -F "" 'BEGIN{OFS=","}{
     }
     # print $0,totalGap,totalM,totalI,totalD,totalS
     print $0}' |
-paste - ${output_ref} |
+paste - "${output_ref}" |
 awk '{if($NF==2) $1=0
     print $1}' \
-> ${output_que}
+> "${output_que}"
 
 # echo "${output_ref} and ${output_que} are finished!"
 # exit 0
@@ -201,7 +201,7 @@ awk '{if($NF==2) $1=0
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 printf "Clustering... \n"
 Rscript DAJIN/src/test_clustering.R \
-${output_que} ${output_label} 2>/dev/null
+"${output_que}" "${output_label}" 2>/dev/null
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Extract high-impact nucreotides
@@ -210,24 +210,28 @@ printf "Output figures... \n"
 input_id=".tmp_/clustering_id_${suffix}"
 output_plot=".tmp_/clustering_plot_${suffix}"
 # ----------------------------------------
-sum_input_id=$(cat "$input_id" | wc -l)
-cat "$input_id" | cut -f 2 | sort | uniq -c | awk -v sum=${sum_input_id} \
-'{print int($1/sum*100+0.5)}'
+# sum_input_id=$(cat "$input_id" | wc -l)
+# cat "$input_id" |
+# cut -f 2 |
+# sort |
+# uniq -c |
+# awk -v sum="${sum_input_id}" \
+# '{print int($1/sum*100+0.5)}'
 
 
-if [ "$alleletype" = "target" ]; then
-target_loci=$(
-    minimap2 -ax map-ont fasta/target.fa fasta/wt.fa --cs 2>/dev/null |
-    grep -v "^@" |
-    awk '{print $(NF-1)}' |
-    sed -e "s/cs:Z:://g" | 
-    sed -e "s/:/ /g" |
-    sed -e "s/\([-|+|*]\)/ \1 /g" |
-    awk '{for(i=1; i<NF; i++){if($i~/[a|t|g|c]/) $i=length($i)}
-        $NF=""
-        print}'
-)
-fi
+# if [ "$alleletype" = "target" ]; then
+# target_loci=$(
+#     minimap2 -ax map-ont fasta/target.fa fasta/wt.fa --cs 2>/dev/null |
+#     grep -v "^@" |
+#     awk '{print $(NF-1)}' |
+#     sed -e "s/cs:Z:://g" | 
+#     sed -e "s/:/ /g" |
+#     sed -e "s/\([-|+|*]\)/ \1 /g" |
+#     awk '{for(i=1; i<NF; i++){if($i~/[a|t|g|c]/) $i=length($i)}
+#         $NF=""
+#         print}'
+# )
+# fi
 # awk -v target="${target_loci}" 'BEGIN{cnt=split(target, path, " ")
 #   for(i=1; i<=cnt; i++) {sum+=path[i]; array[i]=sum}
 #   for(i=1; i<=cnt; i=i+3) {print array[i], array[i+3]}
@@ -283,11 +287,11 @@ Rscript DAJIN/src/test_2ndclustering.R "${output_plot}"  2>/dev/null
 printf "Output BAM files... \n"
 
 rm ${barcode}*.bam* 2>/dev/null
-for i in $(cat ${input_id} | cut -f 2 | sort -u);do
-    cat ${input_id} | grep ${i}$ | cut -f 1 | sort > tmp_id
-    samtools view -h bam/${barcode}.bam | grep "^@" > tmp_header 
+for i in $(cat "${input_id}" | cut -f 2 | sort -u);do
+    cat "${input_id}" | grep "${i}$" | cut -f 1 | sort > tmp_id
+    samtools view -h bam/"${barcode}".bam | grep "^@" > tmp_header 
     #
-    samtools view bam/${barcode}.bam |
+    samtools view bam/"${barcode}".bam |
     sort |
     join - tmp_id |
     sed "s/ /\t/g" |

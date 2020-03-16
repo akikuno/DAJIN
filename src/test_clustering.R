@@ -24,6 +24,7 @@ df_que[is.na(df_que)] <- 0
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # PCA
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+print("Dimension reduction by PCA...")
 input_pca <- df_que
 # output: output_pca # PC1 and PC2
 # //////////////////////////////////////////////////////////
@@ -32,6 +33,7 @@ output_pca <- pca_res$x[, 1:2]
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # HDBSCAN
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+print("Clustering by HDBSCAN...")
 input_hdbscan <- output_pca
 # output: output_hdbscan # Cluster + 1
 # //////////////////////////////////////////////////////////
@@ -95,6 +97,7 @@ for (i in unique(input_cl)) {
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Cosine similarity to merge similar clusters
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+print("Merge similar clusters...")
 input_cossim <- df_cluster
 output_cl <- output_hdbscan
 # //////////////////////////////////////////////////////////
@@ -145,7 +148,7 @@ query_ <- output_cl %>%
     sort()
 
 for(i in seq_along(pattern_)) output_cl[output_cl == pattern_[i]] <- query_[i]
-output_cl %>% unique()
+# output_cl %>% unique()
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Output results
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
