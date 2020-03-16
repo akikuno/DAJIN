@@ -20,23 +20,20 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 input=${1}
 genotype=${2}
+pid=${3}
+
 set +u
-if [ "${3}" = "" ]; then
+if [ "${4}" = "" ]; then
     insertion_skip=""
 else
-    insertion_skip=${3}
+    insertion_skip=${4}
 fi
 set -u
-# if [ -z " ]; then
-#     insertion_skip=""
-# else
-#     insertion_skip="$3"
-# fi
 
 output=$(echo "${input}" | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
-output_MIDS=".tmp_/MIDS_${output}"
-tmp_mapping=".tmp_/${output}_mapping"
-tmp_seqID=".tmp_/${output}_seqID"
+output_MIDS=".tmp_/MIDS_${output}_${pid}"
+tmp_mapping=".tmp_/${output}_mapping_${pid}"
+tmp_seqID=".tmp_/${output}_seqID_${pid}"
 
 # ======================================
 # Mapping
@@ -190,6 +187,6 @@ sed -e "s/$/\t${label}/g" -e "s/ /\t/g" \
 #
 rm "${tmp_mapping}" "${tmp_seqID}"
 
-printf "${output} is now converted...\n"
+# printf "${output} is now converted...\n"
 
 exit 0
