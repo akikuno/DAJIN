@@ -396,14 +396,15 @@ awk '{print $1, int($3*100/$2+0.5),$4}' \
 barcode=barcode29
 control=barcode30 #! define "barcode30" by automate manner
 allele=abnormal
-./DAJIN/src/test_clustering.sh ${barcode} ${control} ${allele}
-cat .tmp_/clustering_results_*
+# ./DAJIN/src/test_clustering.sh ${barcode} ${control} ${allele}
+# cat .tmp_/clustering_results_*
 
 #
 cat .tmp_/DAJIN_prediction_allele_percentage |
 cut -d " " -f 1,3 |
 awk -v cont=${control} \
-    '{print "./DAJIN/src/test_clustering.sh",$1, cont, $2, "&"}' |
+    '{print "./DAJIN/src/test_clustering.sh",$1, cont, $2, NR, "&"}' |
+head -n 2 | #! ---------------------------------
 awk -v th=${threads:-1} '{
     if (NR%th==0) gsub("&","&\nwait",$0)
     print}
