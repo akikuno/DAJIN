@@ -14,17 +14,16 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # Parse auguments
 # ============================================================================
 
-barcode="barcode29"
-control="barcode30"
-alleletype="abnormal"
-suffix="${barcode}"_"${alleletype}"
+# barcode="barcode02"
+# control="barcode30"
+# alleletype="wt"
+# suffix="${barcode}"_"${alleletype}"
 
 barcode="${1}"
 control="${2}"
 alleletype="${3}"
-# MIDS_file="${4}"
 suffix="${barcode}"_"${alleletype}"
-
+echo "${barcode}"_"${alleletype}"
 # ============================================================================
 # Sort prediction results
 # ============================================================================
@@ -36,13 +35,6 @@ awk -v barcode="${barcode}" -v control="${control}" \
     '($1==barcode && $3==que) || ($1==control && $3==ref)' |
 sort -k 2,2 \
 > .tmp_/clustering_prediction_result_"${suffix}"
-
-# cat .tmp_/DAJIN_prediction_result.txt |
-# grep -e "${barcode}" -e "${control}" |
-# awk -v atype="${alleletype}" '$3==atype' |
-# sort -k 2,2 \
-# > .tmp_/clustering_prediction_result_"${suffix}"
-
 
 # ============================================================================
 # MIDS conversion
@@ -79,7 +71,6 @@ join -1 1 -2 2 - ".tmp_/clustering_prediction_result_${suffix}" |
 cut -d " " -f 1,3 |
 sed "s/ /\t/g" \
 > "${output_label}"
-
 #
 cat "${MIDS_que}" |
 grep "${barcode}" |
@@ -100,17 +91,76 @@ awk -F "" '{
 sed -e "s/I//g" -e "s/ //g" \
 > "${output_seq}"
 
-# Output \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+# Get max sequence length
+seq_maxnum=$(cat "${output_seq}" |
+    grep -v "^$" |
+    awk -F "" 'BEGIN{max=0}
+    {if(max<length($0)) max=length($0)}
+    END{print max}')
+
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# Output Genomic coodinates (Control)
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+output_ref=".tmp_/clustering_score_control_${suffix}"
+# ----------------------------------------
+cat "${MIDS_ref}" |
+grep ${control} |
+sort -k 1,1 |
+join -1 1 -2 2 - ".tmp_/clustering_prediction_result_${suffix}" |
+# join -1 1 -2 2 - ".tmp_/prediction_result.txt" |
+awk '$NF=="wt"' |
+cut -d " " -f 2 |
+# Insertion annotation
+awk -F "" '{
+    for(i=1; i<=NF; i++){
+        if($i=="I") num=num+1
+        if($i=="I" && $(i+1)!="I") {
+            ### e.g) if num=10, num becomes "a"
+            if(num>=10 && num<=35) {num=sprintf("%c", num+87)}
+            else if(num>=36) num="z"
+            ###
+            $(i+1)=num; num=0}
+        }
+    print $0
+    }' |
+#
+sed -e "s/I//g" -e "s/ //g" |
+awk -F "" -v seqnum=${seq_maxnum} \
+    '{for(i=1;i<=seqnum;i++) {
+    if($i=="") $i="="
+    seq[i]=seq[i]$i
+}}
+END{for(key in seq) print seq[key]}' |
+awk -F "" '{
+    # sum[1]=gsub("=","=",$0)
+    # sum[2]=gsub("M","M",$0)
+    sum[3]=gsub(/[1-9]|[a-z]/,"@",$0)
+    sum[4]=gsub("D","D",$0)
+    sum[5]=gsub("S","S",$0)
+    # max=sum[1]; num=1
+    # for(i=2; i<5;i++){if(max<sum[i]){max=sum[i]; num=i}}
+    # print num, sum[1],sum[2],sum[3],sum[4],sum[5]
+    # print num
+    # ##
+    # ControlにおいてIDSがtotalの5%を超える場合をシークエンスエラーありとする。
+    per=5
+    # ##
+    if(sum[3] > NF*per/100) num=2
+    else if(sum[4] > NF*per/100) num=2
+    else if(sum[5] > NF*per/100) num=2
+    else num=1
+    print num
+}' \
+> ${output_ref}
+
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# Output Genomic coodinates (Query)
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # ----------------------------------------
 input=".tmp_/clustering_seq_${suffix}"
 output_que=".tmp_/clustering_score_${suffix}"
 # ----------------------------------------
-seq_maxnum=$(cat ${input} |
-    grep -v "^$" |
-    awk -F "" 'BEGIN{max=0} \
-    {if(max<length($0)) max=length($0)} \
-    END{print max}')
-#
+
 cat ${input} |
 # grep a | head -n 1 | grep a |
 awk -F "" -v seqnum=${seq_maxnum} \
@@ -133,194 +183,53 @@ awk -F "" 'BEGIN{OFS=","}{
         else if($i=="S") $i=totalS
     }
     # print $0,totalGap,totalM,totalI,totalD,totalS
-    print $0}' \
-> "${output_que}"
+    print $0}' |
+paste - ${output_ref} |
+awk '{if($NF==2) $1=0
+    print $1}' \
+> ${output_que}
 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# Mutation scoring of Control
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-output_ref=".tmp_/clustering_score_control_${suffix}"
-# ----------------------------------------
-cat "${MIDS_ref}" |
-grep ${control} |
-sort -k 1,1 |
-join -1 1 -2 2 - ".tmp_/clustering_prediction_result_${suffix}" |
-# #? ===================================================
-head -n 10 |
-# #? ===================================================
-cut -d " " -f 2 |
-awk -F "" '{
-    for(i=1; i<=NF; i++){
-        if($i=="I") num=num+1
-        if($i=="I" && $(i+1)!="I") {
-            ### e.g) if num=10, num becomes "a"
-            if(num>=10 && num<=35) {num=sprintf("%c", num+87)}
-            else if(num>=36) num="z"
-            ###
-            $(i+1)=num; num=0}
-        }
-    print $0
-    }' |
-#
-sed -e "s/I//g" -e "s/ //g" |
-awk -F "" -v seqnum=${seq_maxnum} \
-    '{for(i=1;i<=seqnum;i++) {
-    if($i=="") $i="="
-    seq[i]=seq[i]$i
-}}
-END{for(key in seq) print seq[key]}' |
-# #? ===================================================
-head -n 1580 | tail |
-# #? ===================================================
-awk -F "" 'BEGIN{OFS=","}{
-    totalGap=gsub("=","=",$0)
-    totalM=gsub("M","M",$0)
-    totalI=gsub(/[1-9]|[a-z]/,"@",$0)
-    totalD=gsub("D","D",$0)
-    totalS=gsub("S","S",$0)
-    for(i=1; i<=NF; i++){
-        if($i=="=") $i=0
-        else if($i=="M") $i=0
-        else if($i=="@") $i=totalI
-        else if($i=="D") $i=totalD
-        else if($i=="S") $i=totalS
-    }
-    # print $0,totalGap,totalM,totalI,totalD,totalS
-    print $0}' \
-> "${output_ref}"
-# #*=====================================================
-# cat "${MIDS_ref}" |
-# grep ${control} |
-# sort -k 1,1 |
-# join -1 1 -2 2 - ".tmp_/clustering_prediction_result_${suffix}" |
-# # #? ===================================================
-# head -n 10 |
-# # #? ===================================================
-# cut -d " " -f 2 |
-# awk -F "" '{
-#     for(i=1; i<=NF; i++){
-#         if($i=="I") num=num+1
-#         if($i=="I" && $(i+1)!="I") {
-#             ### e.g) if num=10, num becomes "a"
-#             if(num>=10 && num<=35) {num=sprintf("%c", num+87)}
-#             else if(num>=36) num="z"
-#             ###
-#             $(i+1)=num; num=0}
-#         }
-#     print $0
-#     }' |
-# #
-# sed -e "s/I//g" -e "s/ //g" |
-# awk -F "" -v seqnum=${seq_maxnum} \
-#     '{for(i=1;i<=seqnum;i++) {
-#     if($i=="") $i="="
-#     seq[i]=seq[i]$i
-# }}
-# END{for(key in seq) print seq[key]}' |
-# # #? ===================================================
-# head -n 1580 | tail |
-# # #? ===================================================
-# awk -F "" 'BEGIN{OFS=","}{
-#     totalI=gsub(/[1-9]|[a-z]/,"@",$0)
-#     totalD=gsub("D","D",$0)
-#     totalS=gsub("S","S",$0)
-#     print totalI+totalD+totalS
-#     }' \
-# > "${output_ref}"_test
-
-
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# 1st clustering by HDBSCAN
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# Clustering by HDBSCAN
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 printf "Clustering... \n"
 Rscript DAJIN/src/test_clustering.R \
-${output_ref} ${output_que} ${output_label} 2>/dev/null
+${output_que} ${output_label} 2>/dev/null
 
-
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# Output Genomic coodinates (Control)
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-output_ref=".tmp_/clustering_score_control_${suffix}"
-# ----------------------------------------
-cat "${MIDS_ref}" |
-grep ${control} |
-sort -k 1,1 |
-join -1 1 -2 2 - ".tmp_/clustering_prediction_result_${suffix}" |
-# #? ===================================================
-# head -n 100 |
-# #? ===================================================
-cut -d " " -f 2 |
-awk -F "" '{
-    for(i=1; i<=NF; i++){
-        if($i=="I") num=num+1
-        if($i=="I" && $(i+1)!="I") {
-            ### e.g) if num=10, num becomes "a"
-            if(num>=10 && num<=35) {num=sprintf("%c", num+87)}
-            else if(num>=36) num="z"
-            ###
-            $(i+1)=num; num=0}
-        }
-    print $0
-    }' |
-#
-sed -e "s/I//g" -e "s/ //g" |
-awk -F "" -v seqnum=${seq_maxnum} \
-    '{for(i=1;i<=seqnum;i++) {
-    if($i=="") $i="="
-    seq[i]=seq[i]$i
-}}
-END{for(key in seq) print seq[key]}' |
-# #? ===================================================
-# head -n 1400 | tail -n 100 > tmp
-# cat tmp |
-# #? ===================================================
-awk -F "" '{
-    sum[1]=gsub("=","=",$0)
-    sum[2]=gsub("M","M",$0)
-    sum[3]=gsub(/[1-9]|[a-z]/,"@",$0)
-    sum[4]=gsub("D","D",$0)
-    sum[5]=gsub("S","S",$0)
-    # max=sum[1]; num=1
-    # for(i=2; i<5;i++){if(max<sum[i]){max=sum[i]; num=i}}
-    # print num, sum[1],sum[2],sum[3],sum[4],sum[5]
-    # print num
-    ###
-    # COntrolにおいてIDSがtotalの20%を超える場合をシークエンスエラーありとする。
-    ###
-    if(sum[3] > NF*20/200) num=2
-    else if(sum[4] > NF*20/200) num=2
-    else if(sum[5] > NF*20/200) num=2
-    else num=2
-    print num
-    }' |
-#? ---------------------------
-# head -n 1600 | tail |
-#? ---------------------------
-awk -v cl="control" \
-'{if($0==1) print NR,"genome","Match", 1, cl
-else if($0==2) print NR,"genome","Error", 1, cl
-# else if($0==3) print NR,"genome","Insertion", 1.5, cl
-# else if($0==4) print NR,"genome","Deletion", 1.5, cl
-# else if($0==5) print NR,"genome","Substitusion", 1.5, cl
-}' \
-> test_tmp_cluster
-
-
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# 2nd clustering by K-means to extract high-impact nucreotides
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-input_feat=".tmp_/clustering_features_${suffix}"
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# Extract high-impact nucreotides
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+printf "Output figures... \n"
 input_id=".tmp_/clustering_id_${suffix}"
+output_plot=".tmp_/clustering_plot_${suffix}"
+# ----------------------------------------
+sum_input_id=$(cat "$input_id" | wc -l)
+cat "$input_id" | cut -f 2 | sort | uniq -c | awk -v sum=${sum_input_id} \
+'{print int($1/sum*100+0.5)}'
 
-for cluster in $(cat ${input_id} | cut -f 2 | sort -u); do
-    echo "$cluster"
+
+if [ "$alleletype" = "target" ]; then
+target_loci=$(
+    minimap2 -ax map-ont fasta/target.fa fasta/wt.fa --cs 2>/dev/null |
+    grep -v "^@" |
+    awk '{print $(NF-1)}' |
+    sed -e "s/cs:Z:://g" | 
+    sed -e "s/:/ /g" |
+    sed -e "s/\([-|+|*]\)/ \1 /g" |
+    awk '{for(i=1; i<NF; i++){if($i~/[a|t|g|c]/) $i=length($i)}
+        $NF=""
+        print}'
+)
+fi
+# awk -v target="${target_loci}" 'BEGIN{cnt=split(target, path, " ")
+#   for(i=1; i<=cnt; i++) {sum+=path[i]; array[i]=sum}
+#   for(i=1; i<=cnt; i=i+3) {print array[i], array[i+3]}
+#   }'
+
+true > "${output_plot}"
+for cluster in $(cat "${input_id}" | cut -f 2 | sort -u); do
     paste ".tmp_/clustering_seq_${suffix}" "${input_id}" |
-    grep "${cluster}" |
-    sort -k 3,3 |
-    #? ---------------------------
-    # head -n 100 |
-    #? ---------------------------
-    #join -1 3 -2 2 - "${input_feat}" |
+    awk -v cl="${cluster}" '$NF==cl' |
     cut -f 1 |
     awk -F "" -v seqnum=${seq_maxnum} \
         '{for(i=1;i<=seqnum;i++) {
@@ -331,158 +240,40 @@ for cluster in $(cat ${input_id} | cut -f 2 | sort -u); do
     awk -F "" '{
         sum[1]=gsub("=","=",$0)
         sum[2]=gsub("M","M",$0)
-        sum[3]=gsub(/[1-9]|[a-z]/,"@",$0)
+        sum[3]=gsub(/[1-9]|[a-z]/,"@", $0)
         sum[4]=gsub("D","D",$0)
         sum[5]=gsub("S","S",$0)
         ###
         max=sum[1]; num=1
         for(i=2; i<5;i++){if(max<sum[i]){max=sum[i]; num=i}}
-        ### print num, sum[1],sum[2],sum[3],sum[4],sum[5]
+        # print num, sum[1],sum[2],sum[3],sum[4],sum[5]
         print num
         }' |
-    #? ---------------------------
-    # head -n 1600 | tail |
-    #? ---------------------------
+    # Sequence errorのポジションはMatchとする。
+    paste - ${output_ref} |
+    awk '{if($2==2) $1=1
+        print $1}' |
+    #
     awk -v cl="${cluster}" \
-    '{if($0==1) print NR,"genome","Match", 1, cl
-    else if($0==2) print NR,"genome","Match", 1, cl
-    else if($0==3) print NR,"genome","Insertion", 1.5, cl
-    else if($0==4) print NR,"genome","Deletion", 1.5, cl
-    else if($0==5) print NR,"genome","Substitusion", 1.5, cl
+    '{if($1==1) print NR,"genome","Match", cl
+    else if($1==2) print NR,"genome","Match", cl
+    else if($1==3) print NR,"genome","Insertion", cl
+    else if($1==4) print NR,"genome","Deletion", cl
+    else if($1==5) print NR,"genome","Substitusion", cl
+    else if($1==6) print NR,"genome","Target", cl
     }' \
-    >> test_tmp_cluster
+    >> "${output_plot}"
 done
 
-
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# Extract nucreotide
+# Plot mutation loci
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-input_feat=".tmp_/clustering_features_${suffix}"
-input_id=".tmp_/clustering_id_${suffix}"
-#
-output=".tmp_/clustering_results_${suffix}"
-output_tmp=".tmp_/clustering_tmpresult_${suffix}"
-# -----------------------------------------
-#* =============================================
-cat $input_feat |
-awk 'BEGIN{allele[$2]=""}
-    {allele[$2]=allele[$2]" "$1}
-    END{for(key in allele) print key"\t"allele[key]}' |
-sort -k 1,1 \
-> test_spread
-input_feat=test_spread
-#* =============================================
+Rscript DAJIN/src/test_2ndclustering.R "${output_plot}"  2>/dev/null
 
-
-left=$(cat .tmp_/mutation_points | cut -d " " -f 1)
-right=$(cat .tmp_/mutation_points | cut -d " " -f 2)
-
-genome=mm10
-chr=$(cat .tmp_/gggenome_location | cut -f 1)
-start=$(cat .tmp_/gggenome_location | cut -f 2)
-#
-# cluster=allele1
-for cluster in $(cat ${input_id} | cut -f 2 | sort -u); do
-    percent=$(paste ".tmp_/clustering_seq_${suffix}" "${input_id}" |
-    grep "${cluster}" |
-    wc -l ".tmp_/clustering_seq_${suffix}"  - |
-    grep -v total |
-    tr -d "\n" |
-    awk '{printf "%.1f\n", ($3/$1*100)}')
-    #
-    paste ".tmp_/clustering_seq_${suffix}" "${input_id}" |
-    grep "${cluster}" |
-    sort -k 3,3 |
-    #? ---------------------------
-    head -n 10 |
-    #? ---------------------------
-    join -1 3 -2 1 - "${input_feat}" |
-    awk '{alleleID=$1; original_seq=$2; seq=""; loc=""
-        for(i=4; i<=NF; i++) {seq=seq","substr(original_seq, $i, 1); loc=loc","$i}
-        print alleleID,seq, loc
-        }' |
-    # awk '{IF=$}'
-    # awk '{print $NF,$2}' |
-    # awk '{ID[$NF]=ID[$NF]","substr($2,$NF,1)}
-    # END{for(key in ID) print key, ID[key]}' |
-    awk '{alleleID=$1; seq=$2
-        totalGap=gsub("=","",$2)
-        totalM=gsub("M","",$2)
-        totalI=gsub(/[1-9]|[a-z]/,"@",seq)
-        totalD=gsub("D","",$2)
-        totalS=gsub("S","",$2)
-        if ( (totalM < totalI || totalM < totalD || totalM < totalS) && (totalD < totalI && totalS < totalI) ){
-            print alleleID, totalGap, totalM, totalI, totalD, totalS, "@", $2}
-        else if(totalM < totalI || totalM < totalD || totalM < totalS){
-            print alleleID, totalGap, totalM, totalI, totalD, totalS}
-        }' |
-    # Extract insertion numbers
-    awk -F "@" '{max=0; maxI=0
-        for(i=1; i<=10; i++){
-            numI=gsub(i,i,$2)
-            if(max<numI) {max=numI; maxI=i}
-            }
-        for (i=10; i<36; i++){
-            var=sprintf("%c", i+87)
-            numI=gsub(var,var,$2)
-            if(max<numI) {max=numI; maxI=i}
-            }
-        array[$1]=maxI}
-        END{for(key in array) print key,array[key]}' |
-    #
-    awk '{max=0; col=0
-        for(i=2;i<=NF-1;i++) if(max<$i) {max=$i; col=i}
-        if(col == 2) col="gap"
-        if(col == 3) col="M"
-        if(col == 4) col="I"
-        if(col == 5) col="D"
-        if(col == 6) col="S"
-        print $1, col, $NF}' |
-    sort -k 1,1n |
-    awk -v left=${left} -v right=${right} 'BEGIN{seq=1}
-        {seqnum[$1] = $1
-        seqmut[$1] = $2
-        if(seqnum[$1] == seqnum[$1-1] + 1 && seqmut[$1] == seqmut[$1-1]) {seq++; loc=$1; mut=$2}
-        else {loc=$1; mut=$2; seq=1}
-        #
-        if(loc > left-25 && loc < left + 25) {position=loc; loc="Left"}
-        else if(loc > right-25 && loc < right + 25) {position=loc; loc="Right"}
-        else {position=loc; loc="other"}
-        #
-        print $NF, loc, mut, seq, position
-        }' |
-    #
-    awk '{if(max[$1" "$2" "$3]<$4){max[$1" "$2" "$3]=$4; position[$1" "$2" "$3]=$NF}}
-        END{for(key in max) print key, max[key], position[key]}' |
-    # OUTPUT
-    awk -v genome=${genome:-mm10} -v chr=${chr:=chr5} -v start=${start} \
-    '{if($3=="I") {s=start+$NF-$1; e=start+$NF
-        print $2"-"$1""$3, genome, chr":"e"-"s}
-    else {s=start+$NF-$4; e=start+$NF
-        print $2"-"$4""$3, genome, chr":"s"-"e}}' |
-    sed "s/^/${barcode} ${cluster} ${percent} /g" |
-    sort -k 1,1 -k 6,6 |
-    sed "s/ /,/g" > ${output_tmp}_${cluster}
-    #
-    if [ -s ${output_tmp}_${cluster} ]; then
-      cat ${output_tmp}_${cluster} > ${output}_${cluster}
-    else
-      printf "${barcode},${cluster},${percent},intact ${alleletype}\n" > ${output}_${cluster}
-    fi
-done
-
-# cat ${output}*
-printf "${barcode} is finished...\n"
-
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# Separate BAM files
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# cat fasta_ont/* > fasta_ont/all_merged.fa
-# cat fasta_ont/wt* > fasta_ont/wt_merged.fa
-# ./DAJIN/src/igvjs.sh ${genome:-mm10} ${threads:-1}
-
-#barcode=barcode02
-cat ${input_id} | cut -f 2 | sort | uniq -c
+# # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# # Separate BAM files
+# # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+printf "Output BAM files... \n"
 
 rm ${barcode}*.bam* 2>/dev/null
 for i in $(cat ${input_id} | cut -f 2 | sort -u);do
@@ -499,17 +290,3 @@ for i in $(cat ${input_id} | cut -f 2 | sort -u);do
     samtools sort tmp_header > ${barcode}_${i}.bam
     samtools index ${barcode}_${i}.bam
 done
-
-# samtools view -h bam/${barcode}.bam | grep "^@" > tmp_header 
-# #
-# samtools view bam/${barcode}.bam |
-# sort |
-# join - tmp_id |
-# sed "s/ /\t/g" |
-# head -n 100 \
-# >> tmp_header
-# #
-# samtools sort tmp_header > ${barcode}_all.bam
-# samtools index ${barcode}_all.bam
-
-# rm tmp_*

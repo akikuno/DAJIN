@@ -3,39 +3,37 @@
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 options(repos = "https://cran.ism.ac.jp/")
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
-pacman::p_load(tidyverse, dbscan, vroom)
+pacman::p_load(tidyverse, vroom)
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Import data
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+args <- commandArgs(trailingOnly = TRUE)
+data <- vroom(args[1], col_names = F)
+output_suffix <- args[1] %>% str_remove(".*plot_")
+# data <- vroom::vroom(".tmp_/clustering_plot_barcode04_target", col_names = F); output_suffix <- "fuga"
+colnames(data) <- c("coodinate", "value", "mutation", "cluster")
 
-data <- vroom("test_tmp_cluster", col_names = F)
-colnames(data) <- c("coodinate", "value", "mutation", "size", "cluster")
-data_error <- data %>% filter(cluster == "control") %>% filter(mutation!="Match") %>% select(coodinate)
+myColors <- c("gray50", "red", "blue", "green")
+names(myColors) <- c("Match","Insertion","Deletion","Substitution")
+colScale <- scale_colour_manual(name = "mutation", values = myColors)
 
-data_error$coodinate
-# data[]
-data %>% filter(cluster != "control") %>% filter(coodinate %in% data_error$coodinate) %>% mutate(mutation = "Match", size = 1)
-data %>%
-    group_by(cluster, mutation) %>%
-    count()
+# data %>%
+#     group_by(cluster, mutation) %>%
+#     count()
 g <- ggplot(data, aes(x = coodinate, y = value, color = mutation)) +
-    geom_point(aes(size = size)) +
-    scale_color_manual(values = c("blue", "red", "gray", "green")) +
+    geom_point(data=(data %>% filter(mutation=="Match")), aes(size = 1)) +
+    geom_point(data=(data %>% filter(mutation!="Match")), aes(size = 2)) +
+    colScale +
+    guides(size = FALSE) +
+    ggtitle(output_suffix) +
+    xlab("Genomic Coodinate") +
+    ylab("") +
     theme_bw(base_size = 20) +
-    facet_wrap(~cluster, ncol = 1)
-g
-ggsave("test_barcode29_alleleall.png", g, width = 8, height = 4)
-
-data <- vroom("test_tmp_allele3", col_names = F)
-colnames(data) <- c("loc", "value", "mutation", "size")
-data %>%
-    group_by(mutation) %>%
-    count()
-g <- ggplot(data, aes(x = loc, y = value, color = mutation)) +
-    geom_point(aes(size = size)) +
-    scale_color_manual(values = c("blue", "red", "gray", "green")) +
-    theme_bw()
-
-ggsave("test_barcode29_allele3.png", g, width = 8, height = 1)
+    theme(plot.title = element_text(hjust = 0.5),
+    legend.title = element_blank(),
+    axis.text.y = element_blank()) +
+    facet_wrap( ~ cluster, ncol = 1)
+# g
+ggsave(sprintf("%s.png", output_suffix), g, width = 15, height = 4)
 
