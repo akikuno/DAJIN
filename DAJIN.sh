@@ -14,6 +14,7 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 uname -a | grep Microsoft 1>/dev/null 2>/dev/null &&
 alias python="python.exe"
 
+
 # ============================================================================
 # Define the functions for printing usage and error message
 # ============================================================================
@@ -60,10 +61,32 @@ warning() {
 }
 
 # ============================================================================
+# Prerequisit
+# ============================================================================
+set +e
+type python 1>/dev/null 2>/dev/null
+[ "$?" -eq 1 ] && error_exit 1 'Please install Python'
+type git 1>/dev/null 2>/dev/null
+[ "$?" -eq 1 ] && error_exit 1 'Please install git'
+type samtools 1>/dev/null 2>/dev/null
+[ "$?" -eq 1 ] &&  error_exit 1 'Please install samtools'
+type minimap2 1>/dev/null 2>/dev/null
+[ "$?" -eq 1 ] &&  error_exit 1 'Please install minimap2'
+type gzip 1>/dev/null 2>/dev/null
+[ "$?" -eq 1 ] && error_exit 1 'Please install gzip'
+#
+python -c \
+"from tensorflow.python.client import device_lib;
+print(device_lib.list_local_devices())" \
+1>/dev/null 2>/dev/null
+[ "$?" -eq 1 ] &&  error_exit 1 'GPU is not recognized'
+set -e
+
+# ============================================================================
 # Parse arguments
 # ============================================================================
 
-[ $# -eq 0 ] && print_usage_and_exit; fi
+[ $# -eq 0 ] && print_usage_and_exit
 
 option_cnt=""
 while [ $# -gt 0 ]; do
@@ -113,40 +136,37 @@ error_exit 1 "ONT reads from wild-type is required: See ${0##*/} -h"
 echo $option_cnt | grep "\-genome" > /dev/null ||
 error_exit 1 "Reference genome should be specified: See ${0##*/} -h"
 
-if [ $(grep -i '>target' $fasta | wc -l) -ne 1 -a $(grep -i '>wt' $fasta | wc -l) -ne 1 ]; then
+if [ $(grep -c '>target' "${fasta}") -eq 0 -o $(grep -c '>wt' "${fasta}") -eq 0 ]; then
     error_exit 1 "FASTA requires including \">target\" and \">wt\" headers. See ./${0##*/} -h"
 fi
 set -e
 
-# ============================================================================
-# Prerequisit
-# ============================================================================
-set +e
-type python 1>/dev/null 2>/dev/null
-[ "$?" -eq 1 ] && error_exit 1 'Please install Python'
-type git 1>/dev/null 2>/dev/null
-[ "$?" -eq 1 ] && error_exit 1 'Please install git'
-type samtools 1>/dev/null 2>/dev/null
-[ "$?" -eq 1 ] &&  error_exit 1 'Please install samtools'
-type minimap2 1>/dev/null 2>/dev/null
-[ "$?" -eq 1 ] &&  error_exit 1 'Please install minimap2'
-type gzip 1>/dev/null 2>/dev/null
-[ "$?" -eq 1 ] && error_exit 1 'Please install gzip'
-#
-python -c \
-"from tensorflow.python.client import device_lib;
-print(device_lib.list_local_devices())" \
-1>/dev/null 2>/dev/null
-[ "$?" -eq 1 ] &&  error_exit 1 'GPU is not recognized'
-set -e
+# ##################################################
+# Define threads
+# ##################################################
+set +u
+# Linux and similar...
+[ -z "$threads" ] && threads=$(getconf _NPROCESSORS_ONLN 2>/dev/null | awk '{print int($0/1.5+0.5)}')
+# FreeBSD and similar...
+[ -z "$threads" ] && threads=$(getconf NPROCESSORS_ONLN | awk '{print int($0/1.5)+0.5}')
+# Solaris and similar...
+[ -z "$threads" ] && threads=$(ksh93 -c 'getconf NPROCESSORS_ONLN' | awk '{print int($0/1.5+0.5)}')
+# Give up...
+[ -z "$threads" ] && threads=1
+set -u
 
 # ============================================================================
 # Setting Directory
 # ============================================================================
+parent_dir=".DAJIN_temp"
+rm -rf "$parent_dir" 2>/dev/null
+report_dir="DAJIN_reports"
+dirs="fasta fasta_conv fasta_ont NanoSim bam data results/figures/svg results/figures/png results/igvjs"
 
-dirs="fasta fasta_ont bam data_for_ml results .tmp_ results/figures/svg results/figures/png results/igvjs"
-rm -rf ${dirs} .tmp_/NanoSim
-mkdir -p ${dirs}
+echo "$dirs" | sed "s/ /\n/g" |
+while read -r dir; do
+    mkdir -p "$parent_dir"/"$dir"
+done
 
 # ============================================================================
 # Format FASTA file
@@ -156,47 +176,47 @@ mkdir -p ${dirs}
 cat ${fasta} |
 tr -d "\r" |
 grep -v "^$" \
-> .tmp_/fasta.fa
-fasta=".tmp_/fasta.fa"
+> ${parent_dir}/fasta/fasta.fa
+fasta_LF="${parent_dir}/fasta/fasta.fa"
 
 # Separate multiple-FASTA into FASTA files
-cat ${fasta} |
+cat ${fasta_LF} |
 sed "s/^/@/g" |
 tr -d "\n" |
 sed -e "s/@>/\n>/g" -e "s/$/\n/g" |
 grep -v "^$" |
 while read input; do
-    output=$(echo ${input} | sed -e "s/@.*//g" -e "s#>#fasta/#g" -e "s/$/.fa/g")
-    echo ${input} | sed "s/@/\n/g" > ${output}
+    output=$(echo "${input}" | sed -e "s/@.*//g" -e "s#>#${parent_dir}/fasta/#g" -e "s/$/.fa/g")
+    echo "${input}" | sed "s/@/\n/g" > "${output}"
 done
-cp fasta/wt.fa .tmp_/
-cp fasta/target.fa .tmp_/
+# cp "$parent_dir"/fasta/wt.fa ${parent_dir}/
+# cp "$parent_dir"/fasta/target.fa ${parent_dir}/
 
 # When mutation point(s) are closer to もし変異部がFASTAファイルの5'側より3'側に近い場合、
 # right flanking than left flanking,   reverse complementにする。
 # convert a sequence into its reverse-complement
 
-ref_seqlength=$(cat .tmp_/wt.fa | awk '!/[>|@]/ {print length($0)}')
+wt_seqlen=$(cat "$parent_dir"/fasta/wt.fa | awk '!/[>|@]/ {print length($0)}')
 
-conv_revcomp=$(minimap2 -ax splice .tmp_/wt.fa .tmp_/target.fa --cs 2>/dev/null |
-awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
-tr -d "\~\*\-\+atgc" |
-awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
-awk -v ref_seqlength="$ref_seqlength" \
-'{if(ref_seqlength-$2>$1) print 0; else print 1}')
+convert_revcomp=$(minimap2 -ax splice "$parent_dir"/fasta/wt.fa "$parent_dir"/fasta/target.fa --cs 2>/dev/null |
+    awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
+    sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
+    tr -d "\~\*\-\+atgc" |
+    awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
+    awk -v wt_seqlen="$wt_seqlen" \
+    '{if(wt_seqlen-$2>$1) print 0; else print 1}')
 
-if [ $(echo "$conv_revcomp") -eq 1 ] ; then
-    ./DAJIN/src/revcomp.sh "${fasta}" \
-    > .tmp_/fasta_revcomp.fa &&
-    fasta=".tmp_/fasta_revcomp.fa"
-    #
-    cat ${fasta} | sed "s/^/@/g" | tr -d "\n" | sed -e "s/@>/\n>/g" -e "s/$/\n/g" | grep -v "^$" |
-    while read input; do
-        output=$(echo "${input}" | sed -e "s/@.*//g" -e "s#>#fasta/#g" -e "s/$/.fa/g")
-        echo "${input}" | sed "s/@/\n/g" > $output
-    done
+if [ $( echo "$convert_revcomp") -eq 1 ] ; then
+    ./DAJIN/src/revcomp.sh "${fasta_LF}" \
+    > "$parent_dir"/fasta/fasta_revcomp.fa &&
+    fasta_LF="${parent_dir}/fasta/fasta_revcomp.fa"
 fi
+
+cat ${fasta_LF} | sed "s/^/@/g" | tr -d "\n" | sed -e "s/@>/\n>/g" -e "s/$/\n/g" | grep -v "^$" |
+while read -r input; do
+    output=$(echo "${input}" | sed -e "s/@.*//g" -e "s#>#${parent_dir}/fasta_conv/#g" -e "s/$/.fa/g")
+    echo "${input}" | sed "s/@/\n/g" > "$output"
+done
 
 # ============================================================================
 # Format ONT reads into FASTA file
@@ -204,24 +224,24 @@ fi
 # Check wheather the files are binary:
 set +e
 for input in ${ont}/* ; do
-    output=$(echo ${input} | sed -e "s#.*/#fasta_ont/#g" -e "s#\..*#.fa#g")
+    output=$(echo "${input}" | sed -e "s#.*/#${parent_dir}/fasta_ont/#g" -e "s#\.f.*#.fa#g")
     printf "${output} is now generating...\n"
     #
-    if [ $(file ${input} | grep compressed | wc -l) -eq 1 ]; then
-        cat ${input} | gzip -dc |
+    if [ $(file "${input}" | grep -c compressed) -eq 1 ]; then
+        gzip -dc "${input}" |
         awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' \
-        > .tmp_/tmp_$$
+        > "${parent_dir}"/tmp_$$
     else
-        cat ${input} |
+        cat "${input}" |
         awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' \
-        > .tmp_/tmp_$$
+        > "${parent_dir}"/tmp_$$
     fi
-    mv .tmp_/tmp_$$ ${output}
+    mv "${parent_dir}"/tmp_$$ "${output}"
 done
 set -e
 #
-ont_ref=$(echo ${ont_ref} |
-    sed -e "s#.*/#fasta_ont/#g" -e "s#\..*#.fa#g")
+ont_ref_nanosim=$(echo ${ont_ref} |
+    sed -e "s#.*/#${parent_dir}/fasta_ont/#g" -e "s#\.f.*#.fa#g")
 
 # ============================================================================
 # Setting NanoSim (v2.5.0)
@@ -234,34 +254,34 @@ NanoSim simulation starts
 
 printf "Read analysis...\n"
 ./DAJIN/utils/NanoSim/src/read_analysis.py genome \
-    -i "$ont_ref" \
-    -rg fasta/wt.fa \
+    -i "$ont_ref_nanosim" \
+    -rg ${parent_dir}/fasta_conv/wt.fa \
     -t ${threads:-1} \
-    -o .tmp_/NanoSim/training
+    -o ${parent_dir}/NanoSim/training
 
-ref_seqlength=$(cat fasta/wt.fa | awk '!/[>|@]/ {print length($0)}')
-for input in fasta/*; do
+wt_seqlen=$(cat ${parent_dir}/fasta/wt.fa | awk '!/[>|@]/ {print length($0)}')
+for input in ${parent_dir}/fasta_conv/*; do
     printf "${input} is now simulating...\n"
-    output=$(echo $input | sed -e "s#fasta/#fasta_ont/#g" -e "s/.fasta$//g" -e "s/.fa$//g")
-    input_seqlength=$(cat ${input} | sed 1d | awk '{print length($0)-100}')
+    output=$(echo "$input" | sed -e "s#fasta_conv/#fasta_ont/#g" -e "s/.fasta$//g" -e "s/.fa$//g")
+    input_seqlength=$(cat "${input}" | awk '!/[>|@]/ {print length($0)-100}')
     ## For deletion allele
-    if [ "$input_seqlength" -lt "$ref_seqlength" ]; then
+    if [ "$input_seqlength" -lt "$wt_seqlen" ]; then
         len=${input_seqlength}
     else
-        len=${ref_seqlength}
+        len=${wt_seqlen}
     fi
     ##
     ./DAJIN/utils/NanoSim/src/simulator.py genome \
-        -dna_type linear -c .tmp_/NanoSim/training \
+        -dna_type linear -c ${parent_dir}//NanoSim/training \
         -rg $input -n 3000 -t ${threads:-1} \
         -min ${len} \
         -o ${output}_simulated
     ##
-    rm fasta_ont/*_error_* fasta_ont/*_unaligned_* 2>/dev/null
+    rm ${parent_dir}/fasta_ont/*_error_* ${parent_dir}/fasta_ont/*_unaligned_* 2>/dev/null
 done
 
-rm -rf .tmp_/NanoSim \
-    DAJIN/utils/NanoSim/src/__pycache__
+# rm -rf ${parent_dir}/NanoSim \
+rm -rf DAJIN/utils/NanoSim/src/__pycache__
 
 printf 'Success!!\nSimulation is finished\n'
 
@@ -287,8 +307,8 @@ printf \
 Converting ACGT into MIDS format
 ++++++++++++\n"
 
-reference=fasta/wt.fa
-query=fasta/target.fa
+reference="${parent_dir}"/fasta/wt.fa
+query="${parent_dir}"/fasta/target.fa
 
 # Get mutation loci...
 minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
@@ -296,38 +316,39 @@ awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
 sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
 tr -d "\~\*\-\+atgc" |
 awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' \
-> .tmp_/mutation_points
+> ${parent_dir}/data/mutation_points
 
 # MIDS conversion...
 find fasta_ont -type f | sort |
-awk '{print "./DAJIN/src/mids_convertion.sh",$0, "wt", "&"}' |
+awk '{print "./DAJIN/src/mids_convertion.sh",$0, "wt", NR, "&"}' |
 awk -v th=${threads:-1} '{
     if (NR%th==0) gsub("&","&\nwait",$0)
     print}
     END{print "wait"}' |
 sh -
 #
-cat .tmp_/MIDS_* |
+cat ${parent_dir}/data/MIDS_* |
+sed -e "s/_aligned_reads//g" |
 sort -k 1,1 \
-> data_for_ml/${output_file:=DAJIN}.txt
+> "${parent_dir}"/data/${output_file:=DAJIN}.txt
 
-rm .tmp_/MIDS_*
+rm ${parent_dir}/data/MIDS_*
 
-# One-hot encording...
-for i in M I D S; do
-    { cat data_for_ml/${output_file}.txt |
-    cut -f 2 |
-    sed -e "s/^/MIDS=/" |
-    sed -e "s/[^${i}]/0 /g" |
-    sed -e "s/${i}/1 /g" |
-    sed -e "s/ $//" \
-    > .tmp_/onehot_${i}.txt & } 1>/dev/null 2>/dev/null
-done
-wait 2>/dev/null
+# # One-hot encording...
+# for i in M I D S; do
+#     { cat "${parent_dir}"/data/${output_file}.txt |
+#     cut -f 2 |
+#     sed -e "s/^/MIDS=/" |
+#     sed -e "s/[^${i}]/0 /g" |
+#     sed -e "s/${i}/1 /g" |
+#     sed -e "s/ $//" \
+#     > ${parent_dir}/onehot_${i}.txt & } 1>/dev/null 2>/dev/null
+# done
+# wait 2>/dev/null
 
-cat data_for_ml/${output_file}.txt |
-cut -f 1,3 \
-> data_for_ml/${output_file}_trimmed.txt
+# cat "${parent_dir}"/data/${output_file}.txt |
+# cut -f 1,3 \
+# > "${parent_dir}"/data/${output_file}_trimmed.txt
 
 printf "Finished.\n${output_file}.txt is generated.\n"
 
@@ -336,9 +357,14 @@ printf "Finished.\n${output_file}.txt is generated.\n"
 # ============================================================================
 printf "Start allele prediction...\n"
 #
-python DAJIN/src/anomaly_detection.py data_for_ml/${output_file:-DAJIN}_trimmed.txt
+Rscript DAJIN/src/ml_abnormal_detection.R "${parent_dir}"/data/${output_file:-DAJIN}.txt
+
+Rscript DAJIN/src/ml_prediction.R "${parent_dir}"/data/${output_file:-DAJIN}.txt
+
+
+# python DAJIN/src/anomaly_detection.py "${parent_dir}"/data/${output_file:-DAJIN}_trimmed.txt
 #
-rm .tmp_/onehot_*
+# rm ${parent_dir}/onehot_*
 # mutation_type=$(
 #     minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
 #     awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
@@ -347,12 +373,12 @@ rm .tmp_/onehot_*
 # if [ $(echo ${mutation_type}) -eq 1 ]; then
 #     ./DAJIN/src/anomaly_exondeletion.sh ${genome} ${threads}
 # else
-#     cp .tmp_/anomaly_classification.txt .tmp_/anomaly_classification_revised.txt
+#     cp ${parent_dir}/anomaly_classification.txt ${parent_dir}/anomaly_classification_revised.txt
 # fi
 #
-# cp .tmp_/anomaly_classification.txt .tmp_/anomaly_classification_revised.txt
+# cp ${parent_dir}/anomaly_classification.txt ${parent_dir}/anomaly_classification_revised.txt
 #
-python DAJIN/src/prediction.py data_for_ml/${output_file:-DAJIN}_trimmed.txt
+python DAJIN/src/prediction.py "${parent_dir}"/data/${output_file:-DAJIN}_trimmed.txt
 #
 printf "Prediction was finished...\n"
 #
@@ -449,10 +475,10 @@ set -e
 # ============================================================================
 # SVG allele types
 # ============================================================================
-ref_seqlength=$(cat .tmp_/wt.fa | awk '!/[>|@]/ {print length($0)}')
-cat .tmp_/mutation_points |
-awk -v reflen=${ref_seqlength} \
-    '{print int($1/reflen*100) + 10 ,int($2/reflen*100) + 10 }'
+# wt_seqlen=$(cat .tmp_/wt.fa | awk '!/[>|@]/ {print length($0)}')
+# cat .tmp_/mutation_points |
+# awk -v reflen=${wt_seqlen} \
+#     '{print int($1/reflen*100) + 10 ,int($2/reflen*100) + 10 }'
 
 # ============================================================================
 # Alignment viewing
@@ -460,7 +486,7 @@ awk -v reflen=${ref_seqlength} \
 
 printf "Visualizing alignment reads...\n"
 printf "Browser will be launched. Click 'igvjs.html'.\n"
-{ npx live-server results/igvjs/ & } 1>/dev/null 2>/dev/null
+{ npx live-server DAJIN_reports/igvjs/ & } 1>/dev/null 2>/dev/null
 
 # rm -rf .tmp_
 printf "Completed! \nCheck 'results/figures/' directory.\n"
