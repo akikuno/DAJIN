@@ -242,6 +242,8 @@ set -e
 #
 ont_ref_nanosim=$(echo ${ont_ref} |
     sed -e "s#.*/#${parent_dir}/fasta_ont/#g" -e "s#\.f.*#.fa#g")
+ont_ref_barcodeID=$(echo ${ont_ref} |
+    sed -e "s#.*/##g" -e "s#\.f.*##g")
 
 # ============================================================================
 # Setting NanoSim (v2.5.0)
@@ -378,7 +380,7 @@ Rscript DAJIN/src/ml_prediction.R "${parent_dir}"/data/${output_file:-DAJIN}.txt
 #
 # cp ${parent_dir}/anomaly_classification.txt ${parent_dir}/anomaly_classification_revised.txt
 #
-python DAJIN/src/prediction.py "${parent_dir}"/data/${output_file:-DAJIN}_trimmed.txt
+# python DAJIN/src/prediction.py "${parent_dir}"/data/${output_file:-DAJIN}_trimmed.txt
 #
 printf "Prediction was finished...\n"
 #
@@ -386,59 +388,76 @@ printf "Prediction was finished...\n"
 # Report allele percentage
 # ============================================================================
 #
-cat .tmp_/DAJIN_prediction_result.txt  | cut -f 1,3 | sort | uniq -c > .tmp_/tmp_prediction
+cat "${parent_dir}"/data/DAJIN_prediction_result.txt  |
+cut -f 1,3 |
+sort |
+uniq -c \
+> "${parent_dir}"/tmp_prediction_$$
+
 #
-cat .tmp_/tmp_prediction |
+cat "${parent_dir}"/tmp_prediction_$$ |
 awk '{barcode[$2]+=$1} END{for(key in barcode) print key,barcode[key]}' |
 sort |
-join -1 1 -2 2 - .tmp_/tmp_prediction |
+join -1 1 -2 2 - "${parent_dir}"/tmp_prediction_$$ |
 awk '{print $1, int($3/$2*100+0.5), $4}' \
-> .tmp_/tmp1_prediction
+> "${parent_dir}"/tmp_prediction_$$_proportion
 
-per_refab=$(cat .tmp_/tmp1_prediction | 
-    grep barcode30 | #! define "barcode30" by automate manner
+# Filter low-percent alleles ------------------------------------------------
+
+per_refab=$(cat "${parent_dir}"/tmp_prediction_$$_proportion | 
+    grep "${ont_ref_barcodeID}" | #! define "barcode30" by automate manner
     grep abnormal |
     cut -d " " -f 2)
 
-# Filter low-percent alleles ------------------------------------------------
-cat .tmp_/tmp1_prediction |
-awk -v refab=${per_refab} \
+cat "${parent_dir}"/tmp_prediction_$$_proportion |
+awk -v refab="${per_refab}" \
     '{if( !($2<refab+5 && $3 == "abnormal") && ($2>5) ) print $0}' \
-> .tmp_/tmp_prediction_filtered
+> "${parent_dir}"/tmp_prediction_filtered_$$
 
 # Report allele percentage ------------------------------------------------
-cat .tmp_/tmp_prediction_filtered |
+cat "${parent_dir}"/tmp_prediction_filtered_$$ |
 awk '{array[$1]+=$2}
     END{for(key in array) print key, array[key]}' |
 sort |
-join - .tmp_/tmp_prediction_filtered |
+join - "${parent_dir}"/tmp_prediction_filtered_$$ |
 awk '{print $1, int($3*100/$2+0.5),$4}' \
-> .tmp_/DAJIN_prediction_allele_percentage
+> "${parent_dir}"/data/DAJIN_prediction_allele_percentage.txt
+
+rm "${parent_dir}"/tmp_*
 
 # ============================================================================
 # Clustering within each allele type
 # ============================================================================
 
-barcode=barcode29
-control=barcode30 #! define "barcode30" by automate manner
-allele=abnormal
+input="${parent_dir:=.DAJIN_temp}"/data/DAJIN_prediction_allele_percentage.txt
+control="${ont_ref_barcodeID:=barcode30}" #! define "barcode30" by automate manner
 # ./DAJIN/src/test_clustering.sh ${barcode} ${control} ${allele}
 # cat .tmp_/clustering_results_*
 
 #
-cat .tmp_/DAJIN_prediction_allele_percentage |
+rm -rf .DAJIN_temp/clustering
+rm -rf DAJIN_Report/bam_clustering
+rm -rf DAJIN_Report/allele_type
+# ============================================================================
+# Temporal directory
+# ============================================================================
+temp_dir=".DAJIN_temp/clustering/"
+mkdir -p "${temp_dir}"
+
+cat "${input}" |
 cut -d " " -f 1,3 |
 awk -v cont=${control} \
-    '{print "./DAJIN/src/test_clustering.sh",$1, cont, $2, NR, "&"}' |
-head -n 2 | #! ---------------------------------
-awk -v th=${threads:-1} '{
+    '{print "./DAJIN/src/test_clustering.sh",$1, cont, $2, "&"}' |
+ #! ---------------------------------
+head -n 5 |
+ #! ---------------------------------
+ awk -v th=${threads:-1} '{
     if (NR%th==0) gsub("&","&\nwait",$0)
     print}
     END{print "wait"}' |
 sh -
 #
-cat .tmp_/clustering_results_*
-
+rm -rf .DAJIN_temp/clustering
 
 # ============================================================================
 # Joint sequence logo in 2-cut Exon deletion
