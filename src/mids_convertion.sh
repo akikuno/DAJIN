@@ -15,8 +15,9 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # Parse arguments
 # ======================================
 
-# input="fasta/wt.fa"
-# genotype="target"
+# input=".DAJIN_temp/fasta_ont/barcode30.fa"
+# genotype="wt"
+# insertion_skip="control"
 
 input=${1}
 genotype=${2}
@@ -40,7 +41,7 @@ tmp_seqID="${parent_dir}/${output}_seqID_${pid}"
 # Mapping
 # ======================================
 
-reference="fasta/${genotype}.fa"
+reference=".DAJIN_temp/fasta/${genotype}.fa"
 ref=$(cat "${reference}" | grep "^>" | sed "s/>//g")
 #
 minimap2 -t 1 --cs=long -ax map-ont "${reference}" "${input}" 2>/dev/null |
@@ -52,23 +53,16 @@ awk -v ref="${ref}" '$3 == ref' > "${tmp_mapping}"
 reflength=$(cat "${reference}" | grep -v "^>" | awk '{print length($0)}')
 ext=${ext:=100}
 #
-# if [ "${2}" = "wt" ]; then
-    #
 first_flank=$(cat ${parent_dir}/data/mutation_points | awk -v ext=${ext} '{print $1-ext}')
 second_flank=$(cat ${parent_dir}/data/mutation_points | awk -v ext=${ext} '{if(NF==2) print $2+ext; else print $1+ext}')
 if [ "$first_flank" -lt 1 ]; then first_flank=1; fi
 if [ "$second_flank" -gt "$reflength" ]; then second_flank=$(($reflength)); fi
-# echo $first_flank $second_flank
-# else
-#     first_flank=$(cat ${parent_dir}/data/mutation_points | awk -v ext=${ext} '{print $1-ext}')
-#     second_flank=$((${first_flank}+${ext}*2))
-# fi
 
 # ======================================
 # MIDS conversion
 # ======================================
 
-label=$(echo ${input} | sed -e "s#.*/##g" -e "s#\..*##g")
+label=$(echo "${input}" | sed -e "s#.*/##g" -e "s#\..*##g")
 # printf "${label} is now processing...\n" 1>&2
 
 cat ${tmp_mapping} |
@@ -150,8 +144,14 @@ awk '{seq=cstag=$3
     }
     else {print $0}
 }' 
-else sed "s/+[a-z]*=//g"
+else
+    # Delete insertion
+    sed "s/+[a-z]*\([-|=|*]\)/\1/g"
 fi |
+# cat tmp | sed "s/+[a-z]*=//g" | head | awk '{print length($0)}'
+# cat tmp | sed "s/+[a-z]*\([-|=|*]\)/\1/g" | head | awk '{print length($0)}'
+# DDDDDDDD
+
 # replace single-nuc substitution to "S"
 awk '{gsub(/\*[a|t|g|c]*/, "S", $3); print $0}' |
 # replace Deletion to "D"
