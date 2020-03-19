@@ -8,37 +8,49 @@ pacman::p_load(tidyverse, dbscan, vroom)
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Import data
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# que <- ".DAJIN_temp/clustering//4_score_barcode02_wt_9797"
+# label <- ".DAJIN_temp/clustering//2_labels_barcode02_wt_9797"
+# df_que <- vroom(que, col_names = F, col_types = cols())
+# df_label <- vroom(label, col_names = c("id", "label"), col_types = cols())
+# output_suffix <- label %>% str_remove(".*labels_")
 
 args <- commandArgs(trailingOnly = TRUE)
-df_que <- vroom(args[1], col_names = F)
-df_label <- vroom(args[2], col_names = c("id", "label"))
+df_que <- vroom(args[1], col_names = F, col_types = cols())
+df_label <- vroom(args[2], col_names = c("id", "label"), col_types = cols())
 output_suffix <- args[2] %>% str_remove(".*labels_")
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Format input
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
 df_que <- t(df_que)
 df_que[is.na(df_que)] <- 0
+# dim(df_que)
 
+df_que <- df_que[, colSums(df_que) > summary(colSums(df_que))[3]]
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # PCA
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-print("Dimension reduction by PCA...")
+# print("Dimension reduction by PCA...")
 input_pca <- df_que
 # output: output_pca # PC1 and PC2
 # //////////////////////////////////////////////////////////
 pca_res <- prcomp(input_pca, scale. = F)
 output_pca <- pca_res$x[, 1:2]
+
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # HDBSCAN
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-print("Clustering by HDBSCAN...")
+# print("Clustering by HDBSCAN...")
 input_hdbscan <- output_pca
 # output: output_hdbscan # Cluster + 1
 # //////////////////////////////////////////////////////////
+if (nrow(input_hdbscan) < 250) {
+    cl_sizes <- seq(25, nrow(input_hdbscan), by = 25)
+} else {
+    cl_sizes <- seq(25, 250, by = 25)
+}
+
 cl_nums <- c()
-cl_sizes <- seq(25, 250, by = 25)
 i <- 1
 for (i in seq_along(cl_sizes)) {
   cl <- hdbscan(input_hdbscan, minPts = cl_sizes[i])
@@ -49,14 +61,14 @@ for (i in seq_along(cl_sizes)) {
     length()
 }
 # cl_nums %>% table()
-cl_num_opt <- cl_nums %>%
-  table() %>%
-  which.max() %>%
-  names() #
-cl_num_opt <- which(cl_nums == cl_num_opt) %>% min()
+cl_num_opt <- cl_nums %>% table()
+# もし最頻クラスタ数が1つだった場合は次に頻度の高いクラス多数にする。
+cl_num_opt <- cl_num_opt[names(cl_num_opt) != 1] %>%
+    which.max() %>%
+    names()
+cl_num_opt <- which(cl_nums == cl_num_opt) %>% max()
 # cl_num_opt
-cl_num_opt <- cl_sizes[cl_num_opt]
-cl <- hdbscan(input_hdbscan, minPts = cl_num_opt)
+cl <- hdbscan(input_hdbscan, minPts = cl_sizes[cl_num_opt])
 output_hdbscan <- cl$cluster + 1
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -70,7 +82,9 @@ g <- ggplot(
     geom_point(size = 3) +
     theme_bw(base_size = 20) +
     theme(legend.position = "none")
-ggsave(plot = g, filename = sprintf("pca_%s.png", output_suffix), width = 10, height = 8)
+ggsave(plot = g, 
+    filename = sprintf(".DAJIN_temp/clustering/pca_%s.png", output_suffix),
+    width = 10, height = 8)
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Extract feature nucleotide position
@@ -128,7 +142,7 @@ if (nrow(cluster) > 1) {
         )
         df_cossim <- bind_rows(df_cossim, df_)
     }
-    df_cossim <- df_cossim %>% filter(score > 0.80)
+    df_cossim <- df_cossim %>% filter(score > 0.75)
     #
     if (nrow(df_cossim) != 0) {
         for (i in 1:nrow(df_cossim)) {
@@ -154,5 +168,8 @@ for(i in seq_along(pattern_)) output_cl[output_cl == pattern_[i]] <- query_[i]
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 #
 result <- tibble(read_id = df_label$id, output_cl)
-write_tsv(result, sprintf(".tmp_/clustering_id_%s", output_suffix), col_names = F)
+write_tsv(result,
+    sprintf(".DAJIN_temp/clustering/hdbscan_%s", output_suffix),
+    col_names = F
+)
 
