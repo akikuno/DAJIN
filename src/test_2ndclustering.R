@@ -34,17 +34,17 @@ col_scale <- scale_colour_manual(name = "mutation", values = my_colors)
 g <- ggplot(data, aes(x = coodinate, y = value, color = mutation)) +
     geom_point(aes(size = 1))
 
+if(nrow(data %>% filter(mutation != "Match")) > 0) {
+    g <- g + geom_point(
+        data = (data %>% filter(mutation != "Match")),
+        aes(size = 2))
+}
+
 for (i in cutsites) {
     g <- g + geom_vline(
         xintercept = i, linetype = "dotted",
         color = "black", size = 1
     )
-}
-
-if(nrow(data %>% filter(mutation != "Match")) > 0) {
-    g <- g + geom_point(
-        data = (data %>% filter(mutation != "Match")),
-        aes(size = 2))
 }
 
 g <- g +
@@ -61,5 +61,5 @@ g <- g +
     ) +
     facet_wrap(~cluster, ncol = 1)
 # g
-ggsave(sprintf("%s.png", output_suffix), g, width = 10, height = 4)
+ggsave(sprintf("%s.png", output_suffix), g, width = 10, height = 10)
 # ggsave(sprintf("%s.svg", output_suffix), g, width = 15, height = 4)

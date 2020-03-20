@@ -14,9 +14,9 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # Parse auguments
 # ============================================================================
 
-# barcode="barcode02"
+# barcode="barcode26"
 # control="barcode30"
-# alleletype="wt"
+# alleletype="abnormal"
 # alleletype_original=${alleletype}
 # pid=$$
 # suffix="${barcode}"_"${alleletype}"_"${pid}"
@@ -67,6 +67,9 @@ cut -d " " -f 1,3 |
 sed "s/ /\t/g" \
 > "${output_label}"
 #
+# cat $MIDS_que | grep -e 7e0b197a -e a9fb4ea1 > tmp 
+# cat $MIDS_que | grep -e 2c6bb00c -e 96c238ac > tmp 
+
 cat "${MIDS_que}" |
 grep "${barcode}" |
 sort -k 1,1 |
@@ -148,7 +151,7 @@ awk -F "" '{
         num = 2
     else num=1
     #
-    #print NR, num, "@", sum[1], sum[2], sum[3], sum[4], sum[5], "@", int(sum[3]/NF*100+0.5),int(sum[4]/NF*100+0.5),int(sum[5]/NF*100+0.5)
+    # print NR, num, "@", sum[1], sum[2], sum[3], sum[4], sum[5], "@", int(sum[3]/NF*100+0.5),int(sum[4]/NF*100+0.5),int(sum[5]/NF*100+0.5)
     # print NR, num, "@", sum[1], sum[2], sum[3], sum[4], sum[5], "@", sum[1]/NF*100, sum[2]/NF*100, sum[3]/NF*100,sum[4]/NF*100,sum[5]/NF*100
     print num
 }' \
@@ -303,12 +306,10 @@ input_id="${temp_dir}/hdbscan_${suffix}"
 output_plot="${temp_dir}/5_plot_${suffix}"
 
 plot_mutsites=.DAJIN_temp/clustering/tmp_mutation_"${suffix}"
-tmp_plot=.DAJIN_temp/clustering/tmp_plot_"${suffix}"
 # ----------------------------------------
 
 # true > "${output_plot}"
 
-wt_seqlen=$(cat .DAJIN_temp/fasta/wt.fa | awk '!/[>|@]/ {print length($0)}')
 minimap2 -ax map-ont .DAJIN_temp/fasta/target.fa .DAJIN_temp/fasta/wt.fa --cs 2>/dev/null |
 grep -v "^@" |
 awk '{print $(NF-1)}' |
@@ -318,8 +319,7 @@ sed -e "s/\([-|+|*]\)/ \1 /g" |
 awk '{for(i=1; i<NF; i++){if($i~/[a|t|g|c]/) $i=length($i)}
     $NF=""
     print $0}' |
-awk -v wt="${wt_seqlen}" \
-    '{for(i=1; i<NF; i++){ if($i~/[-|+|*]/) $(i+1)=$(i+1)+$(i-1) }
+awk '{for(i=1; i<NF; i++){ if($i~/[-|+|*]/) $(i+1)=$(i+1)+$(i-1) }
     print $0}' |
 sed -e "s/[-|+|*|=]/,/g" \
 > "${plot_mutsites}"
@@ -440,10 +440,10 @@ for i in $(cat "${input_id}" | cut -f 2 | sort -u);do
     #
 done
 
-mkdir -p DAJIN_Report/allele_type
-mv .DAJIN_temp/clustering/*png DAJIN_Report/allele_type/
-echo "${suffix} is successfully finished!"
-# rm .DAJIN_temp/*${suffix}
-rm .DAJIN_temp/tmp_*${suffix}
+# mkdir -p DAJIN_Report/allele_type
+# mv .DAJIN_temp/clustering/*png DAJIN_Report/allele_type/
+# echo "${suffix} is successfully finished!"
+# # rm .DAJIN_temp/*${suffix}
+# rm .DAJIN_temp/tmp_*${suffix}
 
-exit 0
+# exit 0
