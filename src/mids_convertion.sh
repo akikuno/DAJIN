@@ -16,7 +16,7 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # ======================================
 
 # input=".DAJIN_temp/fasta_ont/barcode30.fa"
-# genotype="wt"
+# genotype="target"
 # insertion_skip="control"
 
 input=${1}
@@ -90,9 +90,9 @@ cat ${tmp_mapping} |
 # cat ${parent_dir}/wt_simulated |
 sort |
 join - ${tmp_seqID} |
-# Remove unpredictable long reads あまりにも長いリードは除去する
-awk -v reflen=${reflength} \
-    'length($10) < reflen*1.1' |
+# # Remove unpredictable long reads あまりにも長いリードは除去する
+# awk -v reflen=${reflength} \
+#     'length($10) < reflen*1.1' |
 # append alignment info
 awk '{
     if($2==0 || $2==16) {alignment="primary"} else {alignment="secondary"};

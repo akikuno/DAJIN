@@ -14,9 +14,9 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # Parse auguments
 # ============================================================================
 
-# barcode="barcode26"
+# barcode="barcode04"
 # control="barcode30"
-# alleletype="abnormal"
+# alleletype="target"
 # alleletype_original=${alleletype}
 # pid=$$
 # suffix="${barcode}"_"${alleletype}"_"${pid}"
@@ -151,9 +151,9 @@ awk -F "" '{
         num = 2
     else num=1
     #
-    # print NR, num, "@", sum[1], sum[2], sum[3], sum[4], sum[5], "@", int(sum[3]/NF*100+0.5),int(sum[4]/NF*100+0.5),int(sum[5]/NF*100+0.5)
-    # print NR, num, "@", sum[1], sum[2], sum[3], sum[4], sum[5], "@", sum[1]/NF*100, sum[2]/NF*100, sum[3]/NF*100,sum[4]/NF*100,sum[5]/NF*100
-    print num
+    # print NR, "@", sum[1], sum[2], sum[3], sum[4], sum[5], "@", int(sum[3]/NF*100+0.5),int(sum[4]/NF*100+0.5),int(sum[5]/NF*100+0.5), num
+    print NR, "@", sum[1], sum[2], sum[3], sum[4], sum[5], "@", sum[1]/NF*100, sum[2]/NF*100, sum[3]/NF*100,sum[4]/NF*100,sum[5]/NF*100, num
+    # print num
 }' \
 > "${output_ref}"
 #? ===========================================================
@@ -210,6 +210,8 @@ awk -F "" '{
 # # 2013 genome Deletion 2
 # # 2740 genome Insertion 2
 # # 2919 genome Deletion 2
+# # ### 3757 genome Deletion 3 (128992323)
+# 128996080
 
 # per=0.50
 # cat $output_ref |
@@ -289,7 +291,7 @@ awk '{if($NF==2) $1=0
 # exit 0
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# Clustering by HDBSCAN
+#* Clustering by HDBSCAN
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 printf "Clustering... \n"
 Rscript DAJIN/src/test_clustering.R \
@@ -298,11 +300,14 @@ Rscript DAJIN/src/test_clustering.R \
 # echo $?
 printf "Finish clustering... \n"
 
+
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# Extract high-impact nucreotides
+#* Plot mutation loci
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
 printf "Output figures... \n"
 input_id="${temp_dir}/hdbscan_${suffix}"
+cat $input_id | cut -f 2 | sort | uniq -c
 output_plot="${temp_dir}/5_plot_${suffix}"
 
 plot_mutsites=.DAJIN_temp/clustering/tmp_mutation_"${suffix}"
@@ -361,7 +366,7 @@ for cluster in $(cat "${input_id}" | cut -f 2 | sort -u); do
         ###
         max=sum[1]; num=1
         for(i=2; i<5;i++){if(max<sum[i]){max=sum[i]; num=i}}
-        # print NR, num, sum[1],sum[2],sum[3],sum[4],sum[5]
+        # print num, NR, sum[1],sum[2],sum[3],sum[4],sum[5]
         print num
         }' |
     paste - ${output_ref} |
@@ -404,22 +409,20 @@ for cluster in $(cat "${input_id}" | cut -f 2 | sort -u); do
 done
 # rm "${tmp_plot}" .DAJIN_temp/clustering/tmp_2_$$
 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# Plot mutation loci
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 printf "Plot mutation loci... \n"
 Rscript DAJIN/src/test_2ndclustering.R \
 "${output_plot}" "${plot_mutsites}" 2>/dev/null
 
-# # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# # Separate BAM files
+
+# # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+#* # Separate BAM files
 # input_bamdir="DAJIN_Report/bam/"
 output_bamdir="DAJIN_Report/bam_clustering/"
 mkdir -p "${output_bamdir}"
-# # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 printf "Output BAM files... \n"
 
-# rm ${barcode}*.bam* 2>/dev/null
+rm "${output_bamdir}"/${barcode}_${alleletype_original}*.bam* 2>/dev/null
 for i in $(cat "${input_id}" | cut -f 2 | sort -u);do
     cat "${input_id}" | grep "${i}$" | cut -f 1 | sort \
     > .DAJIN_temp/tmp_id_${suffix}

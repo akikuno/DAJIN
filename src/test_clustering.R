@@ -87,17 +87,18 @@ input_pca <- df_que
 input_pca <- df_filtered
 # output: output_pca # PC1 and PC2
 # //////////////////////////////////////////////////////////
-# pca_res <- prcomp(input_pca, scale. = F)
-# output_pca <- pca_res$x[, 1:2]
+pca_res <- prcomp(input_pca, scale. = F)
+output_pca <- pca_res$x[, 1:2]
 
-pca_res <- umap(input_pca)
-output_pca <- pca_res$layout
-colnames(output_pca) <- c("PC1", "PC2")
+# pca_res <- umap(input_pca)
+# output_pca <- pca_res$layout
+# colnames(output_pca) <- c("PC1", "PC2")
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # HDBSCAN
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # print("Clustering by HDBSCAN...")
 input_hdbscan <- output_pca
+input_hdbscan[,2] <- 0
 # output: output_hdbscan # Cluster + 1
 # //////////////////////////////////////////////////////////
 if (nrow(input_hdbscan) < 250) {
@@ -215,7 +216,7 @@ if (nrow(cluster) > 1) {
         )
         df_cossim <- bind_rows(df_cossim, df_)
     }
-    df_cossim <- df_cossim %>% filter(score > 0.90)
+    df_cossim <- df_cossim %>% filter(score > 0.80)
     #
     if (nrow(df_cossim) != 0) {
         for (i in 1:nrow(df_cossim)) {
