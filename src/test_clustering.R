@@ -8,9 +8,9 @@ pacman::p_load(tidyverse, dbscan, vroom, umap)
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Import data
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# suffix <- "barcode02_wt"
-# que <- paste0(".DAJIN_temp/clustering//4_score_", sprintf("%s",suffix), "_9797")
-# label <- paste0(".DAJIN_temp/clustering//2_labels_", sprintf("%s", suffix), "_9797")
+# suffix <- "barcode26_abnormal_5018"
+# que <- paste0(".DAJIN_temp/clustering//4_score_", sprintf("%s",suffix))
+# label <- paste0(".DAJIN_temp/clustering//2_labels_", sprintf("%s", suffix))
 # df_que <- vroom(que, col_names = F, col_types = cols())
 # df_label <- vroom(label, col_names = c("id", "label"), col_types = cols())
 # output_suffix <- label %>% str_remove(".*labels_")
@@ -52,9 +52,18 @@ df_que <- as.data.frame(df_que)
 # dev.off()
 
 tmp_sum <- colSums(df_que)
-tmp_sum %>% table() %>% which.max() %>% names()
-plus <- nrow(df_que) * sum(tmp_sum > 0) / length(tmp_sum)
-minus <- -1 * nrow(df_que) * sum(tmp_sum < 0) / length(tmp_sum)
+# tmp_sum <- zero_to_one(tmp_sum)
+tmp_sum_mode <- tmp_sum %>%
+    table() %>%
+    which.max() %>%
+    names() %>%
+    as.double()
+    
+minus <- median(tmp_sum)
+plus <- tmp_sum_mode - median(tmp_sum) + tmp_sum_mode
+
+# plus <- nrow(df_que) * sum(tmp_sum > 0) / length(tmp_sum)
+# minus <- -1 * nrow(df_que) * sum(tmp_sum < 0) / length(tmp_sum)
 
 tmp <- (tmp_sum > plus | tmp_sum < minus)
 
@@ -66,11 +75,11 @@ tmp <- (tmp_sum > plus | tmp_sum < minus)
 # quan_max <- quantile(colSums(df_que), 0.95)
 # tmp <- (colSums(df_que) > quan_min) * (colSums(df_que) < quan_max)
 # tmp <- tmp * (colSums(df_que) < quan_mid[1]) | (colSums(df_que) > quan_mid[2])
-sum(tmp)
+# sum(tmp)
 #
 df_filtered <- df_que[, tmp]
 # df_filtered <- df_que[, tmp_sum!=0]
-dim(df_filtered)
+# dim(df_filtered)
 # png("fuga1.png")
 # plot(as.integer(df_filtered[1, ]))
 # dev.off()
@@ -83,12 +92,12 @@ dim(df_filtered)
 # PCA
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # print("Dimension reduction by PCA...")
-input_pca <- df_que
+# input_pca <- df_que
 input_pca <- df_filtered
 # output: output_pca # PC1 and PC2
 # //////////////////////////////////////////////////////////
 pca_res <- prcomp(input_pca, scale. = F)
-output_pca <- pca_res$x[, 1:2]
+output_pca <- pca_res$x[, 1:5]
 
 # pca_res <- umap(input_pca)
 # output_pca <- pca_res$layout
@@ -98,7 +107,7 @@ output_pca <- pca_res$x[, 1:2]
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # print("Clustering by HDBSCAN...")
 input_hdbscan <- output_pca
-input_hdbscan[,2] <- 0
+# input_hdbscan[,2] <- 0
 # output: output_hdbscan # Cluster + 1
 # //////////////////////////////////////////////////////////
 if (nrow(input_hdbscan) < 250) {
@@ -150,31 +159,17 @@ ggsave(plot = g,
     filename = sprintf(".DAJIN_temp/clustering/pca_%s.png", output_suffix),
     width = 10, height = 8)
 
+
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# Extract feature nucleotide position
+# PCA summarized by Cluster
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-input_que <- df_filtered
+input_que <- output_pca
 input_cl <- output_hdbscan
-# Stx2 #26 abnormalのケースでは、
-# 0-1正規化をかますとCosine類似度が0.95ほどになり、理想的なクラスタができないため
-# 正規化しないことにする。
-# //////////////////////////////////////////////////////////
 
-zero_to_one <- function(x) (x - min(x)) / (max(x) - min(x))
+df_cluster <- bind_cols(as.data.frame(input_que), cluster = input_cl)
 
-df_cluster <- tibble(loc = integer(), cluster = integer(), score = double())
-for (i in unique(input_cl)) {
-  tmp_score <- input_que[input_cl == i, ] %>%
-    colSums() # %>%
-    # zero_to_one()
+df_cluster <- df_cluster %>% pivot_longer(-cluster, names_to = "PC", values_to = "score")
 
-  tmp_df <- tibble(
-    loc = seq_len(ncol(input_que)),
-    cluster = i,
-    score = tmp_score
-  )
-  df_cluster <- df_cluster %>% bind_rows(tmp_df)
-}
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Cosine similarity to merge similar clusters
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -196,19 +191,14 @@ if (nrow(cluster) > 1) {
     for (i in seq_along(1:ncol(cl_combn))) {
         df_1 <- input_cossim %>%
             filter(cluster == cl_combn[1, i]) %>%
-            select(score)
-        #
+            group_by(PC) %>%
+            summarize(score = c(median(score)))
+
         df_2 <- input_cossim %>%
             filter(cluster == cl_combn[2, i]) %>%
-            select(score)
+            group_by(PC) %>%
+            summarize(score = c(median(score)))
         #
-        # png("hoge_score1.png")
-        # plot(df_1$score)
-        # dev.off()
-        # png("hoge_score2.png")
-        # plot(df_2$score)
-        # dev.off()
-
         df_ <- tibble(
             one = cl_combn[1, i],
             two = cl_combn[2, i],
@@ -235,7 +225,7 @@ query_ <- output_cl %>%
     order() %>%
     sort()
 
-for(i in seq_along(pattern_)) output_cl[output_cl == pattern_[i]] <- query_[i]
+for (i in seq_along(pattern_)) output_cl[output_cl == pattern_[i]] <- query_[i]
 # output_cl %>% unique()
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Output results
@@ -244,5 +234,94 @@ for(i in seq_along(pattern_)) output_cl[output_cl == pattern_[i]] <- query_[i]
 result <- tibble(read_id = df_label$id, output_cl)
 write_tsv(result,
     sprintf(".DAJIN_temp/clustering/hdbscan_%s", output_suffix),
-    col_names = F)
+    col_names = F
+)
+
+# # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# # Extract feature nucleotide position
+# # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# input_que <- df_filtered
+# input_cl <- output_hdbscan
+# # Stx2 #26 abnormalのケースでは、
+# # 0-1正規化をかますとCosine類似度が0.95ほどになり、理想的なクラスタができないため
+# # 正規化しないことにする。
+# # //////////////////////////////////////////////////////////
+
+# zero_to_one <- function(x) (x - min(x)) / (max(x) - min(x))
+
+# df_cluster <- tibble(loc = integer(), cluster = integer(), score = double())
+# for (i in unique(input_cl)) {
+#   tmp_score <- input_que[input_cl == i, ] %>%
+#     colSums() # %>%
+#     # zero_to_one()
+
+#   tmp_df <- tibble(
+#     loc = seq_len(ncol(input_que)),
+#     cluster = i,
+#     score = tmp_score
+#   )
+#   df_cluster <- df_cluster %>% bind_rows(tmp_df)
+# }
+
+# # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# # Cosine similarity to merge similar clusters
+# # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# print("Merge similar clusters...")
+# input_cossim <- df_cluster
+# output_cl <- output_hdbscan
+# # //////////////////////////////////////////////////////////
+# cosine_sim <- function(a, b) crossprod(a, b) / sqrt(crossprod(a) * crossprod(b))
+
+# cluster <- input_cossim %>%
+#     group_by(cluster) %>%
+#     count() %>%
+#     select(cluster)
+
+# if (nrow(cluster) > 1) {
+#     cl_combn <- combn(cluster$cluster, 2)
+#     df_cossim <- NULL
+#     i <- 1
+#     for (i in seq_along(1:ncol(cl_combn))) {
+#         df_1 <- input_cossim %>%
+#             filter(cluster == cl_combn[1, i]) %>%
+#             select(score)
+#         #
+#         df_2 <- input_cossim %>%
+#             filter(cluster == cl_combn[2, i]) %>%
+#             select(score)
+#         #
+#         # png("hoge_score1.png")
+#         # plot(df_1$score)
+#         # dev.off()
+#         # png("hoge_score2.png")
+#         # plot(df_2$score)
+#         # dev.off()
+
+#         df_ <- tibble(
+#             one = cl_combn[1, i],
+#             two = cl_combn[2, i],
+#             score = cosine_sim(df_1$score, df_2$score)
+#             # score = cosine_sim(summary(df_1$score), summary(df_2$score))
+#         )
+#         df_cossim <- bind_rows(df_cossim, df_)
+#     }
+#     df_cossim <- df_cossim %>% filter(score > 0.80)
+#     #
+#     if (nrow(df_cossim) != 0) {
+#         for (i in 1:nrow(df_cossim)) {
+#             pattern_ <- df_cossim[i, ]$two
+#             query_ <- df_cossim[i, ]$one
+#             output_cl[output_cl == pattern_] <- query_
+#         }
+#     }
+# }
+
+# pattern_ <- output_cl %>%
+#     unique() %>%
+#     sort()
+# query_ <- output_cl %>%
+#     unique() %>%
+#     order() %>%
+#     sort()
+
 

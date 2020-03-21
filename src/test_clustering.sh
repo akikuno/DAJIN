@@ -14,9 +14,9 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # Parse auguments
 # ============================================================================
 
-# barcode="barcode04"
+# barcode="barcode26"
 # control="barcode30"
-# alleletype="target"
+# alleletype="abnormal"
 # alleletype_original=${alleletype}
 # pid=$$
 # suffix="${barcode}"_"${alleletype}"_"${pid}"
@@ -448,5 +448,6 @@ done
 # echo "${suffix} is successfully finished!"
 # # rm .DAJIN_temp/*${suffix}
 # rm .DAJIN_temp/tmp_*${suffix}
+
 
 # exit 0
