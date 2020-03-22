@@ -97,7 +97,10 @@ input_pca <- df_filtered
 # output: output_pca # PC1 and PC2
 # //////////////////////////////////////////////////////////
 pca_res <- prcomp(input_pca, scale. = F)
-output_pca <- pca_res$x[, 1:5]
+components <- seq(1, 5)
+output_pca <- pca_res$x[, components]
+output_pca_importance <- summary(pca_res)$importance[2, components]
+for(i in components) output_pca[, i] <- output_pca[, i] * output_pca_importance[i]
 
 # pca_res <- umap(input_pca)
 # output_pca <- pca_res$layout
@@ -168,7 +171,8 @@ input_cl <- output_hdbscan
 
 df_cluster <- bind_cols(as.data.frame(input_que), cluster = input_cl)
 
-df_cluster <- df_cluster %>% pivot_longer(-cluster, names_to = "PC", values_to = "score")
+df_cluster <- df_cluster %>%
+    pivot_longer(-cluster, names_to = "PC", values_to = "score")
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Cosine similarity to merge similar clusters
@@ -192,12 +196,26 @@ if (nrow(cluster) > 1) {
         df_1 <- input_cossim %>%
             filter(cluster == cl_combn[1, i]) %>%
             group_by(PC) %>%
-            summarize(score = c(median(score)))
-
+            summarize(
+                median = median(score),
+                q10 = quantile(score, 0.10),
+                q25 = quantile(score, 0.25),
+                q75 = quantile(score, 0.75),
+                q90 = quantile(score, 0.90)
+            )
+        df_1 <- df_1 %>% pivot_longer(-PC, values_to = "score")
+        #
         df_2 <- input_cossim %>%
             filter(cluster == cl_combn[2, i]) %>%
             group_by(PC) %>%
-            summarize(score = c(median(score)))
+            summarize(
+                median = median(score),
+                q10 = quantile(score, 0.10),
+                q25 = quantile(score, 0.25),
+                q75 = quantile(score, 0.75),
+                q90 = quantile(score, 0.90)
+            )
+        df_2 <- df_2 %>% pivot_longer(-PC, values_to = "score")
         #
         df_ <- tibble(
             one = cl_combn[1, i],
@@ -206,7 +224,7 @@ if (nrow(cluster) > 1) {
         )
         df_cossim <- bind_rows(df_cossim, df_)
     }
-    df_cossim <- df_cossim %>% filter(score > 0.80)
+    df_cossim <- df_cossim %>% filter(score > 0.75)
     #
     if (nrow(df_cossim) != 0) {
         for (i in 1:nrow(df_cossim)) {
@@ -224,7 +242,7 @@ query_ <- output_cl %>%
     unique() %>%
     order() %>%
     sort()
-
+query_
 for (i in seq_along(pattern_)) output_cl[output_cl == pattern_[i]] <- query_[i]
 # output_cl %>% unique()
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

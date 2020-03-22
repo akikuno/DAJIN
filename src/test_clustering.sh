@@ -14,13 +14,19 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # Parse auguments
 # ============================================================================
 
+# barcode="barcode02"
+# alleletype="wt"
+# barcode="barcode04"
+# alleletype="target"
 # barcode="barcode26"
-# control="barcode30"
 # alleletype="abnormal"
+#
+# control="barcode30"
 # alleletype_original=${alleletype}
 # pid=$$
 # suffix="${barcode}"_"${alleletype}"_"${pid}"
 # [ "$alleletype" = "abnormal" ] && alleletype="wt"
+# echo $suffix
 
 barcode="${1}"
 control="${2}"
@@ -30,9 +36,9 @@ pid=$$
 suffix="${barcode}"_"${alleletype}"_"${pid}"
 [ "$alleletype" = "abnormal" ] && alleletype="wt"
 
+
 temp_dir=".DAJIN_temp/clustering/"
 mkdir -p "${temp_dir}"
-
 # ============================================================================
 # MIDS conversion
 # ============================================================================
@@ -307,7 +313,6 @@ printf "Finish clustering... \n"
 
 printf "Output figures... \n"
 input_id="${temp_dir}/hdbscan_${suffix}"
-cat $input_id | cut -f 2 | sort | uniq -c
 output_plot="${temp_dir}/5_plot_${suffix}"
 
 plot_mutsites=.DAJIN_temp/clustering/tmp_mutation_"${suffix}"
@@ -451,3 +456,5 @@ done
 
 
 # exit 0
+
+cat $input_id | cut -f 2 | sort | uniq -c
