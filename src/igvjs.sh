@@ -67,18 +67,34 @@ strand=$(cat "${output_gggenome_temp}" | head -n 1 | cut -f 2)
 printf "${chromosome}\t${start}\t${end}\t${strand}\n" \
 > "${output_gggenome_location}" # this file will be used at "knockin search"
 
-wget -q -O - http://togows.org/api/ucsc/${genome}/${chromosome}:${start}-${end}.fasta \
-> "${output_reference}"
+# Rerefence FASTA file ---------------------------------------------------
+url_ucsc_usa="http://genome.ucsc.edu/cgi-bin/das/${genome}/dna?segment=${chromosome}:${start},${end}"
+url_ucsc_asia="http://genome-asia.ucsc.edu/cgi-bin/das/${genome}/dna?segment=${chromosome}:${start},${end}"
+url_ucsc_euro="http://genome-euro.ucsc.edu/cgi-bin/das/${genome}/dna?segment=${chromosome}:${start},${end}"
+
+if [ $(wget -nv --spider --timeout 5 -t 1 "${url_ucsc_usa}" 2>&1 | grep -c '200 OK') -eq 1 ]; then
+    url_ucsc="${url_ucsc_usa}"
+elif [ $(wget -nv --spider --timeout 5 -t 1 "${url_ucsc_asia}" 2>&1 | grep -c '200 OK') -eq 1 ]; then
+    url_ucsc="${url_ucsc_asia}"
+elif [ $(wget -nv --spider --timeout 5 -t 1 "${url_ucsc_euro}" 2>&1 | grep -c '200 OK') -eq 1 ]; then
+    url_ucsc="${url_ucsc_euro}"
+else
+    error_exit 1 'Reference genome can not be obtained due to UCSC server error'
+fi
+
+printf ">${genome}:${chromosome}:${start}-${end}\n" > "${output_reference}"
+wget -qO - "${url_ucsc}" | grep -v "^<" >> "${output_reference}"
 [ $(cat "${output_reference}" | wc -l) -eq 0 ] &&
 error_exit 1 'Invalid reference genome.'
+reference="${output_reference}"
 
+# Rerefence Chromosome length  ---------------------------------------------------
 chrom_len=$(
     wget -q -O - http://hgdownload.cse.ucsc.edu/goldenPath/${genome}/bigZips/${genome}.chrom.sizes |
     awk -v chrom=${chromosome} '$1 == chrom' | cut -f 2)
+
 [ $(echo ${chrom_len} | wc -l) -eq 0 ] &&
 error_exit 1 'Invalid reference genome.'
-
-reference="${output_reference}"
 
 rm ${output_gggenome_temp}
 # ============================================================================
