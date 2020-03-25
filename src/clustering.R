@@ -25,7 +25,7 @@ output_suffix <- args[2] %>% str_remove(".*labels_")
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 df_que <- t(df_que)
 df_que[is.na(df_que)] <- 0
-df_que <- as_tibble(df_que)
+# df_que <- as_tibble(df_que)
 
 df_que_rm0 <- df_que[, colSums(df_que) != 0]
 # test <- df_que_rm0[,1002:1004]
@@ -43,8 +43,8 @@ df_que_rm0 <- df_que[, colSums(df_que) != 0]
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Filter non-informative information
-# 0付近の値
-# 全てのリードに共通している値
+# 0<e4><bb><98><e8><bf><91><e3><81><ae><e5><80><a4>
+# <e5><85><a8><e3><81><a6><e3><81><ae><e3><83><aa><e3><83><bc><e3><83><89><e3><81><ab><e5><85><b1><e9><80><9a><e3><81><97><e3><81><a6><e3><81><84><e3><82><8b><e5><80><a4>
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 # tmp_sum <- as.data.frame(df_que)
@@ -65,7 +65,7 @@ df_que_rm0 <- df_que[, colSums(df_que) != 0]
 #     which.max() %>%
 #     names() %>%
 #     as.double()
-    
+
 # minus <- median(tmp_sum)
 # plus <- tmp_sum_mode - median(tmp_sum) + tmp_sum_mode
 
@@ -97,7 +97,7 @@ pca_res <- prcomp(input_pca, scale. = F)
 components <- seq(1, 5)
 output_pca <- pca_res$x[, components]
 output_pca_importance <- summary(pca_res)$importance[2, components]
-for(i in components) output_pca[, i] <- output_pca[, i] * output_pca_importance[i]
+for (i in components) output_pca[, i] <- output_pca[, i] * output_pca_importance[i]
 
 # pca_res <- umap(input_pca)
 # output_pca <- pca_res$layout
@@ -119,16 +119,14 @@ if (nrow(input_hdbscan) < 250) {
 cl_nums <- c()
 i <- 1
 for (i in seq_along(cl_sizes)) {
-  cl <- hdbscan(input_hdbscan, minPts = cl_sizes[i])
-#   print(cl_size)
-#   print(cl$cluster %>% table())
-  cl_nums[i] <- cl$cluster %>%
-    table() %>%
-    length()
+    cl <- hdbscan(input_hdbscan, minPts = cl_sizes[i])
+    cl_nums[i] <- cl$cluster %>%
+        table() %>%
+        length()
 }
 # cl_nums %>% table()
 cl_num_opt <- cl_nums %>% table()
-# もし最頻クラスタ数が1つだった場合は次に頻度の高いクラスタ数にする。
+# <e3><82><82><e3><81><97><e6><9c><80><e9><a0><bb><e3><82><af><e3><83><a9><e3><82><b9><e3><82><bf><e6><95><b0><e3><81><8c>1<e3><81><a4><e3><81><a0><e3><81><a3><e3><81><9f><e5><a0><b4><e5><90><88><e3><81><af><e6><ac><a1><e3><81><ab><e9><a0><bb><e5><ba><a6><e3><81><ae><e9><ab><98><e3><81><84><e3><82><af><e3><83><a9><e3><82><b9><e3><82><bf><e6><95><b0><e3><81><ab><e3><81><99><e3><82><8b><e3><80><82>
 if (length(cl_num_opt[names(cl_num_opt) != 1]) > 0) {
     cl_num_opt <- cl_num_opt[names(cl_num_opt) != 1] %>%
         which.max() %>%
@@ -139,7 +137,7 @@ if (length(cl_num_opt[names(cl_num_opt) != 1]) > 0) {
         names()
 }
 cl_num_opt <- which(cl_nums == cl_num_opt) %>% max()
-# クラスタ数が1つしか無い場合には1を代入する
+# <e3><82><af><e3><83><a9><e3><82><b9><e3><82><bf><e6><95><b0><e3><81><8c>1<e3><81><a4><e3><81><97><e3><81><8b><e7><84><a1><e3><81><84><e5><a0><b4><e5><90><88><e3><81><ab><e3><81><af>1<e3><82><92><e4><bb><a3><e5><85><a5><e3><81><99><e3><82><8b>
 
 cl <- hdbscan(input_hdbscan, minPts = cl_sizes[cl_num_opt])
 output_hdbscan <- cl$cluster + 1
@@ -160,10 +158,12 @@ g <- ggplot(
 ) +
     geom_point(size = 3) +
     theme_bw(base_size = 20) # +
-    # theme(legend.position = "none")
-ggsave(plot = g,
+# theme(legend.position = "none")
+ggsave(
+    plot = g,
     filename = sprintf(".DAJIN_temp/clustering/pca_%s.png", output_suffix),
-    width = 10, height = 8)
+    width = 10, height = 8
+)
 
 
 # # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -176,22 +176,22 @@ zero_to_one <- function(x) (x - min(x)) / (max(x) - min(x))
 
 df_cluster <- tibble(loc = integer(), cluster = integer(), score = double())
 for (i in unique(input_cl)) {
-  tmp_score <- input_que[input_cl == i, ] %>%
-    colSums() # %>%
+    tmp_score <- input_que[input_cl == i, ] %>%
+        colSums() # %>%
     # zero_to_one()
 
-  tmp_df <- tibble(
-    loc = seq_len(ncol(input_que)),
-    cluster = i,
-    score = tmp_score
-  )
-  df_cluster <- df_cluster %>% bind_rows(tmp_df)
+    tmp_df <- tibble(
+        loc = seq_len(ncol(input_que)),
+        cluster = i,
+        score = tmp_score
+    )
+    df_cluster <- df_cluster %>% bind_rows(tmp_df)
 }
 
 # # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # # Cosine similarity to merge similar clusters
 # # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-print("Merge similar clusters...")
+# print("Merge similar clusters...")
 input_cossim <- df_cluster
 output_cl <- output_hdbscan
 # //////////////////////////////////////////////////////////
@@ -255,7 +255,6 @@ query_ <- output_cl %>%
     sort()
 
 for (i in seq_along(pattern_)) output_cl[output_cl == pattern_[i]] <- query_[i]
-output_cl %>% table()
 
 result <- tibble(read_id = df_label$id, output_cl)
 write_tsv(result,

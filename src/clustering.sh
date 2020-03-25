@@ -11,19 +11,23 @@ type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 # ============================================================================
-# Parse auguments
+# I/O naming
 # ============================================================================
-
+# ----------------------------------------
+# Input
+# ----------------------------------------
 # barcode="barcode02"
 # alleletype="wt"
 # barcode="barcode04"
 # alleletype="target"
-# barcode="barcode26"
+# barcode="barcode01"
 # alleletype="abnormal"
 #
 # control="barcode30"
 # alleletype_original=${alleletype}
-# pid=$$
+# [ "$alleletype_original" = "target" ] && pid="HOGE"
+# [ "$alleletype_original" = "wt" ] && pid="FUGA"
+# [ "$alleletype_original" = "abnormal" ] && pid="FOO"
 # suffix="${barcode}"_"${alleletype}"_"${pid}"
 # [ "$alleletype" = "abnormal" ] && alleletype="wt"
 # echo $suffix
@@ -31,20 +35,47 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 barcode="${1}"
 control="${2}"
 alleletype="${3}"; alleletype_original=${3}
-[ "$alleletype_original" = "target" ] && pid="@"
-[ "$alleletype_original" = "wt" ] && pid="@@"
-[ "$alleletype_original" = "abnormal" ] && pid="@@@"
+[ "$alleletype_original" = "target" ] && pid="HOGE"
+[ "$alleletype_original" = "wt" ] && pid="FUGA"
+[ "$alleletype_original" = "abnormal" ] && pid="FOO"
 suffix="${barcode}"_"${alleletype}"_"${pid}"
 [ "$alleletype" = "abnormal" ] && alleletype="wt"
 
+# ----------------------------------------
+# Output
+# ----------------------------------------
+# MIDS conversion
+MIDS_que=".DAJIN_temp/clustering/tmp_MIDS_${suffix}"
+MIDS_ref=".DAJIN_temp/clustering/tmp_MIDS_${control}_${alleletype}"
 
-temp_dir=".DAJIN_temp/clustering/"
-mkdir -p "${temp_dir}"
+# Mutation scoring of samples
+output_label=".DAJIN_temp/clustering/query_labels_${suffix}"
+output_query_seq=".DAJIN_temp/clustering/query_seq_${suffix}"
+
+# Output Genomic coodinates (Control)
+output_ref_seq=".DAJIN_temp/clustering/control_seq_${suffix}"
+output_ref_score=".DAJIN_temp/clustering/control_score_${suffix}"
+
+# Output Genomic coodinates (Query)
+output_query_score=".DAJIN_temp/clustering/query_score_${suffix}"
+
+# Output Plot
+hdbscan_id=".DAJIN_temp/clustering/hdbscan_${suffix}"
+output_alleleper=".DAJIN_temp/clustering/allele_percentage_${suffix}"
+output_plot=".DAJIN_temp/clustering/plot_${suffix}"
+
+plot_mutsites=.DAJIN_temp/clustering/tmp_mutation_"${suffix}"
+
+# Report allele mutation info
+output_result=".DAJIN_temp/clustering/result_alleleinfo_${suffix}"
+
+
 # ============================================================================
 # MIDS conversion
 # ============================================================================
-MIDS_que=".DAJIN_temp/clustering/tmp_MIDS_${suffix}"
-MIDS_ref=".DAJIN_temp/clustering/tmp_MIDS_${control}_${alleletype}"
+mkdir -p .DAJIN_temp/clustering/
+# MIDS_que=".DAJIN_temp/clustering/tmp_MIDS_${suffix}"
+# MIDS_ref=".DAJIN_temp/clustering/tmp_MIDS_${control}_${alleletype}"
 # ----------------------------------------
 
 find .DAJIN_temp/fasta_ont/ -type f | grep "${barcode}" |
@@ -61,8 +92,8 @@ fi
 # ============================================================================
 # Mutation scoring of samples
 # ============================================================================
-output_label="${temp_dir}/query_labels_${suffix}"
-output_query_seq="${temp_dir}/query_seq_${suffix}"
+# output_label=".DAJIN_temp/clustering/query_labels_${suffix}"
+# output_query_seq=".DAJIN_temp/clustering/query_seq_${suffix}"
 # ----------------------------------------
 cat "${MIDS_que}" |
 grep "${barcode}" |
@@ -108,10 +139,8 @@ seq_maxnum=$(cat "${output_query_seq}" |
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Output Genomic coodinates (Control)
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# コントロールとサンプルで**同じ箇所に同じ変異がある場合**、
-# その塩基はMatchとして扱うようにする
-output_ref_seq="${temp_dir}/control_seq_${suffix}"
-output_ref_score="${temp_dir}/control_score_${suffix}"
+# output_ref_seq=".DAJIN_temp/clustering/control_seq_${suffix}"
+# output_ref_score=".DAJIN_temp/clustering/control_score_${suffix}"
 # ----------------------------------------
 cat "${MIDS_ref}" |
 grep "${control}" |
@@ -151,18 +180,13 @@ awk -F "" '{
     sum[3]=gsub(/[1-9]|[a-z]/,"@",$0)
     sum[4]=gsub("D","D",$0)
     sum[5]=gsub("S","S",$0)
-    #
     # max=sum[1]; num=1
     # for(i=2; i<5;i++){if(max<sum[i]){max=sum[i]; num=i}}
-    # ##
     ### ControlにおいてIDSがtotalの10%を超える場合をシークエンスエラーありとする。
     per=10
-    if(sum[3]+sum[4]+sum[5] > NF*per/100) \
-        # print NR, int(sum[3]/NF*100+0.5),int(sum[4]/NF*100+0.5),int(sum[5]/NF*100+0.5)
-        num = 2
+    if(sum[3]+sum[4]+sum[5] > NF*per/100) num = 2
     else num=1
     #
-    # print NR, "@", sum[1], sum[2], sum[3], sum[4], sum[5], "@", int(sum[3]/NF*100+0.5),int(sum[4]/NF*100+0.5),int(sum[5]/NF*100+0.5), num
     print NR, "@", sum[1], sum[2], sum[3], sum[4], sum[5], "@", sum[1]/NF*100, sum[2]/NF*100, sum[3]/NF*100,sum[4]/NF*100,sum[5]/NF*100, num
     # print num
 }' \
@@ -172,11 +196,11 @@ awk -F "" '{
 # Output Genomic coodinates (Query)
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # ----------------------------------------
-input="${output_query_seq}"
-output_query_score="${temp_dir}/query_score_${suffix}"
+# input="${output_query_seq}"
+# output_query_score=".DAJIN_temp/clustering/query_score_${suffix}"
 # ----------------------------------------
 
-cat "${input}" |
+cat "${output_query_seq}" |
 awk -F "" -v seqnum="${seq_maxnum}" \
     '{for(i=1;i<=seqnum;i++) {
         if($i=="") $i="="
@@ -184,9 +208,8 @@ awk -F "" -v seqnum="${seq_maxnum}" \
     }}
 END{for(key in seq) print seq[key]}' |
 awk -F "" 'BEGIN{OFS=","}{
-    len=length($0)
-    totalGap=gsub("=","=",$0)
-    totalM=gsub("M","M",$0)
+    # totalGap=gsub("=","=",$0)
+    # totalM=gsub("M","M",$0)
     totalI=gsub(/[1-9]|[a-z]/,"@",$0)
     totalD=gsub("D","D",$0)
     totalS=gsub("S","S",$0)
@@ -210,72 +233,77 @@ awk '{if($NF==2) $1=0
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 #* Clustering by HDBSCAN
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-printf "Clustering... \n"
-Rscript DAJIN/src/test_clustering.R \
+# printf "Clustering... \n"
+Rscript DAJIN/src/clustering.R \
 "${output_query_score}" "${output_label}" 2>/dev/null
-
+# ls -lh "${output_query_score}" "${output_label}"
 # echo $?
-printf "Finish clustering... \n"
+# printf "Finish clustering... \n"
 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-#* Remove minor allele (< 10%)
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-input_id="${temp_dir}/hdbscan_${suffix}"
-output_alleleper="${temp_dir}/allele_percentage_${suffix}"
+# ============================================================================
+# Remove minor allele (< 10%)
+# ============================================================================
+# hdbscan_id=".DAJIN_temp/clustering/hdbscan_${suffix}"
+# output_alleleper=".DAJIN_temp/clustering/allele_percentage_${suffix}"
 # ----------------------------------------
 
-input_id_NR=$(cat "${input_id}" | wc -l)
+hdbscan_id_NR=$(cat "${hdbscan_id}" | wc -l)
 
-cat "${input_id}" | awk '{print $NF}' | sort | uniq -c |
-awk -v nr="${input_id_NR}" \
+cat "${hdbscan_id}" | awk '{print $NF}' | sort | uniq -c |
+awk -v nr="${hdbscan_id_NR}" \
 '{if($1/nr>0.1) print $2,int($1/nr*100+0.5)}' \
-> .DAJIN_temp/tmp_"${suffix}"
+> .DAJIN_temp/clustering/tmp_"${suffix}"
 
-per=$(cat .DAJIN_temp/tmp_"${suffix}" | awk '{sum+=$2} END{print sum}')
+per=$(cat .DAJIN_temp/clustering/tmp_"${suffix}" | awk '{sum+=$2} END{print sum}')
 
-cat .DAJIN_temp/tmp_"${suffix}" |
-awk -v per="${per}" '{print $1, int($2*100/per+0.5)}' \
+cat .DAJIN_temp/clustering/tmp_"${suffix}" |
+awk -v per="${per}" '{print $1, NR, int($2*100/per+0.5)}' \
 > "${output_alleleper}"
 
 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-#* # Separate BAM files
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# ============================================================================
+# Generate BAM files on each cluster
+# ============================================================================
 # input_bamdir="DAJIN_Report/bam/"
 output_bamdir="DAJIN_Report/bam_clustering/"
 mkdir -p "${output_bamdir}"
 # # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-printf "Output BAM files... \n"
+# printf "Output BAM files... \n"
 
-rm "${output_bamdir}"/${barcode}_${alleletype_original}*.bam* 2>/dev/null
-for i in $(cat "${output_alleleper}" | cut -d " " -f 1 | sort -u);do
-    cat "${input_id}" | grep "${i}$" | cut -f 1 | sort \
-    > .DAJIN_temp/tmp_id_${suffix}
+set +e
+rm "${output_bamdir}/${barcode}_${alleletype_original}*.bam*" 2>/dev/null
+set -e
+
+for i in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
+    index=$(cat "${output_alleleper}" | sed -n "${i}"p | cut -d " " -f 1)
+    #
+    cat "${hdbscan_id}" | grep "${index}$" | cut -f 1 | sort \
+    > ".DAJIN_temp/clustering/tmp_id_${suffix}"
     #
     samtools view -h DAJIN_Report/bam/"${barcode}".bam |
-    grep "^@" > .DAJIN_temp/tmp_header_${suffix} 
+    grep "^@" > ".DAJIN_temp/clustering/tmp_header_${suffix}" 
     #
     samtools view DAJIN_Report/bam/"${barcode}".bam |
     sort |
-    join - .DAJIN_temp/tmp_id_${suffix} 2>/dev/null |
+    join - ".DAJIN_temp/clustering/tmp_id_${suffix}" 2>/dev/null |
     sed "s/ /\t/g" 2>/dev/null |
     head -n 100 \
-    >> .DAJIN_temp/tmp_header_${suffix}
+    >> ".DAJIN_temp/clustering/tmp_header_${suffix}"
     #
-    samtools sort .DAJIN_temp/tmp_header_${suffix} \
+    samtools sort ".DAJIN_temp/clustering/tmp_header_${suffix}" \
     > "${output_bamdir}/${barcode}_${alleletype_original}_${i}.bam"
     samtools index "${output_bamdir}/${barcode}_${alleletype_original}_${i}.bam"
     #
 done
 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-#* Plot mutation loci
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-printf "Output figures... \n"
-input_id="${temp_dir}/hdbscan_${suffix}"
-output_plot="${temp_dir}/plot_${suffix}"
+# ============================================================================
+# Plot mutation loci
+# ============================================================================
+# printf "Output figures... \n"
+# hdbscan_id=".DAJIN_temp/clustering/hdbscan_${suffix}"
+# output_plot=".DAJIN_temp/clustering/plot_${suffix}"
 
-plot_mutsites=.DAJIN_temp/clustering/tmp_mutation_"${suffix}"
+# plot_mutsites=.DAJIN_temp/clustering/tmp_mutation_"${suffix}"
 # ----------------------------------------
 
 # --------------------------------------------------------------------------------
@@ -316,9 +344,11 @@ cut_start=$(cut -d " " -f 1 .DAJIN_temp/data/mutation_points)
 del_size=$(cat .DAJIN_temp/data/mutation_points | awk '{print $2-$1}')
 
 true > "${output_plot}"
-for cluster in $(cat "${output_alleleper}" | cut -d " " -f 1 | sort -u); do
-    paste "${output_query_seq}" "${input_id}" |
-    awk -v cl="${cluster}" '$NF==cl' |
+for cluster in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
+    index=$(cat "${output_alleleper}" | sed -n "${cluster}"p | cut -d " " -f 1)
+    #
+    paste "${output_query_seq}" "${hdbscan_id}" |
+    awk -v cl="${index}" '$NF==cl' |
     cut -f 1 |
     awk -F "" -v seqnum=${seq_maxnum} \
         '{for(i=1;i<=seqnum;i++) {
@@ -353,17 +383,25 @@ for cluster in $(cat "${output_alleleper}" | cut -d " " -f 1 | sort -u); do
         D=abs($7-$11)
         S=abs($8-$12)
         M=abs(1-I-D-S)
-        print NR, M, I, D, S}' |
+        print NR, M, I, D, S, $3}' |
+    awk '{max=0; num=0
+        for(i=2; i<=5;i++){if(max<$i){max=$i; num=i}}
+        print num, $1, $NF}' |
+    awk -v cl="${cluster}" \
+    '{if($1==1) print $2, "M", cl, $NF
+    else if($1==2) print $2, "M", cl, $NF
+    else if($1==3) print $2, "I", cl, $NF
+    else if($1==4) print $2, "D", cl, $NF
+    else if($1==5) print $2, "S", cl, $NF}' |
     # もしアレルタイプが2cut-deletionならば、変異箇所の行番号に変異サイズを追加する。
     if [ "${mutation_type}" = "D" ] && [ "${alleletype_original}" = "target" ] ; then    
         cat - |
         awk -v cut="${cut_start}" -v del="${del_size}" \
         '{if($1>cut) $1=$1+del
-        print }' |
-        sed "s/ /\t/g"
-    else cat -
-    fi |
-    sed "s/$/\t"${cluster}"/g" \
+        print }'
+    else
+        cat -
+    fi \
     >> "${output_plot}"
 done
 
@@ -380,64 +418,68 @@ awk '{for(i=1; i<NF; i++){ if($i~/[-|+|*]/) $(i+1)=$(i+1)+$(i-1) }
     print $0}' |
 sed -e "s/[-|+|*|=]/,/g" \
 > "${plot_mutsites}"
-cat "${plot_mutsites}"
+# cat "${plot_mutsites}"
 
 # --------------------------------------------------------------------------------
 #* Plot
 # --------------------------------------------------------------------------------
 
-printf "Plot mutation loci... \n"
+# printf "Plot mutation loci... \n"
 
-for cluster in $(cat "${output_alleleper}" | cut -d " " -f 1 | sort -u); do
+for cluster in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
     cat "${output_plot}" |
-    grep "${cluster}$" > tmp_"${suffix}"_"${cluster}"
+    awk -v cl="${cluster}" '$3==cl' \
+    > .DAJIN_temp/clustering/tmp_"${suffix}"_"${cluster}"
     Rscript DAJIN/src/clustering_alleleplot.R \
-    tmp_"${suffix}"_"${cluster}" "${plot_mutsites}" 2>/dev/null
+    .DAJIN_temp/clustering/tmp_"${suffix}"_"${cluster}" "${plot_mutsites}" 2>/dev/null
 done
 
 # mkdir -p DAJIN_Report/allele_type
 # mv .DAJIN_temp/clustering/*png DAJIN_Report/allele_type/
 # echo "${suffix} is successfully finished!"
 # # rm .DAJIN_temp/*${suffix}
-# rm .DAJIN_temp/tmp_*${suffix}
+# rm .DAJIN_temp/clustering/tmp_*${suffix}
 
+# ============================================================================
+# Report allele mutation info
+# ============================================================================
+# output_result=".DAJIN_temp/clustering/result_alleleinfo_${suffix}"
+# ---------------------------------------------------
 
+cat "${output_plot}" |
+# grep -v "M" |
+awk '{
+    num=1
+    cl_mut[$3]=cl_mut[$3]$2
+    if($2!="M"){
+        loc[NR] = $1
+        mut[NR] = $2
+        cl[NR] = $3
+        ins[NR] = $4
+    }}
+END{for(j in cl_mut) {if (cl_mut[j] !~/[I|D|S]/) print j, 0,"intact"}
+    for(i in loc){
+    if(loc[i+1] - loc[i] == 1) {num++}
+    else if(ins[i]>0) {print cl[i], i, ins[i]""mut[i]}
+    else {print cl[i], i, num""mut[i]; num=1}
+}}' |
+sort -t " " -k 1,1 -k 2,2n \
+> ".DAJIN_temp/clustering/tmp_${suffix}"
+
+cat "$output_alleleper" | cut -d " " -f 2- |
+sort |
+join - ".DAJIN_temp/clustering/tmp_${suffix}" |
+sort -t " " -k 1,1n  -k 3,3n |
+awk '{print $1,$2,$4,$5, NR}' |
+sed "s/^/${barcode}_${alleletype_original} /g" \
+> "${output_result}"
+
+#cat $output_plot | grep -v M
+
+echo "${suffix}" |
+sed "s/_/ /g" |
+cut -d " " -f 1,2 |
+sed "s/$/ is finished.../g"
+
+# rm .DAJIN_temp/clustering/tmp_*
 # exit 0
-
-cat $output_alleleper
-cat $output_plot | grep -v Match
-
-# rm .DAJIN_temp/tmp_"${suffix}"
-# rm .DAJIN_temp/tmp_* .DAJIN_temp/clustering/tmp_*
-
-
-    # head -n 1575 | tail # ins=1570
-    # head -n 1382 | tail # del
-    # cat - > tmp_hoge
-    # paste - ${output_ref_score} |
-    # awk '{if($NF==2) $1=1
-    #     print $1,$2,$3,$4,$5,$6}' > tmp2 #! ===================================================
-    # cat tmp2 > tmp_${cluster}
-    # awk -v cl="${cluster}" \
-    # '{if($1==1) print NR,"Match", cl,$2
-    # else if($1==2) print NR,"Match", cl,$2
-    # else if($1==3) print NR,"Insertion", cl,$2
-    # else if($1==4) print NR,"Deletion", cl,$2
-    # else if($1==5) print NR,"Substitusion", cl,$2}' |
-    ###
-
-    # #
-    # # もし最終行番号がWTの配列長に満たなかった場合、WTの配列長に合わせるように行を追加する。
-    # tmp_NR=$(cat .DAJIN_temp/tmp_2_$$ | awk 'END{print $1}')
-    # if [ $(echo "${tmp_NR}") -lt $(echo "${wt_seqlen}") ]; then
-    #     addrow=$(awk -v nr="${tmp_NR}" -v wt="${wt_seqlen}" BEGIN'{print wt-nr}')
-    #     cat $output_plot |
-    #     awk -v add="${addrow}" \
-    #     '{array[NR]=$0}
-    #     END{for(i=NR-add; i<=NR;i++) print array[i]}' |
-    #     # tail -n "${tmp_addrow}" |
-    #     awk -v cl="${cluster}" 'BEGIN{OFS="\t"} {$NF=cl; print}' \
-    #     >> "${output_plot}"
-    # else
-    #     cat .DAJIN_temp/tmp_2_$$ >> "${output_plot}"
-    # fi
