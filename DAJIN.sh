@@ -158,14 +158,12 @@ set -u
 # ============================================================================
 # Setting Directory
 # ============================================================================
-parent_dir=".DAJIN_temp"
-rm -rf "$parent_dir" 2>/dev/null
-report_dir="DAJIN_reports"
+rm -rf ".DAJIN_temp" 2>/dev/null
 dirs="fasta fasta_conv fasta_ont NanoSim bam data results/figures/svg results/figures/png results/igvjs"
 
 echo "$dirs" | sed "s/ /\n/g" |
 while read -r dir; do
-    mkdir -p "$parent_dir"/"$dir"
+    mkdir -p ".DAJIN_temp"/"$dir"
 done
 
 # ============================================================================
@@ -176,8 +174,8 @@ done
 cat ${fasta} |
 tr -d "\r" |
 grep -v "^$" \
-> ${parent_dir}/fasta/fasta.fa
-fasta_LF="${parent_dir}/fasta/fasta.fa"
+> .DAJIN_temp/fasta/fasta.fa
+fasta_LF=".DAJIN_temp/fasta/fasta.fa"
 
 # Separate multiple-FASTA into FASTA files
 cat ${fasta_LF} |
@@ -185,12 +183,12 @@ sed "s/^/@/g" |
 tr -d "\n" |
 sed -e "s/@>/\n>/g" -e "s/$/\n/g" |
 grep -v "^$" |
-while read input; do
-    output=$(echo "${input}" | sed -e "s/@.*//g" -e "s#>#${parent_dir}/fasta/#g" -e "s/$/.fa/g")
+while read -r input; do
+    output=$(echo "${input}" | sed -e "s/@.*//g" -e "s#>#.DAJIN_temp/fasta/#g" -e "s/$/.fa/g")
     echo "${input}" | sed "s/@/\n/g" > "${output}"
 done
-# cp "$parent_dir"/fasta/wt.fa ${parent_dir}/
-# cp "$parent_dir"/fasta/target.fa ${parent_dir}/
+# cp "$parent_dir"/fasta/wt.fa .DAJIN_temp/
+# cp "$parent_dir"/fasta/target.fa .DAJIN_temp/
 
 # When mutation point(s) are closer to もし変異部がFASTAファイルの5'側より3'側に近い場合、
 # right flanking than left flanking,   reverse complementにする。
@@ -206,15 +204,15 @@ convert_revcomp=$(minimap2 -ax splice "$parent_dir"/fasta/wt.fa "$parent_dir"/fa
     awk -v wt_seqlen="$wt_seqlen" \
     '{if(wt_seqlen-$2>$1) print 0; else print 1}')
 
-if [ $( echo "$convert_revcomp") -eq 1 ] ; then
+if [ "$convert_revcomp" -eq 1 ] ; then
     ./DAJIN/src/revcomp.sh "${fasta_LF}" \
     > "$parent_dir"/fasta/fasta_revcomp.fa &&
-    fasta_LF="${parent_dir}/fasta/fasta_revcomp.fa"
+    fasta_LF=".DAJIN_temp/fasta/fasta_revcomp.fa"
 fi
 
 cat ${fasta_LF} | sed "s/^/@/g" | tr -d "\n" | sed -e "s/@>/\n>/g" -e "s/$/\n/g" | grep -v "^$" |
 while read -r input; do
-    output=$(echo "${input}" | sed -e "s/@.*//g" -e "s#>#${parent_dir}/fasta_conv/#g" -e "s/$/.fa/g")
+    output=$(echo "${input}" | sed -e "s/@.*//g" -e "s#>#.DAJIN_temp/fasta_conv/#g" -e "s/$/.fa/g")
     echo "${input}" | sed "s/@/\n/g" > "$output"
 done
 
@@ -224,24 +222,24 @@ done
 # Check wheather the files are binary:
 set +e
 for input in ${ont}/* ; do
-    output=$(echo "${input}" | sed -e "s#.*/#${parent_dir}/fasta_ont/#g" -e "s#\.f.*#.fa#g")
+    output=$(echo "${input}" | sed -e "s#.*/#.DAJIN_temp/fasta_ont/#g" -e "s#\.f.*#.fa#g")
     printf "${output} is now generating...\n"
     #
     if [ $(file "${input}" | grep -c compressed) -eq 1 ]; then
         gzip -dc "${input}" |
         awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' \
-        > "${parent_dir}"/tmp_$$
+        > ".DAJIN_temp"/tmp_$$
     else
         cat "${input}" |
         awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' \
-        > "${parent_dir}"/tmp_$$
+        > ".DAJIN_temp"/tmp_$$
     fi
-    mv "${parent_dir}"/tmp_$$ "${output}"
+    mv ".DAJIN_temp"/tmp_$$ "${output}"
 done
 set -e
 #
 ont_ref_nanosim=$(echo ${ont_ref} |
-    sed -e "s#.*/#${parent_dir}/fasta_ont/#g" -e "s#\.f.*#.fa#g")
+    sed -e "s#.*/#.DAJIN_temp/fasta_ont/#g" -e "s#\.f.*#.fa#g")
 ont_ref_barcodeID=$(echo ${ont_ref} |
     sed -e "s#.*/##g" -e "s#\.f.*##g")
 
@@ -257,12 +255,12 @@ NanoSim simulation starts
 printf "Read analysis...\n"
 ./DAJIN/utils/NanoSim/src/read_analysis.py genome \
     -i "$ont_ref_nanosim" \
-    -rg ${parent_dir}/fasta_conv/wt.fa \
+    -rg .DAJIN_temp/fasta_conv/wt.fa \
     -t ${threads:-1} \
-    -o ${parent_dir}/NanoSim/training
+    -o .DAJIN_temp/NanoSim/training
 
-wt_seqlen=$(cat ${parent_dir}/fasta/wt.fa | awk '!/[>|@]/ {print length($0)}')
-for input in ${parent_dir}/fasta_conv/*; do
+wt_seqlen=$(cat .DAJIN_temp/fasta/wt.fa | awk '!/[>|@]/ {print length($0)}')
+for input in .DAJIN_temp/fasta_conv/*; do
     printf "${input} is now simulating...\n"
     output=$(echo "$input" | sed -e "s#fasta_conv/#fasta_ont/#g" -e "s/.fasta$//g" -e "s/.fa$//g")
     input_seqlength=$(cat "${input}" | awk '!/[>|@]/ {print length($0)-100}')
@@ -274,15 +272,15 @@ for input in ${parent_dir}/fasta_conv/*; do
     fi
     ##
     ./DAJIN/utils/NanoSim/src/simulator.py genome \
-        -dna_type linear -c ${parent_dir}//NanoSim/training \
+        -dna_type linear -c .DAJIN_temp//NanoSim/training \
         -rg $input -n 3000 -t ${threads:-1} \
         -min ${len} \
         -o ${output}_simulated
     ##
-    rm ${parent_dir}/fasta_ont/*_error_* ${parent_dir}/fasta_ont/*_unaligned_* 2>/dev/null
+    rm .DAJIN_temp/fasta_ont/*_error_* .DAJIN_temp/fasta_ont/*_unaligned_* 2>/dev/null
 done
 
-# rm -rf ${parent_dir}/NanoSim \
+# rm -rf .DAJIN_temp/NanoSim \
 rm -rf DAJIN/utils/NanoSim/src/__pycache__
 
 printf 'Success!!\nSimulation is finished\n'
@@ -309,8 +307,8 @@ printf \
 Converting ACGT into MIDS format
 ++++++++++++\n"
 
-reference="${parent_dir}"/fasta/wt.fa
-query="${parent_dir}"/fasta/target.fa
+reference=".DAJIN_temp"/fasta/wt.fa
+query=".DAJIN_temp"/fasta/target.fa
 
 # Get mutation loci...
 minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
@@ -318,7 +316,7 @@ awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
 sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
 tr -d "\~\*\-\+atgc" |
 awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' \
-> ${parent_dir}/data/mutation_points
+> .DAJIN_temp/data/mutation_points
 
 # MIDS conversion...
 find fasta_ont -type f | sort |
@@ -329,28 +327,28 @@ awk -v th=${threads:-1} '{
     END{print "wait"}' |
 sh -
 #
-cat ${parent_dir}/data/MIDS_* |
+cat .DAJIN_temp/data/MIDS_* |
 sed -e "s/_aligned_reads//g" |
 sort -k 1,1 \
-> "${parent_dir}"/data/${output_file:=DAJIN}.txt
+> ".DAJIN_temp"/data/${output_file:=DAJIN}.txt
 
-rm ${parent_dir}/data/MIDS_*
+rm .DAJIN_temp/data/MIDS_*
 
 # # One-hot encording...
 # for i in M I D S; do
-#     { cat "${parent_dir}"/data/${output_file}.txt |
+#     { cat ".DAJIN_temp"/data/${output_file}.txt |
 #     cut -f 2 |
 #     sed -e "s/^/MIDS=/" |
 #     sed -e "s/[^${i}]/0 /g" |
 #     sed -e "s/${i}/1 /g" |
 #     sed -e "s/ $//" \
-#     > ${parent_dir}/onehot_${i}.txt & } 1>/dev/null 2>/dev/null
+#     > .DAJIN_temp/onehot_${i}.txt & } 1>/dev/null 2>/dev/null
 # done
 # wait 2>/dev/null
 
-# cat "${parent_dir}"/data/${output_file}.txt |
+# cat ".DAJIN_temp"/data/${output_file}.txt |
 # cut -f 1,3 \
-# > "${parent_dir}"/data/${output_file}_trimmed.txt
+# > ".DAJIN_temp"/data/${output_file}_trimmed.txt
 
 printf "Finished.\n${output_file}.txt is generated.\n"
 
@@ -359,14 +357,14 @@ printf "Finished.\n${output_file}.txt is generated.\n"
 # ============================================================================
 printf "Start allele prediction...\n"
 #
-Rscript DAJIN/src/ml_abnormal_detection.R "${parent_dir}"/data/${output_file:-DAJIN}.txt
+Rscript DAJIN/src/ml_abnormal_detection.R ".DAJIN_temp"/data/${output_file:-DAJIN}.txt
 
-Rscript DAJIN/src/ml_prediction.R "${parent_dir}"/data/${output_file:-DAJIN}.txt
+Rscript DAJIN/src/ml_prediction.R ".DAJIN_temp"/data/${output_file:-DAJIN}.txt
 
 
-# python DAJIN/src/anomaly_detection.py "${parent_dir}"/data/${output_file:-DAJIN}_trimmed.txt
+# python DAJIN/src/anomaly_detection.py ".DAJIN_temp"/data/${output_file:-DAJIN}_trimmed.txt
 #
-# rm ${parent_dir}/onehot_*
+# rm .DAJIN_temp/onehot_*
 # mutation_type=$(
 #     minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
 #     awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
@@ -375,12 +373,12 @@ Rscript DAJIN/src/ml_prediction.R "${parent_dir}"/data/${output_file:-DAJIN}.txt
 # if [ $(echo ${mutation_type}) -eq 1 ]; then
 #     ./DAJIN/src/anomaly_exondeletion.sh ${genome} ${threads}
 # else
-#     cp ${parent_dir}/anomaly_classification.txt ${parent_dir}/anomaly_classification_revised.txt
+#     cp .DAJIN_temp/anomaly_classification.txt .DAJIN_temp/anomaly_classification_revised.txt
 # fi
 #
-# cp ${parent_dir}/anomaly_classification.txt ${parent_dir}/anomaly_classification_revised.txt
+# cp .DAJIN_temp/anomaly_classification.txt .DAJIN_temp/anomaly_classification_revised.txt
 #
-# python DAJIN/src/prediction.py "${parent_dir}"/data/${output_file:-DAJIN}_trimmed.txt
+# python DAJIN/src/prediction.py ".DAJIN_temp"/data/${output_file:-DAJIN}_trimmed.txt
 #
 printf "Prediction was finished...\n"
 #
@@ -388,48 +386,48 @@ printf "Prediction was finished...\n"
 # Report allele percentage
 # ============================================================================
 #
-cat "${parent_dir}"/data/DAJIN_prediction_result.txt  |
+cat ".DAJIN_temp"/data/DAJIN_prediction_result.txt  |
 cut -f 1,3 |
 sort |
 uniq -c \
-> "${parent_dir}"/tmp_prediction_$$
+> ".DAJIN_temp"/tmp_prediction_$$
 
 #
-cat "${parent_dir}"/tmp_prediction_$$ |
+cat ".DAJIN_temp"/tmp_prediction_$$ |
 awk '{barcode[$2]+=$1} END{for(key in barcode) print key,barcode[key]}' |
 sort |
-join -1 1 -2 2 - "${parent_dir}"/tmp_prediction_$$ |
+join -1 1 -2 2 - ".DAJIN_temp"/tmp_prediction_$$ |
 awk '{print $1, int($3/$2*100+0.5), $4}' \
-> "${parent_dir}"/tmp_prediction_$$_proportion
+> ".DAJIN_temp"/tmp_prediction_$$_proportion
 
 # Filter low-percent alleles ------------------------------------------------
 
-per_refab=$(cat "${parent_dir}"/tmp_prediction_$$_proportion | 
-    grep "${ont_ref_barcodeID}" | #! define "barcode30" by automate manner
+per_refab=$(cat ".DAJIN_temp"/tmp_prediction_$$_proportion | 
+    grep "${ont_ref_barcodeID:=barcode30}" | #! define "barcode30" by automate manner
     grep abnormal |
     cut -d " " -f 2)
 
-cat "${parent_dir}"/tmp_prediction_$$_proportion |
+cat ".DAJIN_temp"/tmp_prediction_$$_proportion |
 awk -v refab="${per_refab}" \
     '{if( !($2<refab+5 && $3 == "abnormal") && ($2>5) ) print $0}' \
-> "${parent_dir}"/tmp_prediction_filtered_$$
+> ".DAJIN_temp"/tmp_prediction_filtered_$$
 
 # Report allele percentage ------------------------------------------------
-cat "${parent_dir}"/tmp_prediction_filtered_$$ |
+cat ".DAJIN_temp"/tmp_prediction_filtered_$$ |
 awk '{array[$1]+=$2}
     END{for(key in array) print key, array[key]}' |
 sort |
-join - "${parent_dir}"/tmp_prediction_filtered_$$ |
+join - ".DAJIN_temp"/tmp_prediction_filtered_$$ |
 awk '{print $1, int($3*100/$2+0.5),$4}' \
-> "${parent_dir}"/data/DAJIN_prediction_allele_percentage.txt
+> ".DAJIN_temp"/data/DAJIN_prediction_allele_percentage.txt
 
-rm "${parent_dir}"/tmp_*
+rm ".DAJIN_temp"/tmp_*
 
 # ============================================================================
 # Clustering within each allele type
 # ============================================================================
 
-input="${parent_dir:=.DAJIN_temp}"/data/DAJIN_prediction_allele_percentage.txt
+input=".DAJIN_temp/data/DAJIN_prediction_allele_percentage.txt"
 control="${ont_ref_barcodeID:=barcode30}" #! define "barcode30" by automate manner
 # ./DAJIN/src/test_clustering.sh ${barcode} ${control} ${allele}
 # cat .tmp_/clustering_results_*
@@ -447,9 +445,9 @@ mkdir -p "${temp_dir}"
 cat "${input}" |
 cut -d " " -f 1,3 |
 awk -v cont=${control} \
-    '{print "./DAJIN/src/test_clustering.sh",$1, cont, $2, "&"}' |
+    '{print "./DAJIN/src/clustering.sh",$1, cont, $2, "&"}' |
  #! ---------------------------------
-head -n 5 |
+grep -e barcode01 -e barcode02 -e barcode04 |
  #! ---------------------------------
  awk -v th=${threads:-1} '{
     if (NR%th==0) gsub("&","&\nwait",$0)
