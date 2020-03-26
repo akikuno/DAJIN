@@ -16,7 +16,16 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # ======================================
 
 # input=".DAJIN_temp/fasta_ont/barcode30.fa"
+# input="barcode30.fa"
 # genotype="target"
+# alleletype_original=${alleletype}
+# [ "$alleletype_original" = "target" ] && pid="HOGE"
+# [ "$alleletype_original" = "wt" ] && pid="FUGA"
+# [ "$alleletype_original" = "abnormal" ] && pid="FOO"
+# suffix="${barcode}"_"${alleletype}"_"${pid}"
+# [ "$alleletype" = "abnormal" ] && alleletype="wt"
+# echo $suffix
+
 # insertion_skip="control"
 
 input=${1}
@@ -34,8 +43,8 @@ set -u
 parent_dir=".DAJIN_temp"
 output=$(echo "${input}" | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
 output_MIDS="${parent_dir}/data/MIDS_${output}_${pid}"
-tmp_mapping="${parent_dir}/${output}_mapping_${pid}"
-tmp_seqID="${parent_dir}/${output}_seqID_${pid}"
+tmp_mapping="${parent_dir}/tmp_${output}_mapping_${pid}"
+tmp_seqID="${parent_dir}/tmp_${output}_seqID_${pid}"
 
 # ======================================
 # Mapping
@@ -65,7 +74,7 @@ if [ "$second_flank" -gt "$reflength" ]; then second_flank=$(($reflength)); fi
 label=$(echo "${input}" | sed -e "s#.*/##g" -e "s#\..*##g")
 # printf "${label} is now processing...\n" 1>&2
 
-cat ${tmp_mapping} |
+cat "${tmp_mapping}" |
 grep -v "^@" |
 # fetch sequence start and end sites
 awk 'BEGIN{OFS="\t"}{
@@ -84,12 +93,13 @@ awk '{if(length(min[$1])==0) min[$1]="inf";
 sort -t " " -n |
 awk -v first=${first_flank} -v second=${second_flank} '{
     if($2<=first && $3>=second) print $1}' |
-sort > ${tmp_seqID}
+sort \
+> "${tmp_seqID}"
 #
-cat ${tmp_mapping} |
-# cat ${parent_dir}/wt_simulated |
+cat "${tmp_mapping}" |
 sort |
-join - ${tmp_seqID} |
+join - "${tmp_seqID}" |
+# join "${tmp_mapping}" - |
 # # Remove unpredictable long reads あまりにも長いリードは除去する
 # awk -v reflen=${reflength} \
 #     'length($10) < reflen*1.1' |
@@ -148,9 +158,6 @@ else
     # Delete insertion
     sed "s/+[a-z]*\([-|=|*]\)/\1/g"
 fi |
-# cat tmp | sed "s/+[a-z]*=//g" | head | awk '{print length($0)}'
-# cat tmp | sed "s/+[a-z]*\([-|=|*]\)/\1/g" | head | awk '{print length($0)}'
-# DDDDDDDD
 
 # replace single-nuc substitution to "S"
 awk '{gsub(/\*[a|t|g|c]*/, "S", $3); print $0}' |
@@ -186,7 +193,6 @@ awk -v reflen="${reflength}" '{
 sed -e "s/$/\t${label}/g" -e "s/ /\t/g" \
 > "${output_MIDS}"
 #
-rm "${tmp_mapping}" "${tmp_seqID}"
 
 # printf "${output} is now converted...\n"
 

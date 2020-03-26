@@ -390,38 +390,34 @@ cat ".DAJIN_temp"/data/DAJIN_prediction_result.txt  |
 cut -f 1,3 |
 sort |
 uniq -c \
-> ".DAJIN_temp"/tmp_prediction_$$
+> .DAJIN_temp/tmp_prediction_$$
 
-#
-cat ".DAJIN_temp"/tmp_prediction_$$ |
+cat .DAJIN_temp/tmp_prediction_$$ |
 awk '{barcode[$2]+=$1} END{for(key in barcode) print key,barcode[key]}' |
 sort |
-join -1 1 -2 2 - ".DAJIN_temp"/tmp_prediction_$$ |
+join -1 1 -2 2 - .DAJIN_temp/tmp_prediction_$$ |
 awk '{print $1, int($3/$2*100+0.5), $4}' \
-> ".DAJIN_temp"/tmp_prediction_$$_proportion
+> .DAJIN_temp/tmp_prediction_$$_proportion
 
-# Filter low-percent alleles ------------------------------------------------
-
+# Filter low-percent alleles ---------
 per_refab=$(cat ".DAJIN_temp"/tmp_prediction_$$_proportion | 
     grep "${ont_ref_barcodeID:=barcode30}" | #! define "barcode30" by automate manner
     grep abnormal |
     cut -d " " -f 2)
 
-cat ".DAJIN_temp"/tmp_prediction_$$_proportion |
+cat .DAJIN_temp/tmp_prediction_$$_proportion |
 awk -v refab="${per_refab}" \
     '{if( !($2<refab+5 && $3 == "abnormal") && ($2>5) ) print $0}' \
-> ".DAJIN_temp"/tmp_prediction_filtered_$$
+> .DAJIN_temp/tmp_prediction_filtered_$$
 
-# Report allele percentage ------------------------------------------------
-cat ".DAJIN_temp"/tmp_prediction_filtered_$$ |
+# Report allele percentage -------------
+cat .DAJIN_temp/tmp_prediction_filtered_$$ |
 awk '{array[$1]+=$2}
     END{for(key in array) print key, array[key]}' |
 sort |
-join - ".DAJIN_temp"/tmp_prediction_filtered_$$ |
+join - .DAJIN_temp/tmp_prediction_filtered_$$ |
 awk '{print $1, int($3*100/$2+0.5),$4}' \
-> ".DAJIN_temp"/data/DAJIN_prediction_allele_percentage.txt
-
-rm ".DAJIN_temp"/tmp_*
+> .DAJIN_temp/data/DAJIN_prediction_allele_percentage.txt
 
 # ============================================================================
 # Clustering within each allele type
@@ -433,9 +429,9 @@ control="${ont_ref_barcodeID:=barcode30}" #! define "barcode30" by automate mann
 # cat .tmp_/clustering_results_*
 
 #
-rm -rf .DAJIN_temp/clustering
-rm -rf DAJIN_Report/bam_clustering
-rm -rf DAJIN_Report/allele_type
+# rm -rf .DAJIN_temp/clustering
+# rm -rf DAJIN_Report/bam_clustering
+# rm -rf DAJIN_Report/allele_type
 # ============================================================================
 # Temporal directory
 # ============================================================================
@@ -447,7 +443,7 @@ cut -d " " -f 1,3 |
 awk -v cont=${control} \
     '{print "./DAJIN/src/clustering.sh",$1, cont, $2, "&"}' |
  #! ---------------------------------
-grep -e barcode01 -e barcode02 -e barcode04 |
+# grep -e barcode03 -e barcode04 -e barcode26 |
  #! ---------------------------------
  awk -v th=${threads:-1} '{
     if (NR%th==0) gsub("&","&\nwait",$0)
@@ -455,7 +451,7 @@ grep -e barcode01 -e barcode02 -e barcode04 |
     END{print "wait"}' |
 sh -
 #
-rm -rf .DAJIN_temp/clustering
+# rm -rf .DAJIN_temp/clustering
 
 # ============================================================================
 # Joint sequence logo in 2-cut Exon deletion
@@ -506,6 +502,8 @@ printf "Browser will be launched. Click 'igvjs.html'.\n"
 { npx live-server DAJIN_reports/igvjs/ & } 1>/dev/null 2>/dev/null
 
 # rm -rf .tmp_
+# rm .DAJIN_temp/tmp_* .DAJIN_temp/clustering/tmp_* 2>/dev/null
+
 printf "Completed! \nCheck 'results/figures/' directory.\n"
 
 exit 0

@@ -18,9 +18,9 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # ----------------------------------------
 # barcode="barcode02"
 # alleletype="wt"
-# barcode="barcode04"
+# barcode="barcode03"
 # alleletype="target"
-# barcode="barcode01"
+# barcode="barcode03"
 # alleletype="abnormal"
 #
 # control="barcode30"
@@ -69,7 +69,6 @@ plot_mutsites=.DAJIN_temp/clustering/tmp_mutation_"${suffix}"
 # Report allele mutation info
 output_result=".DAJIN_temp/clustering/result_alleleinfo_${suffix}"
 
-
 # ============================================================================
 # MIDS conversion
 # ============================================================================
@@ -80,14 +79,14 @@ mkdir -p .DAJIN_temp/clustering/
 
 find .DAJIN_temp/fasta_ont/ -type f | grep "${barcode}" |
 xargs -I @ ./DAJIN/src/mids_convertion.sh @ "${alleletype}" "${pid}" &&
-mv .DAJIN_temp/data/MIDS_"${barcode}"_"${pid}" "${MIDS_que}"
+mv ".DAJIN_temp/data/MIDS_${barcode}_${pid}" "${MIDS_que}"
 
 # If no control MIDS files, output... 
-if [ ! -s "${MIDS_ref}" ]; then
-    find .DAJIN_temp/fasta_ont/ -type f | grep "${control}" |
-    xargs -I @ ./DAJIN/src/mids_convertion.sh @ "${alleletype}" "${pid}" "control" &&
-    mv ".DAJIN_temp/data/MIDS_${control}_${pid}" "${MIDS_ref}"
-fi
+#if [ ! -s "${MIDS_ref}" ]; then
+find .DAJIN_temp/fasta_ont/ -type f | grep "${control}" |
+xargs -I @ ./DAJIN/src/mids_convertion.sh @ "${alleletype}" "${pid}" "control" &&
+mv ".DAJIN_temp/data/MIDS_${control}_${pid}" "${MIDS_ref}"
+#fi
 
 # ============================================================================
 # Mutation scoring of samples
@@ -146,7 +145,6 @@ cat "${MIDS_ref}" |
 grep "${control}" |
 sort -k 1,1 |
 join -1 1 -2 2 - .DAJIN_temp/data/DAJIN_prediction_result.txt |
-# join -1 1 -2 2 - ".DAJIN_temp/prediction_result.txt" |
 awk '$NF=="wt"' |
 cut -d " " -f 2 |
 # Insertion annotation
@@ -163,17 +161,14 @@ awk -F "" '{
     print $0
     }' |
 #
-sed -e "s/I//g" -e "s/ //g" \
-> "${output_ref_seq}"
-
-cat "${output_ref_seq}" |
+sed -e "s/I//g" -e "s/ //g" |
+tee "${output_ref_seq}" |
 awk -F "" -v seqnum="${seq_maxnum}" \
     '{for(i=1;i<=seqnum;i++) {
     if($i=="") $i="="
     seq[i]=seq[i]$i
 }}
 END{for(key in seq) print seq[key]}' |
-
 awk -F "" '{
     sum[1]=gsub("=","=",$0)
     sum[2]=gsub("M","M",$0)
@@ -306,6 +301,22 @@ done
 # plot_mutsites=.DAJIN_temp/clustering/tmp_mutation_"${suffix}"
 # ----------------------------------------
 
+minimap2 -ax map-ont .DAJIN_temp/fasta/target.fa .DAJIN_temp/fasta/wt.fa --cs 2>/dev/null |
+grep -v "^@" |
+awk '{print $(NF-1)}' |
+sed -e "s/cs:Z:://g" | 
+sed -e "s/:/ /g" |
+sed -e "s/\([-|+|*]\)/ \1 /g" |
+awk '{for(i=1; i<NF; i++){if($i~/[a|t|g|c]/) $i=length($i)}
+    $NF=""
+    print $0}' |
+awk '{for(i=1; i<NF; i++){ if($i~/[-|+|*]/) $(i+1)=$(i+1)+$(i-1) }
+    print $0}' |
+sed -e "s/[-|+|*|=]/,/g" \
+> "${plot_mutsites}"
+# cat "${plot_mutsites}"
+
+
 # --------------------------------------------------------------------------------
 #* Subtract Control from Query
 # --------------------------------------------------------------------------------
@@ -328,6 +339,9 @@ awk -F "" '{sequence=$0
     }' \
 > .DAJIN_temp/clustering/tmp_control_"${suffix}"
 
+# cat .DAJIN_temp/clustering/tmp_control_"${suffix}" |
+# awk '{print NR,$0}' |
+# awk '$2 < 0.7' | head
 
 # annotate Deletion(D), Knock-in(I), or Point mutation(P)
 mutation_type=$(
@@ -340,8 +354,8 @@ mutation_type=$(
         }'
 )
 
-cut_start=$(cut -d " " -f 1 .DAJIN_temp/data/mutation_points)
-del_size=$(cat .DAJIN_temp/data/mutation_points | awk '{print $2-$1}')
+cut_start=$(cut -d " " -f 1 "${plot_mutsites}")
+del_size=$(awk '{print $3-$1}' "${plot_mutsites}")
 
 true > "${output_plot}"
 for cluster in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
@@ -350,12 +364,13 @@ for cluster in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
     paste "${output_query_seq}" "${hdbscan_id}" |
     awk -v cl="${index}" '$NF==cl' |
     cut -f 1 |
-    awk -F "" -v seqnum=${seq_maxnum} \
+    awk -F "" -v seqnum="${seq_maxnum}" \
         '{for(i=1;i<=seqnum;i++) {
         if($i=="") $i="="
         seq[i]=seq[i]$i
         }}
         END{for(key in seq) print seq[key]}' |
+    #
     awk -F "" '{sequence=$0
         sum[1]=gsub("=","=",sequence)
         sum[2]=gsub("M","M",sequence)
@@ -405,20 +420,6 @@ for cluster in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
     >> "${output_plot}"
 done
 
-minimap2 -ax map-ont .DAJIN_temp/fasta/target.fa .DAJIN_temp/fasta/wt.fa --cs 2>/dev/null |
-grep -v "^@" |
-awk '{print $(NF-1)}' |
-sed -e "s/cs:Z:://g" | 
-sed -e "s/:/ /g" |
-sed -e "s/\([-|+|*]\)/ \1 /g" |
-awk '{for(i=1; i<NF; i++){if($i~/[a|t|g|c]/) $i=length($i)}
-    $NF=""
-    print $0}' |
-awk '{for(i=1; i<NF; i++){ if($i~/[-|+|*]/) $(i+1)=$(i+1)+$(i-1) }
-    print $0}' |
-sed -e "s/[-|+|*|=]/,/g" \
-> "${plot_mutsites}"
-# cat "${plot_mutsites}"
 
 # --------------------------------------------------------------------------------
 #* Plot
@@ -481,5 +482,6 @@ sed "s/_/ /g" |
 cut -d " " -f 1,2 |
 sed "s/$/ is finished.../g"
 
+set +eu
 # rm .DAJIN_temp/clustering/tmp_*
 # exit 0
