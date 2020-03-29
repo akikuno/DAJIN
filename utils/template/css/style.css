@@ -4,11 +4,19 @@ body {
 }
 
 h1 {
-  overflow: hidden;
-  text-align: left;
+  padding:0.5em;
   font-size: x-large;
-  margin: 0 0.5em;
-  padding: 0.3em 0.5em;
+  border-bottom: solid 3px #ffc778;
+  position: relative;
+}
+
+h1:after {
+  position: absolute;
+  content: " ";
+  display: block;
+  border-bottom: solid 3px #ffc778;
+  bottom: -3px;
+  width: 40%;
 }
 
 h2 {
@@ -43,20 +51,32 @@ table{
   table-layout: auto;
   border-collapse: collapse;
   border-spacing: 0;
-  width: 90%;
+  width: 100%;
 }
 
 table tr{
   border-bottom: solid 1px #eee;
   cursor: pointer;
+  margin: 0 0.5em;
 }
 
+/*
 table tr:hover{
   background-color: #d4f0fd;
 }
-
-table th,table td{
+*/
+table th{
+  font-size: small;
   text-align: center;
-  width: 20%;
+  width: 15%;
+  margin: 0 0.5em;
+  padding: 15px 10px;
+}
+
+table td{
+  font-size: smaller;
+  text-align: center;
+  width: 15%;
+  margin: 0 0.5em;
   padding: 15px 10px;
 }

@@ -13,72 +13,72 @@
 </head>
 
 <body>
-    <h1><span>DAJIN summary</span></h2>
-        <div class="sortable-table">
-            <table id="my-table1">
-                <thead>
-                    <tr>
-                        <th data-id="id" data-header>
-                            <div>Sample</div>
-                        </th>
-                        <th data-id="mosaic" sortable>
-                            Mosaicism <br>(# of delected alleles)
-                        </th>
-                        <th data-id="designed" sortable>
-                            Designed allele
-                        </th>
-                        <th data-id="wt" sortable>
-                            WT allele
-                        </th>
-                        <th data-id="abnormal" sortable>
-                            Abnormal allele
-                        </th>
-                        <th data-id="details">
-                            Details
-                        </th>
-                    </tr>
-                </thead>
-            </table>
-        </div>
+    <h1><span>DAJIN Summary Report</span></h1>
+    <div class="sortable-table">
+        <table id="my-table1">
+            <thead>
+                <tr>
+                    <th data-id="sample" sortable>
+                        <div>Sample</div>
+                    </th>
+                    <th data-id="mosaic" sortable>
+                        Mosaicism <br>(# of delected alleles)
+                    </th>
+                    <th data-id="designed" sortable>
+                        Designed allele
+                    </th>
+                    <th data-id="wt" sortable>
+                        WT allele
+                    </th>
+                    <th data-id="abnormal" sortable>
+                        Abnormal allele
+                    </th>
+                    <th data-id="details">
+                        Details
+                    </th>
+                </tr>
+            </thead>
+        </table>
+    </div>
 
-        <script src="https://cdn.jsdelivr.net/npm/@riversun/sortable-table@1.0.0/lib/sortable-table.js"></script>
-        <script>
+    <script src="https://cdn.jsdelivr.net/npm/@riversun/sortable-table@1.0.0/lib/sortable-table.js"></script>
+    <script>
 
-            const data = [
-                {
-                    id: 'barcode01',
-                    mosaic: '2',
-                    designed: 'Detected',
-                    wt: 'Detected',
-                    abnormal: 'None-detected',
-                    details: 'Link',
-                },
-                {
-                    id: 'barcode02',
-                    mosaic: '3',
-                    designed: 'None-Detected',
-                    wt: 'Detected',
-                    abnormal: 'None-detected',
-                    details: 'Link',
-                },
-            ];
+        const data = [
+            {
+                sample: 'barcode01',
+                mosaic: '2',
+                designed: 'Detected',
+                wt: 'Detected',
+                abnormal: 'None-detected',
+                details: 'Link',
+            },
+            {
+                sample: 'barcode02',
+                mosaic: '3',
+                designed: 'None-Detected',
+                wt: 'Detected',
+                abnormal: 'None-detected',
+                details: 'Link',
+            },
+        ];
 
-            const sortableTable = new SortableTable();
+        const sortableTable = new SortableTable();
 
-            // set table element
-            sortableTable.setTable(document.querySelector('#my-table1'));
-            // set data to be sorted
-            sortableTable.setData(data);
-            // handling events
-            sortableTable.events()
-                .on('sort', (event) => {
-                    console.log(`[SortableTable#onSort]
+        // set table element
+        sortableTable.setTable(document.querySelector('#my-table1'));
+        // set data to be sorted
+        sortableTable.setData(data);
+        // handling events
+        sortableTable.events()
+            .on('sort', (event) => {
+                console.log(`[SortableTable#onSort]
      event.colId=${event.colId}
      event.sortDir=${event.sortDir}
      event.data=\n${JSON.stringify(event.data)}`);
-                });
+            });
 
-        </script>
+    </script>
 </body>
 
 </html>
