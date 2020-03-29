@@ -40,9 +40,10 @@ h2 span::after {
 }
 
 table{
+  table-layout: auto;
   border-collapse: collapse;
   border-spacing: 0;
-  width: 60%;
+  width: 90%;
 }
 
 table tr{
@@ -56,6 +57,6 @@ table tr:hover{
 
 table th,table td{
   text-align: center;
-  width: 25%;
-  padding: 15px 0;
+  width: 20%;
+  padding: 15px 10px;
 }
