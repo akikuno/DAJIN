@@ -136,7 +136,7 @@ error_exit 1 "ONT reads from wild-type is required: See ${0##*/} -h"
 echo $option_cnt | grep "\-genome" > /dev/null ||
 error_exit 1 "Reference genome should be specified: See ${0##*/} -h"
 
-if [ $(grep -c '>target' "${fasta}") -eq 0 -o $(grep -c '>wt' "${fasta}") -eq 0 ]; then
+if [ "$(grep -c '>target' ${fasta})" -eq 0 ] || [ "$(grep -c '>wt' ${fasta})" -eq 0 ]; then
     error_exit 1 "FASTA requires including \">target\" and \">wt\" headers. See ./${0##*/} -h"
 fi
 set -e
@@ -187,8 +187,6 @@ while read -r input; do
     output=$(echo "${input}" | sed -e "s/@.*//g" -e "s#>#.DAJIN_temp/fasta/#g" -e "s/$/.fa/g")
     echo "${input}" | sed "s/@/\n/g" > "${output}"
 done
-# cp "$parent_dir"/fasta/wt.fa .DAJIN_temp/
-# cp "$parent_dir"/fasta/target.fa .DAJIN_temp/
 
 # When mutation point(s) are closer to もし変異部がFASTAファイルの5'側より3'側に近い場合、
 # right flanking than left flanking,   reverse complementにする。
@@ -238,9 +236,9 @@ for input in ${ont}/* ; do
 done
 set -e
 #
-ont_ref_nanosim=$(echo ${ont_ref} |
+ont_ref_nanosim=$(echo "${ont_ref}" |
     sed -e "s#.*/#.DAJIN_temp/fasta_ont/#g" -e "s#\.f.*#.fa#g")
-ont_ref_barcodeID=$(echo ${ont_ref} |
+ont_ref_barcodeID=$(echo "${ont_ref}" |
     sed -e "s#.*/##g" -e "s#\.f.*##g")
 
 # ============================================================================
@@ -280,7 +278,6 @@ for input in .DAJIN_temp/fasta_conv/*; do
     rm .DAJIN_temp/fasta_ont/*_error_* .DAJIN_temp/fasta_ont/*_unaligned_* 2>/dev/null
 done
 
-# rm -rf .DAJIN_temp/NanoSim \
 rm -rf DAJIN/utils/NanoSim/src/__pycache__
 
 printf 'Success!!\nSimulation is finished\n'
@@ -333,22 +330,6 @@ sort -k 1,1 \
 > ".DAJIN_temp"/data/${output_file:=DAJIN}.txt
 
 rm .DAJIN_temp/data/MIDS_*
-
-# # One-hot encording...
-# for i in M I D S; do
-#     { cat ".DAJIN_temp"/data/${output_file}.txt |
-#     cut -f 2 |
-#     sed -e "s/^/MIDS=/" |
-#     sed -e "s/[^${i}]/0 /g" |
-#     sed -e "s/${i}/1 /g" |
-#     sed -e "s/ $//" \
-#     > .DAJIN_temp/onehot_${i}.txt & } 1>/dev/null 2>/dev/null
-# done
-# wait 2>/dev/null
-
-# cat ".DAJIN_temp"/data/${output_file}.txt |
-# cut -f 1,3 \
-# > ".DAJIN_temp"/data/${output_file}_trimmed.txt
 
 printf "Finished.\n${output_file}.txt is generated.\n"
 
