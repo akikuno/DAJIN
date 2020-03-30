@@ -1,9 +1,8 @@
-# One-hot encording in R
 # ============================================================================
 # Environment setting ----
 # ============================================================================
-if(!requireNamespace("pacman", quietly = T)) install.packages("pacman")
-if(!requireNamespace("reticulate", quietly = T)) install.packages("reticulate")
+if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
+if (!requireNamespace("reticulate", quietly = T)) install.packages("reticulate")
 reticulate::use_condaenv("DAJIN")
 pacman::p_load(tidyverse, keras, reticulate, caret, e1071, gridExtra, svglite, progress)
 # reticulate::py_config()
@@ -19,50 +18,59 @@ ftools <- import("functools")
 
 args <- commandArgs(trailingOnly = TRUE)
 file_name <- args[1]
-# file_name <- ".DAJIN_temp/data/DAJIN.txt"
+# file_name <- ".DAJIN_temp/data/DAJIN_MIDS.txt"
 
 output_dir <- ".DAJIN_temp/results"
+system("mkdir -p .DAJIN_temp/results")
 output_npz <- file_name %>% str_replace(".txt*$", ".npz")
 output_model <- file_name %>% str_replace(".txt*$", ".h5")
-output_file_name <- file_name %>% str_remove(".*/") %>% str_remove(".txt.*$")
+output_file_name <- file_name %>%
+  str_remove(".*/") %>%
+  str_remove(".txt.*$")
 
 df <- read_tsv(file_name, col_names = c("ID", "SEQ", "LABEL"), col_types = cols())
 
 df$SEQ <- str_c("MIDS=", df$SEQ, sep = "")
-df_sim <- df %>% filter(str_detect(LABEL,"simulate"))
-df_real <- df %>% filter(!str_detect(LABEL,"simulate"))
+df_sim <- df %>% filter(str_detect(LABEL, "simulate"))
+df_real <- df %>% filter(!str_detect(LABEL, "simulate"))
 
 # ============================================================================
 # # one-hot encoding ----
 # ============================================================================
-one_hot_encode <- function(seq){
+one_hot_encode <- function(seq) {
   seq_len <- seq[1] %>% str_count()
-  array_oh <- array(0, dim = c(length(seq), seq_len, 4))
+  array_oh <- array(0L, dim = c(length(seq), seq_len, 4))
   #
   list_seq <- seq %>%
     str_split("")
   #
   pb <- progress_bar$new(
-      format = "  One-hot encording... [:bar] :percent eta: :eta",
-      total = length(list_seq), clear = FALSE, width = 100)
+    format = "  One-hot encording... [:bar] :percent eta: :eta",
+    total = length(list_seq), clear = FALSE, width = 100
+  )
   #
-  for(i in seq_along(list_seq)){
+  for (i in seq_along(list_seq)) {
     pb$tick()
     x <- list_seq[[i]]
-    for(j in seq_along(x)){
-      if(x[j] == "M") array_oh[i,j,] <- c(1,0,0,0)
-      else if(x[j] == "I") array_oh[i,j,] <- c(0,1,0,0)
-      else if(x[j] == "D") array_oh[i,j,] <- c(0,0,1,0)
-      else if(x[j] == "S") array_oh[i,j,] <- c(0,0,0,1)
+    for (j in seq_along(x)) {
+      if (x[j] == "M") {
+        array_oh[i, j, ] <- c(1, 0, 0, 0)
+      } else if (x[j] == "I") {
+        array_oh[i, j, ] <- c(0, 1, 0, 0)
+      } else if (x[j] == "D") {
+        array_oh[i, j, ] <- c(0, 0, 1, 0)
+      } else if (x[j] == "S") array_oh[i, j, ] <- c(0, 0, 0, 1)
     }
   }
   return(array_oh)
 }
 # # ////
-X_all <- one_hot_encode(df$SEQ)
+
+# X_all <- one_hot_encode(df$SEQ)
 #
-X_sim <- X_all[str_detect(df$LABEL, "simulate"), , ]
-X_real <- X_all[!str_detect(df$LABEL, "simulate"), , ]
+X_sim <- one_hot_encode(df_sim$SEQ)
+# X_sim <- X_all[str_detect(df$LABEL, "simulate"), , ]
+# X_real <- X_all[!str_detect(df$LABEL, "simulate"), , ]
 #
 # # ////
 # np_load = ftools$partial(np$load, allow_pickle=TRUE)
@@ -87,7 +95,7 @@ Y_train <- train_test[[3]]
 Y_test <- train_test[[4]]
 
 # ============================================================================
-# model construction ---- 
+# model construction ----
 # ============================================================================
 # os <- import("os")
 # os$environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -137,7 +145,7 @@ model %>% compile(
 
 print("Model fitting...")
 suppressMessages(
-    history <- model %>% fit(X_train, Y_train,
+  history <- model %>% fit(X_train, Y_train,
     epochs = 20, verbose = 0,
     validation_split = 0.2, shuffle = TRUE
   )
@@ -150,35 +158,42 @@ suppressMessages(
 
 cosine_sim <- function(a, b) crossprod(a, b) / sqrt(crossprod(a) * crossprod(b))
 
-get_cosine_score <- function(model, train, test){
-  model_ <- keras_model(model$get_layer(index = 0L)$input,
-                        model$get_layer(index = -2L)$output)
+get_cosine_score <- function(model, train, test) {
+  model_ <- keras_model(
+    model$get_layer(index = 0L)$input,
+    model$get_layer(index = -2L)$output
+  )
   # print(summary(model_))
   train_vector <- model_ %>% predict(train, verbose = 0)
   test_vector <- model_ %>% predict(test, verbose = 0)
-  cosine_sim(train_vector[1,], test_vector[1,])
-  # train_list <- split(train_vector, rep(1:nrow(train_vector), each = ncol(train_vector)))
-  # score <- parallel::mclapply(train_list, function(x) {
-  #   apply(x, 1, function(y) cosine_sim(test_vector[i, ], y)) %>% max()
-  # })
+  cosine_sim(train_vector[1, ], test_vector[1, ])
+  #
   score <- rep(0, nrow(test_vector))
   pb <- progress_bar$new(
     format = "  Cosine similarity... [:bar] :percent eta: :eta",
     total = length(score), clear = FALSE, width = 100
   )
-  for(i in seq_along(score)){
+  for (i in seq_along(score)) {
     pb$tick()
-    score[i] <- apply(train_vector, 1, function(x) cosine_sim(test_vector[i, ], x)) %>% max()
-    }
+    score[i] <- apply(train_vector, 1, function(x)
+      cosine_sim(test_vector[i, ], x)) %>% max()
+  }
   return(score)
 }
-# cos_max <- function(train_vector, test_vector){
-#   score <- apply(train_vector, 1, function(x) cosine_sim(test_vector[i, ], x)) %>% max()
-#   return(score)
-#   }
+cos_sim <- get_cosine_score(model, X_train[0:500, , ], X_sim)
 
-cos_all <- get_cosine_score(model, X_train[0:500, , ], X_all)
+cos_real <- vector()
+iter <- c(0, seq(10000, nrow(df_real), 10000), nrow(df_real))
+start = Sys.time()
+for(i in 2:length(iter)){
+  cos_tmp <- one_hot_encode(df_real$SEQ[seq(iter[i-1], iter[i])]) %>%
+  get_cosine_score(model, X_train[0:500, , ], .)
+  cos_real <- append(cos_tmp, cos_real)
+}
+end = Sys.time()
+end - start
 #
+
 df_all <- tibble(barcode = df$LABEL, cos_similarity = cos_all)
 df_all <- df_all %>% mutate(label = if_else(str_detect(barcode, "simulate"), "simulated", "real")) # -----------------------------
 cos_threshold <- df_all %>%
@@ -234,7 +249,7 @@ plotTable <- cm %>%
 g_cm <- ggplot(plotTable, aes(x = Reference, y = Prediction, fill = goodbad, alpha = prop)) +
   geom_tile() +
   geom_text(aes(label = sprintf("%.2f", prop)), vjust = .5, fontface = "bold", alpha = 1) +
-  scale_fill_manual(values = c(correct = "#FF4B00", incorrect = "#5290FF")) +
+  scale_fill_manual(values = c(correct = "#FF4B00", incorrect = "#00b4ff")) +
   xlim(rev(levels(cm$Reference))) +
   theme_bw(base_size = 15, base_family = "Arial") +
   theme(

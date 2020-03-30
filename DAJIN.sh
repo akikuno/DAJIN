@@ -27,7 +27,7 @@ Usage     : ${0##*/} [options] \\
             -ont_dir [FASTA|FASTQ]  \\
             -ont_ref [FASTA|FASTQ] \\
             -genome [reference genome]
-            -o [string] (optional) \\
+            -name [string] (optional) \\
             -seq [string] (optional) \\
             -t [integer] (optional)
 
@@ -44,7 +44,7 @@ Options :   -i         : Multi-FASTA file. It must includes ">target" and ">wt"
             -ont_ref   : Reference (or wild-type) reads from ONT MinION
             -genome    : Reference genome (e.g. hg19, mm10):
                          See https://gggenome.dbcls.jp/en/help.html#db_list
-            -o         : Output file name :default=sequence
+            -name         : Output file name :default=sequence
             -seq       : Target knock-in sequence
 	            -t         : Number of threads: default=4
 
@@ -79,7 +79,7 @@ python -c \
 "from tensorflow.python.client import device_lib;
 print(device_lib.list_local_devices())" \
 1>/dev/null 2>/dev/null
-[ "$?" -eq 1 ] &&  error_exit 1 'GPU is not recognized'
+[ "$?" -eq 1 ] &&  error_exit 1 'Please install Tensorflow'
 set -e
 
 # ============================================================================
@@ -101,8 +101,8 @@ while [ $# -gt 0 ]; do
         -i)  [ ! -s "${2}" ] && error_exit 1 'Invalid -i option: Empty file'
             fasta=${2}
         ;;
-        -ont) [ ! -d "${2}" ] && error_exit 1 'Invalid -ont option: Directory not found'
-            ont=${2}
+        -ont_dir) [ ! -d "${2}" ] && error_exit 1 'Invalid -ont_dir option: Directory not found'
+            ont_dir=${2}
         ;;
         -ont_ref) [ ! -s "${2}" ] && error_exit 1 'Invalid -ont_ref option: Empty file'
             ont_ref=${2}
@@ -110,11 +110,8 @@ while [ $# -gt 0 ]; do
         -genome) [ ! -n "${2}" ] && error_exit 1 'Invalid -genome option'
             genome=${2}
         ;;
-        -o) [ $(echo "${2}" | awk '{print NF}') -ne 1 ] && error_exit 1 'Invalid -o option'
+        -name) [ $(echo "${2}" | awk '{print NF}') -ne 1 ] && error_exit 1 'Invalid -name option'
             output_file=${2}
-        ;;
-        -seq) [ $(echo "${2}" | awk '{print NF}') -ne 1 ] && error_exit 1 'Invalid -seq option'
-            mut_seq=${2}
         ;;
         -t) [ ! "${2}" -eq "${2}" ] && error_exit 1 'Invalid -t option'
             threads=${2}
@@ -159,13 +156,15 @@ set -u
 # Setting Directory
 # ============================================================================
 rm -rf ".DAJIN_temp" 2>/dev/null
-dirs="fasta fasta_conv fasta_ont NanoSim bam data results/figures/svg results/figures/png results/igvjs"
+dirs="fasta fasta_conv fasta_ont NanoSim data \
+    results/svg results/png results/igvjs"
 
 echo "$dirs" | sed "s/ /\n/g" |
 while read -r dir; do
-    mkdir -p ".DAJIN_temp"/"$dir"
+    mkdir -p ".DAJIN_temp/$dir"
 done
 
+# mkdir -p DAJIN_results/bam 
 # ============================================================================
 # Format FASTA file
 # ============================================================================
@@ -192,9 +191,9 @@ done
 # right flanking than left flanking,   reverse complementにする。
 # convert a sequence into its reverse-complement
 
-wt_seqlen=$(cat "$parent_dir"/fasta/wt.fa | awk '!/[>|@]/ {print length($0)}')
+wt_seqlen=$(cat .DAJIN_temp/fasta/wt.fa | awk '!/[>|@]/ {print length($0)}')
 
-convert_revcomp=$(minimap2 -ax splice "$parent_dir"/fasta/wt.fa "$parent_dir"/fasta/target.fa --cs 2>/dev/null |
+convert_revcomp=$(minimap2 -ax splice .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/target.fa --cs 2>/dev/null |
     awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
     sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
     tr -d "\~\*\-\+atgc" |
@@ -204,7 +203,7 @@ convert_revcomp=$(minimap2 -ax splice "$parent_dir"/fasta/wt.fa "$parent_dir"/fa
 
 if [ "$convert_revcomp" -eq 1 ] ; then
     ./DAJIN/src/revcomp.sh "${fasta_LF}" \
-    > "$parent_dir"/fasta/fasta_revcomp.fa &&
+    > .DAJIN_temp/fasta/fasta_revcomp.fa &&
     fasta_LF=".DAJIN_temp/fasta/fasta_revcomp.fa"
 fi
 
@@ -219,11 +218,11 @@ done
 # ============================================================================
 # Check wheather the files are binary:
 set +e
-for input in ${ont}/* ; do
+for input in ${ont_dir}/* ; do
     output=$(echo "${input}" | sed -e "s#.*/#.DAJIN_temp/fasta_ont/#g" -e "s#\.f.*#.fa#g")
     printf "${output} is now generating...\n"
     #
-    if [ $(file "${input}" | grep -c compressed) -eq 1 ]; then
+    if [ "$(file ${input} | grep -c compressed)" -eq 1 ]; then
         gzip -dc "${input}" |
         awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' \
         > ".DAJIN_temp"/tmp_$$
@@ -261,8 +260,9 @@ wt_seqlen=$(cat .DAJIN_temp/fasta/wt.fa | awk '!/[>|@]/ {print length($0)}')
 for input in .DAJIN_temp/fasta_conv/*; do
     printf "${input} is now simulating...\n"
     output=$(echo "$input" | sed -e "s#fasta_conv/#fasta_ont/#g" -e "s/.fasta$//g" -e "s/.fa$//g")
-    input_seqlength=$(cat "${input}" | awk '!/[>|@]/ {print length($0)-100}')
+    #
     ## For deletion allele
+    input_seqlength=$(cat "${input}" | awk '!/[>|@]/ {print length($0)-100}')
     if [ "$input_seqlength" -lt "$wt_seqlen" ]; then
         len=${input_seqlength}
     else
@@ -270,10 +270,13 @@ for input in .DAJIN_temp/fasta_conv/*; do
     fi
     ##
     ./DAJIN/utils/NanoSim/src/simulator.py genome \
-        -dna_type linear -c .DAJIN_temp//NanoSim/training \
-        -rg $input -n 3000 -t ${threads:-1} \
-        -min ${len} \
-        -o ${output}_simulated
+        -dna_type linear \
+        -c .DAJIN_temp/NanoSim/training \
+        -rg "${input}" \
+        -n 3000 \
+        -t "${threads:-1}" \
+        -min "${len}" \
+        -o "${output}_simulated"
     ##
     rm .DAJIN_temp/fasta_ont/*_error_* .DAJIN_temp/fasta_ont/*_unaligned_* 2>/dev/null
 done
@@ -291,8 +294,8 @@ printf \
 Generate BAM files
 +++++++++++++++++++++\n"
 
-./DAJIN/src/igvjs.sh ${genome:-mm10} ${threads:-1}
-
+./DAJIN/src/igvjs.sh "${genome:-mm10}" "${threads:-1}"
+rm .DAJIN_temp/tmp_* 2>/dev/null
 printf "BAM files are saved at bam\n"
 printf "Next converting BAM to MIDS format...\n"
 
@@ -304,8 +307,8 @@ printf \
 Converting ACGT into MIDS format
 ++++++++++++\n"
 
-reference=".DAJIN_temp"/fasta/wt.fa
-query=".DAJIN_temp"/fasta/target.fa
+reference=".DAJIN_temp/fasta/wt.fa"
+query=".DAJIN_temp/fasta/target.fa"
 
 # Get mutation loci...
 minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
@@ -316,7 +319,7 @@ awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' \
 > .DAJIN_temp/data/mutation_points
 
 # MIDS conversion...
-find fasta_ont -type f | sort |
+find .DAJIN_temp/fasta_ont -type f | sort |
 awk '{print "./DAJIN/src/mids_convertion.sh",$0, "wt", NR, "&"}' |
 awk -v th=${threads:-1} '{
     if (NR%th==0) gsub("&","&\nwait",$0)
@@ -327,20 +330,20 @@ sh -
 cat .DAJIN_temp/data/MIDS_* |
 sed -e "s/_aligned_reads//g" |
 sort -k 1,1 \
-> ".DAJIN_temp"/data/${output_file:=DAJIN}.txt
+> ".DAJIN_temp/data/${output_file:=DAJIN}_MIDS.txt"
 
-rm .DAJIN_temp/data/MIDS_*
+rm .DAJIN_temp/data/MIDS_* 2>/dev/null
 
-printf "Finished.\n${output_file}.txt is generated.\n"
+printf "Finished.\n${output_file}_MIDS.txt is generated.\n"
 
 # ============================================================================
 # Prediction
 # ============================================================================
 printf "Start allele prediction...\n"
 #
-Rscript DAJIN/src/ml_abnormal_detection.R ".DAJIN_temp"/data/${output_file:-DAJIN}.txt
+Rscript DAJIN/src/ml_abnormal_detection.R ".DAJIN_temp"/data/${output_file:-DAJIN}_MIDS.txt
 
-Rscript DAJIN/src/ml_prediction.R ".DAJIN_temp"/data/${output_file:-DAJIN}.txt
+Rscript DAJIN/src/ml_prediction.R ".DAJIN_temp"/data/${output_file:-DAJIN}_MIDS.txt
 
 
 # python DAJIN/src/anomaly_detection.py ".DAJIN_temp"/data/${output_file:-DAJIN}_trimmed.txt
@@ -480,7 +483,7 @@ set -e
 
 printf "Visualizing alignment reads...\n"
 printf "Browser will be launched. Click 'igvjs.html'.\n"
-{ npx live-server DAJIN_reports/igvjs/ & } 1>/dev/null 2>/dev/null
+{ npx live-server DAJIN_results/igvjs/ & } 1>/dev/null 2>/dev/null
 
 # rm -rf .tmp_
 # rm .DAJIN_temp/tmp_* .DAJIN_temp/clustering/tmp_* 2>/dev/null
