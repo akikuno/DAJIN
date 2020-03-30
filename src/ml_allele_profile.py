@@ -41,6 +41,7 @@ df_real = df[~df.barcodeID.str.contains("simulated")].reset_index(drop=True)
 
 # Output names
 fig_dirs = ["results/figures/png", "results/figures/svg"]
+output_name = file_name.replace(".txt", "")
 # output_npz = file_name.replace(".txt", ".npz")
 # output_figure = file_name.replace(".txt", "").replace("data_for_ml/", "")
 # output_model = file_name.replace(".txt", ".h5")
@@ -104,9 +105,12 @@ model.add(Conv1D(filters=32, kernel_size=4,
                 activation="relu", name="4th_Conv1D"))
 model.add(MaxPooling1D(pool_size=4, name="4th_MaxPooling1D"))
 
+# model.add(Dense(64, activation='relu', name="1st_FC"),
+#     input_shape=(X_sim.shape[1], X_sim.shape[2]))
+
 model.add(Flatten(name="flatten"))
 
-model.add(Dense(64, activation='relu', name="1st_FC"))
+model.add(Dense(64, activation='relu', name="2nd_FC"))
 
 # L2 <<<<<<<
 alpha = 0.1  # hyperparameter
@@ -118,7 +122,7 @@ model.compile(optimizer='adam', loss='categorical_crossentropy',
             metrics=['accuracy'])
 # model.summary()
 # -
-stack = model.fit(X_train, Y_train, epochs=20, verbose=0,
+stack = model.fit(X_train, Y_train, epochs=10, verbose=1,
                 validation_split=0.2, shuffle=True)
 
 
@@ -158,7 +162,7 @@ def cosine_similarity(x1, x2):
 X_all = np.concatenate([X_sim, X_real])
 print("Abnormal allele detection...")
 cos_all, normal_vector, predict_vector = get_score_cosine(
-    model, X_train[0:1000], X_all)
+    model, X_train[0:500], X_all)
 
 df_name = pd.concat([df_sim[["barcodeID", "seqID"]].reset_index(drop=True),
                     df_real[["barcodeID", "seqID"]].reset_index(drop=True)])
@@ -170,7 +174,7 @@ df_all.columns = ["barcodeID", "seqID", "cos_similarity"]
 df_all["label"] = df_all.barcodeID.apply(
     lambda x: 1 if "simulated" in x else -1)
 
-optimal_threshold = df_all[df_all.label == 1].cos_similarity.quantile(0.001)
+optimal_threshold = df_all[df_all.label == 1].cos_similarity.quantile(0.0001)
 
 df_all["abnormal_prediction"] = df_all.cos_similarity.apply(
     lambda x: 1 if x > optimal_threshold else - 1)
@@ -192,7 +196,7 @@ for i in tqdm(range(0, X_real.shape[0], iter_)):
 
 df_predict = pd.Series(predict, dtype="str") + "_"
 
-for i, j in enumerate(labels_index["label"].str.replace("_simulated.*$", "")):
+for i, j in enumerate(labels_index.str.replace("_simulated.*$", "")):
     df_predict = df_predict.str.replace(str(i)+"_", j)
 
 df_result = pd.DataFrame({"barcodeID": df_anomaly.iloc[:, 0],
@@ -211,5 +215,6 @@ del df_result["anomaly"]
 # Output the results
 # ====================================
 
-df_result.to_csv('.DAJIN_temp/data/DAJIN_prediction_result.txt',
+df_result.to_csv(f'{output_name}_prediction_result.txt',
                  sep='\t', index=False, header=False)
+

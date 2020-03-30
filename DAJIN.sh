@@ -307,8 +307,8 @@ printf \
 Converting ACGT into MIDS format
 ++++++++++++\n"
 
-reference=".DAJIN_temp/fasta/wt.fa"
-query=".DAJIN_temp/fasta/target.fa"
+reference=".DAJIN_temp/fasta_conv/wt.fa"
+query=".DAJIN_temp/fasta_conv/target.fa"
 
 # Get mutation loci...
 minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
@@ -330,21 +330,21 @@ sh -
 cat .DAJIN_temp/data/MIDS_* |
 sed -e "s/_aligned_reads//g" |
 sort -k 1,1 \
-> ".DAJIN_temp/data/${output_file:=DAJIN}_MIDS.txt"
+> ".DAJIN_temp/data/${output_file:-DAJIN}.txt"
 
 rm .DAJIN_temp/data/MIDS_* 2>/dev/null
 
-printf "Finished.\n${output_file}_MIDS.txt is generated.\n"
+printf "Finished.\n${output_file:-DAJIN}.txt is generated.\n"
 
 # ============================================================================
 # Prediction
 # ============================================================================
 printf "Start allele prediction...\n"
 #
+python DAJIN/src/ml_allele_profile.py ".DAJIN_temp/data/${output_file:-DAJIN}.txt"
 # Rscript DAJIN/src/ml_abnormal_detection.R ".DAJIN_temp"/data/${output_file:-DAJIN}_MIDS.txt
-python DAJIN/src/ml_allele_profile.py ".DAJIN_temp"/data/${output_file:-DAJIN}_MIDS.txt
-python DAJIN/src/ml_abnormal_detection.py ".DAJIN_temp"/data/${output_file:-DAJIN}_MIDS.txt
-Rscript DAJIN/src/ml_prediction.R ".DAJIN_temp"/data/${output_file:-DAJIN}_MIDS.txt
+# python DAJIN/src/ml_abnormal_detection.py ".DAJIN_temp"/data/${output_file:-DAJIN}_MIDS.txt
+# Rscript DAJIN/src/ml_prediction.R ".DAJIN_temp"/data/${output_file:-DAJIN}_MIDS.txt
 
 
 # python DAJIN/src/anomaly_detection.py ".DAJIN_temp"/data/${output_file:-DAJIN}_trimmed.txt
@@ -370,8 +370,10 @@ printf "Prediction was finished...\n"
 # ============================================================================
 # Report allele percentage
 # ============================================================================
-#
-cat ".DAJIN_temp"/data/DAJIN_prediction_result.txt  |
+input=".DAJIN_temp/data/${output_file:-DAJIN}_prediction_result.txt"
+output=".DAJIN_temp/data/${output_file:-DAJIN}_prediction_allele_percentage.txt"
+# ----------------------------------------------------------------------------
+cat "${input}"  |
 cut -f 1,3 |
 sort |
 uniq -c \
@@ -386,13 +388,14 @@ awk '{print $1, int($3/$2*100+0.5), $4}' \
 
 # Filter low-percent alleles ---------
 per_refab=$(cat ".DAJIN_temp"/tmp_prediction_$$_proportion | 
-    grep "${ont_ref_barcodeID:=barcode30}" | #! define "barcode30" by automate manner
+    grep "${ont_ref_barcodeID:=barcode21}" | #! define "barcode30" by automate manner
     grep abnormal |
     cut -d " " -f 2)
 
 cat .DAJIN_temp/tmp_prediction_$$_proportion |
 awk -v refab="${per_refab}" \
-    '{if( !($2<refab+5 && $3 == "abnormal") && ($2>5) ) print $0}' \
+    '!($2<refab+5 && $3 == "abnormal")' |
+awk '($2 > 5 && $3 != "target") || ($2 > 0 && $3 == "target")' \
 > .DAJIN_temp/tmp_prediction_filtered_$$
 
 # Report allele percentage -------------
@@ -402,8 +405,9 @@ awk '{array[$1]+=$2}
 sort |
 join - .DAJIN_temp/tmp_prediction_filtered_$$ |
 awk '{print $1, int($3*100/$2+0.5),$4}' \
-> .DAJIN_temp/data/DAJIN_prediction_allele_percentage.txt
+> "${output}"
 
+rm .DAJIN_temp/tmp_*$$
 # ============================================================================
 # Clustering within each allele type
 # ============================================================================

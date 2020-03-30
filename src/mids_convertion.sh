@@ -50,7 +50,7 @@ tmp_seqID="${parent_dir}/tmp_${output}_seqID_${pid}"
 # Mapping
 # ======================================
 
-reference=".DAJIN_temp/fasta/${genotype}.fa"
+reference=".DAJIN_temp/fasta_conv/${genotype}.fa"
 ref=$(cat "${reference}" | grep "^>" | sed "s/>//g")
 #
 minimap2 -t 1 --cs=long -ax map-ont "${reference}" "${input}" 2>/dev/null |
