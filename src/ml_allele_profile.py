@@ -23,6 +23,7 @@ from tensorflow.keras.layers import (Activation, Conv1D, Dense, Flatten,
                                     MaxPooling1D)
 from tensorflow.keras.models import Model, Sequential, load_model
 
+
 # ====================================
 # Input and format data
 # ====================================
@@ -40,9 +41,9 @@ df_real = df[~df.barcodeID.str.contains("simulated")].reset_index(drop=True)
 
 # Output names
 fig_dirs = ["results/figures/png", "results/figures/svg"]
-output_npz = file_name.replace(".txt", ".npz")
+# output_npz = file_name.replace(".txt", ".npz")
 # output_figure = file_name.replace(".txt", "").replace("data_for_ml/", "")
-output_model = file_name.replace(".txt", ".h5")
+# output_model = file_name.replace(".txt", ".h5")
 
 # # ====================================
 # # One-hot encording
@@ -172,92 +173,43 @@ df_all["label"] = df_all.barcodeID.apply(
 optimal_threshold = df_all[df_all.label == 1].cos_similarity.quantile(0.001)
 
 df_all["abnormal_prediction"] = df_all.cos_similarity.apply(
-    lambda x: 1 if x > optimal_threshold else -1)
-
+    lambda x: 1 if x > optimal_threshold else - 1)
+    
 df_anomaly = df_real[["barcodeID", "seqID"]]
 df_anomaly["abnormal_prediction"] = df_all[df_all.label == -1].reset_index().cos_similarity.apply(
     lambda x: "normal" if x > optimal_threshold else "abnormal")
 
 # ====================================
+# # Prediction
+# ====================================
+print("Predict allele types...")
+iter_ = 1000
+predict = np.zeros(X_real.shape[0], dtype="uint8")
+for i in tqdm(range(0, X_real.shape[0], iter_)):
+    predict_ = model.predict(X_real[i: i + iter_, :, :].astype("float16"),
+                             verbose=0, batch_size=32)
+    predict[i:i+iter_] = np.argmax(predict_, axis=1)
+
+df_predict = pd.Series(predict, dtype="str") + "_"
+
+for i, j in enumerate(labels_index["label"].str.replace("_simulated.*$", "")):
+    df_predict = df_predict.str.replace(str(i)+"_", j)
+
+df_result = pd.DataFrame({"barcodeID": df_anomaly.iloc[:, 0],
+                          "seqID": df_anomaly.iloc[:, 1],
+                          "predict": df_predict,
+                          "anomaly": df_anomaly.iloc[:, 2]})
+
+df_result.predict = df_result.predict.mask(
+    df_result.anomaly.str.contains("abnormal"), df_result.anomaly)
+
+del df_result["anomaly"]
+# df_result = df_result.head(1000)
+
+
+# ====================================
 # Output the results
 # ====================================
-# Save One-hot matrix
-np.savez_compressed(output_npz,
-                X_sim=X_sim,
-                X_real=X_real
-                )
-# Save the model
-model.save(output_model)
 
-# Save Anomaly annotation
-df_anomaly.to_csv(
-    '.DAJIN_temp/data/DAJIN_anomaly_classification.txt',
-    header=False, index=False, sep="\t")
-
-# Save labels
-pd.Series(labels_index).to_csv(
-    '.DAJIN_temp/data/DAJIN_anomaly_classification_labels.txt',
-    header=False, index=False, sep="\t")
-
-
-
-# ====================================
-# # ## Plot loss and Accuracy
-# # ====================================
-# plt.figure()
-# plt.style.use('default')
-# plt.rcParams["font.size"] = 15
-# plt.rcParams['axes.linewidth'] = 1.5
-# plt.rcParams['font.family'] = 'Arial'
-
-# fig = plt.figure(figsize=(15, 5))
-# ax1 = fig.add_subplot(1, 2, 1)
-# ax2 = fig.add_subplot(1, 2, 2)
-
-# ax1.plot(stack.history['loss'], lw=3)
-# ax1.plot(stack.history['val_loss'], lw=3)
-# ax1.set_title('Loss', fontsize=20)
-# # ax1.set_ylabel('loss')
-# ax1.set_xlabel('Epoch')
-# ax1.legend(['train', 'validation'])
-
-# ax2.plot(stack.history['accuracy'], lw=5)
-# ax2.plot(stack.history['val_accuracy'], lw=5)
-# ax2.set_title('Accuracy', fontsize=20)
-# # ax2.set_ylabel('accuracy')
-# ax2.set_xlabel('Epoch')
-# ax2.legend(['train', 'validation'])
-
-# # ------------------------
-# fig_name = "loss_acc"
-# for fig_dir in fig_dirs:
-#     fig_type = re.sub(".*/", "", fig_dir)
-#     plt.savefig(f"{fig_dir}/{output_figure}_{fig_name}.{fig_type}",
-#                 dpi=350, bbox_inches="tight")
-
-
-# # ====================================
-# # ## Plot cosine similarity
-# # ====================================
-
-# plt.figure(figsize=(6, 10))
-# plt.rcParams['axes.linewidth'] = 1.5
-# plt.rcParams['font.family'] = 'Arial'
-# plt.rcParams['font.size'] = '20'
-# sns.set_style("whitegrid")
-
-# ax = sns.boxplot(x="cos_similarity", y="barcodeID", data=df_all.sort_values(by="barcodeID"),
-#                 showfliers=False)
-# ax.set(xlim=[0.0, 1.05])
-# ax.set_title("Abnormal allele detection")
-# ax.set_xlabel("Cosine similarity")
-# ax.set_ylabel("")
-# ax.axvline(x=optimal_threshold, ls="--", color="r",
-#         alpha=0.5, label="threshold of abnormality")
-# plt.legend(loc='bottom left')
-# # ----------------------------
-# fig_name = "cosine_similarity"
-# for fig_dir in fig_dirs:
-#     fig_type = re.sub(".*/", "", fig_dir)
-#     plt.savefig(f"{fig_dir}/{output_figure}_{fig_name}.{fig_type}",
-#                 dpi=350, bbox_inches="tight")
+df_result.to_csv('.DAJIN_temp/data/DAJIN_prediction_result.txt',
+                 sep='\t', index=False, header=False)

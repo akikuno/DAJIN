@@ -341,8 +341,9 @@ printf "Finished.\n${output_file}_MIDS.txt is generated.\n"
 # ============================================================================
 printf "Start allele prediction...\n"
 #
-Rscript DAJIN/src/ml_abnormal_detection.R ".DAJIN_temp"/data/${output_file:-DAJIN}_MIDS.txt
-
+# Rscript DAJIN/src/ml_abnormal_detection.R ".DAJIN_temp"/data/${output_file:-DAJIN}_MIDS.txt
+python DAJIN/src/ml_allele_profile.py ".DAJIN_temp"/data/${output_file:-DAJIN}_MIDS.txt
+python DAJIN/src/ml_abnormal_detection.py ".DAJIN_temp"/data/${output_file:-DAJIN}_MIDS.txt
 Rscript DAJIN/src/ml_prediction.R ".DAJIN_temp"/data/${output_file:-DAJIN}_MIDS.txt
 
 
