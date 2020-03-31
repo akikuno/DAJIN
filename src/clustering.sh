@@ -18,12 +18,12 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # ----------------------------------------
 # barcode="barcode02"
 # alleletype="wt"
-# barcode="barcode03"
+# barcode="barcode14"
 # alleletype="target"
 # barcode="barcode03"
 # alleletype="abnormal"
 #
-# control="barcode30"
+# control="barcode21"
 # alleletype_original=${alleletype}
 # [ "$alleletype_original" = "target" ] && pid="HOGE"
 # [ "$alleletype_original" = "wt" ] && pid="FUGA"
@@ -53,7 +53,7 @@ output_label=".DAJIN_temp/clustering/query_labels_${suffix}"
 output_query_seq=".DAJIN_temp/clustering/query_seq_${suffix}"
 
 # Output Genomic coodinates (Control)
-output_ref_seq=".DAJIN_temp/clustering/control_seq_${suffix}"
+# output_ref_seq=".DAJIN_temp/clustering/control_seq_${suffix}"
 output_ref_score=".DAJIN_temp/clustering/control_score_${suffix}"
 
 # Output Genomic coodinates (Query)
@@ -69,6 +69,8 @@ plot_mutsites=.DAJIN_temp/clustering/tmp_mutation_"${suffix}"
 # Report allele mutation info
 output_result=".DAJIN_temp/clustering/result_alleleinfo_${suffix}"
 
+# Get max sequence length
+seq_maxnum=$(cat .DAJIN_temp/fasta_conv/target.fa | awk ' !/[>|@]/ {print length}')
 # ============================================================================
 # MIDS conversion
 # ============================================================================
@@ -97,8 +99,8 @@ mv ".DAJIN_temp/data/MIDS_${control}_${pid}" "${MIDS_ref}"
 cat "${MIDS_que}" |
 grep "${barcode}" |
 sort -k 1,1 |
-join -1 1 -2 2 - .DAJIN_temp/data/DAJIN_prediction_result.txt |
-awk -v atype=${alleletype_original} \
+join -1 1 -2 2 - .DAJIN_temp/data/DAJIN_prediction_result.txt | #!! NAME
+awk -v atype="${alleletype_original}" \
 '$NF==atype' |
 cut -d " " -f 1,3 |
 sed "s/ /\t/g" \
@@ -111,7 +113,7 @@ cat "${MIDS_que}" |
 grep "${barcode}" |
 sort -k 1,1 |
 join -1 1 -2 2 - .DAJIN_temp/data/DAJIN_prediction_result.txt |
-awk -v atype=${alleletype_original} \
+awk -v atype="${alleletype_original}" \
 '$NF==atype' |
 cut -d " " -f 2 |
 awk -F "" '{
@@ -128,12 +130,12 @@ awk -F "" '{
 sed -e "s/I//g" -e "s/ //g" \
 > "${output_query_seq}"
 
-# Get max sequence length
-seq_maxnum=$(cat "${output_query_seq}" |
-    grep -v "^$" |
-    awk -F "" 'BEGIN{max=0}
-    {if(max<length($0)) max=length($0)}
-    END{print max}')
+# # Get max sequence length
+# seq_maxnum=$(cat "${output_query_seq}" |
+#     grep -v "^$" |
+#     awk -F "" 'BEGIN{max=0}
+#     {if(max<length($0)) max=length($0)}
+#     END{print max}')
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Output Genomic coodinates (Control)
@@ -162,7 +164,7 @@ awk -F "" '{
     }' |
 #
 sed -e "s/I//g" -e "s/ //g" |
-tee "${output_ref_seq}" |
+# tee "${output_ref_seq}" |
 awk -F "" -v seqnum="${seq_maxnum}" \
     '{for(i=1;i<=seqnum;i++) {
     if($i=="") $i="="
@@ -182,7 +184,8 @@ awk -F "" '{
     if(sum[3]+sum[4]+sum[5] > NF*per/100) num = 2
     else num=1
     #
-    print NR, "@", sum[1], sum[2], sum[3], sum[4], sum[5], "@", sum[1]/NF*100, sum[2]/NF*100, sum[3]/NF*100,sum[4]/NF*100,sum[5]/NF*100, num
+    print NR, "@", sum[1], sum[2], sum[3], sum[4], sum[5], "@", \
+        (sum[1]+sum[2])/NF, sum[3]/NF,sum[4]/NF,sum[5]/NF, num
     # print num
 }' \
 > "${output_ref_score}"
@@ -217,7 +220,7 @@ awk -F "" 'BEGIN{OFS=","}{
     }
     print $0
     }' |
-paste - ${output_ref_score} |
+paste - "${output_ref_score}" |
 awk '{if($NF==2) $1=0
     print $1}' \
 > "${output_query_score}"
@@ -301,18 +304,22 @@ done
 # plot_mutsites=.DAJIN_temp/clustering/tmp_mutation_"${suffix}"
 # ----------------------------------------
 
-minimap2 -ax map-ont .DAJIN_temp/fasta/target.fa .DAJIN_temp/fasta/wt.fa --cs 2>/dev/null |
+minimap2 -ax map-ont .DAJIN_temp/fasta_conv/target.fa .DAJIN_temp/fasta_conv/wt.fa --cs 2>/dev/null |
 grep -v "^@" |
 awk '{print $(NF-1)}' |
 sed -e "s/cs:Z:://g" | 
 sed -e "s/:/ /g" |
 sed -e "s/\([-|+|*]\)/ \1 /g" |
-awk '{for(i=1; i<NF; i++){if($i~/[a|t|g|c]/) $i=length($i)}
-    $NF=""
+awk '{$NF=""
+    for(i=1; i<NF; i++){if($i~/[a|t|g|c]/) $i=num+length($i)}
     print $0}' |
-awk '{for(i=1; i<NF; i++){ if($i~/[-|+|*]/) $(i+1)=$(i+1)+$(i-1) }
+awk '{num=0
+    for(i=1; i<=NF; i++){ if($i!~/[-|+|*]/) {num=num+$i; $i=num} }
     print $0}' |
-sed -e "s/[-|+|*|=]/,/g" \
+# awk '{for(i=1; i<NF; i++){ if($i~/[-|+|*]/) $(i+1)=$(i+1)+$(i-1) }
+#     print $0}' |
+sed -e "s/[-|+|*|=]/,/g" |
+sed -e "s/ , /,/g" -e "s/ /,/g" \
 > "${plot_mutsites}"
 # cat "${plot_mutsites}"
 
@@ -321,23 +328,23 @@ sed -e "s/[-|+|*|=]/,/g" \
 #* Subtract Control from Query
 # --------------------------------------------------------------------------------
 # Control
-cat "${output_ref_seq}" |
-cut -f 1 |
-awk -F "" -v seqnum=${seq_maxnum} \
-    '{for(i=1;i<=seqnum;i++) {
-    if($i=="") $i="="
-    seq[i]=seq[i]$i
-    }}
-    END{for(key in seq) print seq[key]}' |
-awk -F "" '{sequence=$0
-    sum[1]=gsub("=","=",sequence)
-    sum[2]=gsub("M","M",sequence)
-    sum[3]=gsub(/[1-9]|[a-z]/,"@", sequence)
-    sum[4]=gsub("D","D",sequence)
-    sum[5]=gsub("S","S",sequence)
-    print (sum[1]+sum[2])/NF, sum[3]/NF, sum[4]/NF, sum[5]/NF
-    }' \
-> .DAJIN_temp/clustering/tmp_control_"${suffix}"
+# cat "${output_ref_seq}" |
+# cut -f 1 |
+# awk -F "" -v seqnum=${seq_maxnum} \
+#     '{for(i=1;i<=seqnum;i++) {
+#     if($i=="") $i="="
+#     seq[i]=seq[i]$i
+#     }}
+#     END{for(key in seq) print seq[key]}' |
+# awk -F "" '{sequence=$0
+#     sum[1]=gsub("=","=",sequence)
+#     sum[2]=gsub("M","M",sequence)
+#     sum[3]=gsub(/[1-9]|[a-z]/,"@", sequence)
+#     sum[4]=gsub("D","D",sequence)
+#     sum[5]=gsub("S","S",sequence)
+#     print (sum[1]+sum[2])/NF, sum[3]/NF, sum[4]/NF, sum[5]/NF
+#     }' \
+# > .DAJIN_temp/clustering/tmp_control_"${suffix}"
 
 # cat .DAJIN_temp/clustering/tmp_control_"${suffix}" |
 # awk '{print NR,$0}' |
@@ -391,14 +398,21 @@ for cluster in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
         # print num, ins_num
         }' |
     #
-    paste - .DAJIN_temp/clustering/tmp_control_"${suffix}" |
+    paste - "${output_ref_score}" |
+    # paste - .DAJIN_temp/clustering/tmp_control_"${suffix}" |
+    # paste tmp "${output_ref_score}" | head -n 405 | tail -n 2 | ###!!!!
     awk 'function abs(v) {return v < 0 ? -v : v}
-        {# num=""; for(i=4;i<8;i++) num=num" "abs($i-$(i+4))
-        I=abs($6-$10)
-        D=abs($7-$11)
-        S=abs($8-$12)
-        M=abs(1-I-D-S)
-        print NR, M, I, D, S, $3}' |
+        $NF==1 {
+            I=abs($6-$(NF-3))
+            D=abs($7-$(NF-2))
+            S=abs($8-$(NF-1))
+            M=abs(1-I-D-S)
+            print NR, M, I, D, S, $3
+        }
+        # Sequence error annontated as Match
+        $NF==2 {
+            print NR, 1, 0, 0, 0, 0
+        }' |
     awk '{max=0; num=0
         for(i=2; i<=5;i++){if(max<$i){max=$i; num=i}}
         print num, $1, $NF}' |
@@ -426,7 +440,7 @@ done
 # --------------------------------------------------------------------------------
 
 # printf "Plot mutation loci... \n"
-
+mkdir -p DAJIN_Report/alleletypes
 for cluster in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
     cat "${output_plot}" |
     awk -v cl="${cluster}" '$3==cl' \

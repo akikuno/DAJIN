@@ -413,7 +413,7 @@ rm .DAJIN_temp/tmp_*$$
 # ============================================================================
 
 input=".DAJIN_temp/data/DAJIN_prediction_allele_percentage.txt"
-control="${ont_ref_barcodeID:=barcode30}" #! define "barcode30" by automate manner
+control="${ont_ref_barcodeID:=barcode21}" #! define "barcode30" by automate manner
 # ./DAJIN/src/test_clustering.sh ${barcode} ${control} ${allele}
 # cat .tmp_/clustering_results_*
 
