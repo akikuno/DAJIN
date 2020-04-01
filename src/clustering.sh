@@ -62,6 +62,7 @@ output_query_score=".DAJIN_temp/clustering/query_score_${suffix}"
 # Output Plot
 hdbscan_id=".DAJIN_temp/clustering/hdbscan_${suffix}"
 output_alleleper=".DAJIN_temp/clustering/allele_percentage_${suffix}"
+output_id=".DAJIN_temp/clustering/allele_id_${suffix}"
 output_plot=".DAJIN_temp/clustering/plot_${suffix}"
 
 plot_mutsites=.DAJIN_temp/clustering/tmp_mutation_"${suffix}"
@@ -258,6 +259,21 @@ cat .DAJIN_temp/clustering/tmp_"${suffix}" |
 awk -v per="${per}" '{print $1, NR, int($2*100/per+0.5)}' \
 > "${output_alleleper}"
 
+true > .DAJIN_temp/clustering/tmp_id_"${suffix}"
+cat "${output_alleleper}" |
+while read -r input; do
+    before=$(echo $input | cut -d " " -f 1)
+    after=$(echo $input | cut -d " " -f 2)
+    #
+    cat "${hdbscan_id}" |
+    awk -v bf="${before}" -v af="${after}" \
+    '$2==bf {$2=af; print}' \
+    >> .DAJIN_temp/clustering/tmp_id_"${suffix}"
+done
+cat .DAJIN_temp/clustering/tmp_id_"${suffix}" |
+sed "s/ /\t/g" |
+sort \
+> ${output_id}
 
 # ============================================================================
 # Generate BAM files on each cluster
@@ -327,28 +343,6 @@ sed -e "s/ , /,/g" -e "s/ /,/g" \
 # --------------------------------------------------------------------------------
 #* Subtract Control from Query
 # --------------------------------------------------------------------------------
-# Control
-# cat "${output_ref_seq}" |
-# cut -f 1 |
-# awk -F "" -v seqnum=${seq_maxnum} \
-#     '{for(i=1;i<=seqnum;i++) {
-#     if($i=="") $i="="
-#     seq[i]=seq[i]$i
-#     }}
-#     END{for(key in seq) print seq[key]}' |
-# awk -F "" '{sequence=$0
-#     sum[1]=gsub("=","=",sequence)
-#     sum[2]=gsub("M","M",sequence)
-#     sum[3]=gsub(/[1-9]|[a-z]/,"@", sequence)
-#     sum[4]=gsub("D","D",sequence)
-#     sum[5]=gsub("S","S",sequence)
-#     print (sum[1]+sum[2])/NF, sum[3]/NF, sum[4]/NF, sum[5]/NF
-#     }' \
-# > .DAJIN_temp/clustering/tmp_control_"${suffix}"
-
-# cat .DAJIN_temp/clustering/tmp_control_"${suffix}" |
-# awk '{print NR,$0}' |
-# awk '$2 < 0.7' | head
 
 # annotate Deletion(D), Knock-in(I), or Point mutation(P)
 mutation_type=$(
@@ -478,6 +472,18 @@ END{for(j in cl_mut) {if (cl_mut[j] !~/[I|D|S]/) print j, 0,"intact"}
     else if(ins[i]>0) {print cl[i], i, ins[i]""mut[i]}
     else {print cl[i], i, num""mut[i]; num=1}
 }}' |
+awk '
+{
+    if($3 ~ /[a-z]I/) {
+        for (i=10; i<=36; i++) {
+            num=i+87
+            ins=sprintf("%c", num)
+            if($3==ins"I") $3=i"I"
+        }
+    }
+    print $0
+}' |
+sed "s/35I/>35I/g" |
 sort -t " " -k 1,1 -k 2,2n \
 > ".DAJIN_temp/clustering/tmp_${suffix}"
 
