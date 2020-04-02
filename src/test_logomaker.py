@@ -61,38 +61,40 @@ output_figname = re.sub(".fa", "", output_figname)
 # output_figname = re.sub(".fa", "", output_figname)
 # TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-# TEST =====================================
-barcode = "barcode02"
-site = "right"
-fasta_expected = pd.read_csv(
-    f".tmp_/cutting_sites_{site}.fa", sep="\t", header=None)
-fasta_intact = pd.read_csv(
-    f".tmp_/lalign_intact_{barcode}_{site}.fa", sep="\t", header=None)
-fasta_nonintact = pd.read_csv(
-    f".tmp_/lalign_nonintact_{barcode}_{site}.fa", sep="\t", header=None)
-alignment = pd.read_csv(f".tmp_/numseq_alignment_{barcode}_{site}",
-                        sep="\t", header=None, names=[""])
-intact_ratio = pd.read_csv(f".tmp_/numseq_intact_{barcode}_{site}",
-                           sep="\t", header=None, names=[""])
-#
-alignment = alignment.T
-alignment.columns = ["all", "aligned"]
-alignment["non-aligned"] = alignment["all"] - alignment["aligned"]
-alignment["per_align"] = alignment["aligned"]/alignment["all"]*100
-alignment["per_non-align"] = alignment["non-aligned"]/alignment["all"]*100
+# # TEST =====================================
+# barcode = "barcode02"
+# site = "right"
+# fasta_expected = pd.read_csv(
+#     f".tmp_/cutting_sites_{site}.fa", sep="\t", header=None)
+# fasta_intact = pd.read_csv(
+#     f".tmp_/lalign_intact_{barcode}_{site}.fa", sep="\t", header=None)
+# fasta_nonintact = pd.read_csv(
+#     f".tmp_/lalign_nonintact_{barcode}_{site}.fa", sep="\t", header=None)
+# alignment = pd.read_csv(f".tmp_/numseq_alignment_{barcode}_{site}",
+#                         sep="\t", header=None, names=[""])
+# intact_ratio = pd.read_csv(f".tmp_/numseq_intact_{barcode}_{site}",
+#                            sep="\t", header=None, names=[""])
+# #
+# alignment = alignment.T
+# alignment.columns = ["all", "aligned"]
+# alignment["non-aligned"] = alignment["all"] - alignment["aligned"]
+# alignment["per_align"] = alignment["aligned"]/alignment["all"]*100
+# alignment["per_non-align"] = alignment["non-aligned"]/alignment["all"]*100
 
-intact_ratio = intact_ratio.T
-intact_ratio.columns = ["intact", "non-intact"]
-intact_all = intact_ratio["intact"] + intact_ratio["non-intact"]
-intact_ratio["per_intact"] = intact_ratio["intact"]/intact_all*100
-intact_ratio["per_non-intact"] = intact_ratio["non-intact"]/intact_all*100
+# intact_ratio = intact_ratio.T
+# intact_ratio.columns = ["intact", "non-intact"]
+# intact_all = intact_ratio["intact"] + intact_ratio["non-intact"]
+# intact_ratio["per_intact"] = intact_ratio["intact"]/intact_all*100
+# intact_ratio["per_non-intact"] = intact_ratio["non-intact"]/intact_all*100
 
-output_figname = re.sub(
-    r".*_intact_", "", f".tmp_/lalign_intact_{barcode}_{site}.fa")
-output_figname = re.sub(".fa", "", output_figname)
-title_figname = re.sub(
-    r"_", " ", output_figname)
+# output_figname = re.sub(
+#     r".*_intact_", "", f".tmp_/lalign_intact_{barcode}_{site}.fa")
+# output_figname = re.sub(".fa", "", output_figname)
+# title_figname = re.sub(
+#     r"_", " ", output_figname)
 # TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+fasta_intact = pd.read_csv(f"test.fa",
+                        sep="\t", header=None, names=["fa"])
 # TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 # ============================================================================
@@ -100,7 +102,7 @@ title_figname = re.sub(
 # ============================================================================
 
 seq_expected = fasta_expected[~fasta_expected[0].str.startswith(">")].squeeze()
-seq_intact = fasta_intact[~fasta_intact[0].str.startswith(">")].squeeze()
+seq_intact = fasta_intact[~fasta_intact.fa.str.startswith(">")].squeeze()
 seq_nonintact = fasta_nonintact[~fasta_nonintact[0].str.startswith(
     ">")].squeeze()
 

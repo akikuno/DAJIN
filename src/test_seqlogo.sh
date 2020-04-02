@@ -131,9 +131,54 @@ cut -d " " -f 1,3 | sort -u |
 while read -r input; do
     cl=$(echo "$input" | cut -d " " -f 1)
     target=$(echo "$input" | cut -d " " -f 2)
+    #
     awk -v cl="${cl}" -v target="${target}"\
     '$1==cl && $3==target' test2.sam |
-    head -n 5
+    # head -n 3 |
+    awk '{print ">"$1"@"$3"\n"$NF}' |
+    clustalo --force --auto -i - |
+    awk '{if($0~">") print $0"#"
+        else print}' |
+    tr -d "\n" |
+    sed -e "s/>/\n>/g" -e "s/#/\n/g" |
+    grep -v "^$" \
+    > test.fa
+    #
+    # TRIM GAP
+    gap_rm=$(cat test.fa |
+    grep -v "^>" | 
+    awk -F "" '
+    {for(i=1; i<=NF; i++) seq[i]=seq[i]$i}
+    END {
+        for(key in seq) {gap=gsub("-","-",seq[key]); if(gap/length(seq[key])<0.1) print key}
+    }' |
+    tr "\n" "," |
+    sed "s/,$/\n/g")
+    #
+    cat test.fa |
+    grep -v "^>" | 
+    awk -F "" -v gap_rm="${gap_rm}" \
+    '{seq=""
+    split(gap_rm, array, ",")
+    for(key in array) seq=seq$array[key]
+    print seq
+    }' |
+    grep ATAACTT
+
+    cat test.fa | grep -v "^>" | awk -F "" '{print $12}' | sort | uniq -c
+
+    #
+    awk '$2==0 {print $0 > "tmp1"}
+    $2==16 {print $0 > "tmp2"; print $NF > "tmp2_seq"}'
+    ./DAJIN/src/revcomp.sh tmp2_seq > tmp2_seqrev
+    paste tmp2 tmp2_seqrev |
+    awk '{print $1,$2,$3,$5}' \
+    >> tmp1
+    #
+    cat tmp1 |
+    awk '{print ">"$1"@"$3"\n"$NF}' |
+    clustalo --auto -i - -o tmp_alinged_result.fa
+
 done
 
 #* ========================================
@@ -152,7 +197,7 @@ while read -r input; do
     sed "s/^/${label} /g" \
     >> "${output_lalign}"
 done
-#
+# 
 
 
 
