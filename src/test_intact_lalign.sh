@@ -24,7 +24,10 @@ awk -v mut_len=${mut_length} 'length($NF)>mut_len-10' \
 #
 # Reverse complement
 #
- [ ! -s ${file_name} ] && exit 1
+if [ ! -s ${file_name} ]; then
+    rm "${file_name}"
+    exit 1
+fi
 
 start=$(cat ${file_name} | cut -d " " -f 2)
 end=$(cat ${file_name} | cut -d " " -f 3)
@@ -59,5 +62,7 @@ awk -v mut_len=${mut_length} '{
     #print s_seq, e_seq
     print $1,$6,s_seq""$NF""e_seq
 }'
+
+rm "${file_name}"
 
 exit 0

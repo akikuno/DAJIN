@@ -5,8 +5,8 @@ alleletype=target
 suffix="${barcode}_${alleletype}"
 
 mkdir -p .DAJIN_temp/seqlogo/
-fasta=.DAJIN_temp/fasta_ont/barcode14.fa
-clustering_id=.DAJIN_temp/clustering/allele_id_barcode14_target_HOGE
+fasta=.DAJIN_temp/fasta_ont/"{barcode}".fa
+clustering_id=$(find .DAJIN_temp/clustering/allele_id* | grep $suffix)
 output_fa=.DAJIN_temp/seqlogo/"${suffix}".fa
 
 cat "${fasta}" |
@@ -23,18 +23,6 @@ join - "${clustering_id}" |
 awk '{print ">"$NF"@@@"$1"\n"$2}' \
 > ${output_fa}
 
-
-# ============================================================================
-# Split fasta files for the following alignment
-# ============================================================================
-# ----------------------------------------
-# input=".tmp_/mutsite_split_${barcode}"
-output_split_dir=".DAJIN_temp/seqlogo/split_${suffix}"
-# ----------------------------------------
-rm -rf ${output_split_dir} 2>/dev/null
-mkdir -p ${output_split_dir}
-split -l 2 ${output_fa} ${output_split_dir}"/split_"
-# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 #
 # ============================================================================
 # Align reads to target sequence (gRNA and Target mutation)
@@ -126,60 +114,107 @@ awk '{cstag=$NF
     }' \
 > test2.sam
 
+true > "${output_lalign}"
+
 cat test2.sam |
 cut -d " " -f 1,3 | sort -u |
 while read -r input; do
     cl=$(echo "$input" | cut -d " " -f 1)
     target=$(echo "$input" | cut -d " " -f 2)
+    label="${cl}"@"${target}"
     #
     awk -v cl="${cl}" -v target="${target}"\
     '$1==cl && $3==target' test2.sam |
     # head -n 3 |
-    awk '{print ">"$1"@"$3"\n"$NF}' |
-    clustalo --force --auto -i - |
-    awk '{if($0~">") print $0"#"
-        else print}' |
-    tr -d "\n" |
-    sed -e "s/>/\n>/g" -e "s/#/\n/g" |
-    grep -v "^$" \
+    awk '{print ">"$1"@"$3"\n"$NF}' \
     > test.fa
-    #
-    # TRIM GAP
-    gap_rm=$(cat test.fa |
-    grep -v "^>" | 
-    awk -F "" '
-    {for(i=1; i<=NF; i++) seq[i]=seq[i]$i}
-    END {
-        for(key in seq) {gap=gsub("-","-",seq[key]); if(gap/length(seq[key])<0.1) print key}
-    }' |
-    tr "\n" "," |
-    sed "s/,$/\n/g")
-    #
-    cat test.fa |
-    grep -v "^>" | 
-    awk -F "" -v gap_rm="${gap_rm}" \
-    '{seq=""
-    split(gap_rm, array, ",")
-    for(key in array) seq=seq$array[key]
-    print seq
-    }' |
-    grep ATAACTT
 
-    cat test.fa | grep -v "^>" | awk -F "" '{print $12}' | sort | uniq -c
-
+    # ============================================================================
+    # Split fasta files for the following alignment
+    # ============================================================================
+    output_split_dir=".DAJIN_temp/seqlogo/split_${suffix}"
+    # ----------------------------------------
+    rm -rf ${output_split_dir} 2>/dev/null
+    mkdir -p ${output_split_dir}
+    split -l 2 test.fa ${output_split_dir}"/split_"
+    # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     #
-    awk '$2==0 {print $0 > "tmp1"}
-    $2==16 {print $0 > "tmp2"; print $NF > "tmp2_seq"}'
-    ./DAJIN/src/revcomp.sh tmp2_seq > tmp2_seqrev
-    paste tmp2 tmp2_seqrev |
-    awk '{print $1,$2,$3,$5}' \
-    >> tmp1
+    find ${output_split_dir}/ -name split_* -type f |
+    xargs -I @ ./DAJIN/src/test_intact_lalign.sh \
+        test_targetseq1.fa @ |
+    awk -v label="${label}" '{$2=label; print}' \
+    > test_lalign
     #
-    cat tmp1 |
-    awk '{print ">"$1"@"$3"\n"$NF}' |
-    clustalo --auto -i - -o tmp_alinged_result.fa
+    input=test_lalign
+    percentile=0.5
+    per=$(cat ${input} |
+    awk -v per=${percentile} '{
+        percentile[NR]=$1}
+        END{asort(percentile)
+        print percentile[int(NR*per)]
+    }')
+    #
+    cat "${output_targetseq}" |
+    grep "${target}" > test_targetseq
+    mut_length=$(cat test_targetseq | awk '{print length($2)}')
+    #
+    cat ${input} |
+    awk -v per=${per} '$1>per' |
+    cut -d " " -f 3 |
+    awk -v mut_len=${mut_length} '{print substr($0,0,mut_len)}' \
+    > ${output_lalign} # 1>/dev/null
 
+    >> "${output_lalign}"
 done
+#     # ! ----------------------------------------------------------
+#     awk -v cl="${cl}" -v target="${target}"\
+#     '$1==cl && $3==target' test2.sam |
+#     # head -n 3 |
+#     awk '{print ">"$1"@"$3"\n"$NF}' |
+#     clustalo --force --auto -i - |
+#     awk '{if($0~">") print $0"#"
+#         else print}' |
+#     tr -d "\n" |
+#     sed -e "s/>/\n>/g" -e "s/#/\n/g" |
+#     grep -v "^$" \
+#     > test.fa
+#     #
+#     # TRIM GAP
+#     gap_rm=$(cat test.fa |
+#     grep -v "^>" | 
+#     awk -F "" '
+#     {for(i=1; i<=NF; i++) seq[i]=seq[i]$i}
+#     END {
+#         for(key in seq) {gap=gsub("-","-",seq[key]); if(gap/length(seq[key])<0.1) print key}
+#     }' |
+#     tr "\n" "," |
+#     sed "s/,$/\n/g")
+#     #
+#     cat test.fa |
+#     grep -v "^>" | 
+#     awk -F "" -v gap_rm="${gap_rm}" \
+#     '{seq=""
+#     split(gap_rm, array, ",")
+#     for(key in array) seq=seq$array[key]
+#     print seq
+#     }' |
+#     grep ATAACTT
+
+#     cat test.fa | grep -v "^>" | awk -F "" '{print $12}' | sort | uniq -c
+
+#     #
+#     awk '$2==0 {print $0 > "tmp1"}
+#     $2==16 {print $0 > "tmp2"; print $NF > "tmp2_seq"}'
+#     ./DAJIN/src/revcomp.sh tmp2_seq > tmp2_seqrev
+#     paste tmp2 tmp2_seqrev |
+#     awk '{print $1,$2,$3,$5}' \
+#     >> tmp1
+#     #
+#     cat tmp1 |
+#     awk '{print ">"$1"@"$3"\n"$NF}' |
+#     clustalo --auto -i - -o tmp_alinged_result.fa
+
+# done
 
 #* ========================================
 

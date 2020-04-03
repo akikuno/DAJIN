@@ -4,7 +4,47 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
+plt.style.use('ggplot')
+plt.rcParams.update({'font.size': 15})
+plt.tight_layout()
+import seaborn as sns
+sns.set(style='ticks', context='talk')
+
 import logomaker as lm
+
+# TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+target_1 = "CCCACAGCTAGGGCCGCATAACTTCGTATAATGTATGCTATACGAAGTTATAGCTTGATATCGAATTGGCGCGCAGTGGCTG"
+fasta_intact = pd.read_csv(f".DAJIN_temp/seqlogo/tmp_lalign_barcode14_target",
+                        sep=" ", header=None, names=["seq"])
+# seq_intact = fasta_intact[~fasta_intact.fa.str.startswith(">")].squeeze()
+#seq_max = fasta_intact["seq"].str.len().max()
+#fasta_target = target_1.ljust(seq_max, "-")
+# fasta_intact["seq"] = fasta_intact["seq"].str.ljust(seq_max, "-")
+
+counts_expected = lm.alignment_to_matrix(pd.Series(target_1),
+                                       to_type="counts",
+                                       characters_to_ignore='.-X')
+counts_intact = lm.alignment_to_matrix(fasta_intact["seq"],
+                                       to_type="counts",
+                                       characters_to_ignore='.-X')
+#plt.subplots_adjust(top=0.85, hspace=1, wspace=1)
+fig, ax = plt.subplots(2,1,figsize=(40, 5))
+
+logo_exp = lm.Logo(counts_expected, font_name='monospace', ax=ax[0],
+                color_scheme="colorblind_safe", width=0.9, vpad=0.1)
+logo_exp.style_xticks(spacing=5)
+logo1 = lm.Logo(counts_intact, font_name='monospace', ax=ax[1],
+                color_scheme="colorblind_safe", width=0.9, vpad=0.1)
+logo1.style_xticks(spacing=5)
+plt.savefig(f"test_seqlogo.png")
+
+#
+# TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+
 
 # ============================================================================
 # # arguments
@@ -92,10 +132,6 @@ output_figname = re.sub(".fa", "", output_figname)
 # output_figname = re.sub(".fa", "", output_figname)
 # title_figname = re.sub(
 #     r"_", " ", output_figname)
-# TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-fasta_intact = pd.read_csv(f"test.fa",
-                        sep="\t", header=None, names=["fa"])
-# TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 # ============================================================================
 # # create position weight matrix
