@@ -1,13 +1,23 @@
 #!/bin/sh
 
+# ============================================================================
+# I/O and Arguments
+# ============================================================================
+mkdir -p .DAJIN_temp/seqlogo/
+#! gRNAのデータを保存する
+grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
+grna=$(echo "${grna}" |
+    DAJIN/src/revcomp.sh - |
+    sed "s/^/${grna},/g")
+
 barcode=barcode14
 alleletype=target
 suffix="${barcode}_${alleletype}"
 
-mkdir -p .DAJIN_temp/seqlogo/
-fasta=.DAJIN_temp/fasta_ont/"{barcode}".fa
+fasta=.DAJIN_temp/fasta_ont/"${barcode}".fa
 clustering_id=$(find .DAJIN_temp/clustering/allele_id* | grep $suffix)
 output_fa=.DAJIN_temp/seqlogo/"${suffix}".fa
+
 
 cat "${fasta}" |
 awk '{if(NR % 2 != 0) $1="HOGE"$1
@@ -27,19 +37,9 @@ awk '{print ">"$NF"@@@"$1"\n"$2}' \
 # ============================================================================
 # Align reads to target sequence (gRNA and Target mutation)
 # ============================================================================
-# input=".tmp_/split_${barcode}"
 output_targetseq=".DAJIN_temp/seqlogo/tmp_targetseq_${suffix}"
 output_lalign=".DAJIN_temp/seqlogo/tmp_lalign_${suffix}"
 # ----------------------------------------
-
-#! gRNAのデータを保存する
-# grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
-cat << EOF > tmp_grna.fa
-CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
-EOF
-cat tmp_grna.fa | DAJIN/src/revcomp.sh - > tmp_grna_conv.fa
-
-grna=$(cat tmp_grna_conv.fa)
 
 true > "${output_targetseq}"
 cat .DAJIN_temp/fasta_conv/${alleletype}.fa |
@@ -80,15 +80,14 @@ if [ "${alleletype}" = "target" ]; then
     >> "${output_targetseq}"
 fi
 
+seqlen=$(awk '!/[>|@]/ {print length($0)}' .DAJIN_temp/fasta_conv/${alleletype}.fa)
 
-target_seqlen=$(awk '!/[>|@]/ {print length($0)}' .DAJIN_temp/fasta_conv/target.fa)
-
-true > test.sam
+true > test_cstag
 cat "${output_targetseq}" |
 while read -r input; do
     label=$(echo "${input}" | cut -d " " -f 1)
     echo "$input" |
-    awk -v tar="${target_seqlen}" \
+    awk -v tar="${seqlen}" \
     '{  s=sprintf("%."tar"d","0")
         gsub("0","N",s)
         print $1,$2s}' |
@@ -96,39 +95,43 @@ while read -r input; do
     > .DAJIN_temp/seqlogo/tmp_"${suffix}"
     #
     minimap2 -ax map-ont .DAJIN_temp/seqlogo/tmp_"${suffix}" \
-    ${output_fa} --cs=long 2>/dev/null \
-    >> test.sam
+    ${output_fa} --cs=long 2>/dev/null |
+    awk '$2==0 || $2==16 {print $1, $2, $3, $(NF-1)}' |
+    awk '{cstag=$NF
+        sub("cs:Z:", "", cstag)
+        gsub(/\*[a-z]/, "", cstag)
+        gsub(/\-[a-z]*[+|*|=]/, "", cstag)
+        gsub("[=|+]", "", cstag)
+        #
+        gsub(/@@@.*/, "", $1)
+        print $1, $2, $3, toupper(cstag)
+    }' \
+    >> test_cstag
 done
 
-#cat test.sam | grep "cs:" | cut -f 2 | sort | uniq -c
-cat test.sam |
-awk '$2==0 || $2==16 {print $1, $2, $3, $(NF-1)}' |
-awk '{cstag=$NF
-    sub("cs:Z:", "", cstag)
-    gsub(/\*[a-z]/, "", cstag)
-    gsub(/\-[a-z]*[+|*|=]/, "", cstag)
-    gsub("[=|+]", "", cstag)
-    #
-    gsub(/@@@.*/, "", $1)
-    print $1, $2, $3, toupper(cstag)
-    }' \
-> test2.sam
-
 true > "${output_lalign}"
-
-cat test2.sam |
+cat test_cstag |
 cut -d " " -f 1,3 | sort -u |
 while read -r input; do
     cl=$(echo "$input" | cut -d " " -f 1)
     target=$(echo "$input" | cut -d " " -f 2)
     label="${cl}"@"${target}"
+    cat "${output_targetseq}" |
+    grep "${target}" - |
+    sed "s/ /\n/g" \
+    > test_targetseq.fa
+    #
+    cat test_targetseq.fa | ./DAJIN/src/revcomp.sh - \
+    > test_revcomp_targetseq.fa
     #
     awk -v cl="${cl}" -v target="${target}"\
-    '$1==cl && $3==target' test2.sam |
+    '$1==cl && $3==target' test_cstag |
     # head -n 3 |
     awk '{print ">"$1"@"$3"\n"$NF}' \
     > test.fa
-
+    #
+    cat test.fa | ./DAJIN/src/revcomp.sh - \
+    > test_revcomp.fa
     # ============================================================================
     # Split fasta files for the following alignment
     # ============================================================================
@@ -137,34 +140,45 @@ while read -r input; do
     rm -rf ${output_split_dir} 2>/dev/null
     mkdir -p ${output_split_dir}
     split -l 2 test.fa ${output_split_dir}"/split_"
+    split -l 2 test_revcomp.fa ${output_split_dir}"/revcomp_split_"
     # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     #
-    find ${output_split_dir}/ -name split_* -type f |
+    time find ${output_split_dir}/ -name revcomp_split_* -type f | head -n 100 |
     xargs -I @ ./DAJIN/src/test_intact_lalign.sh \
-        test_targetseq1.fa @ |
+        test_targetseq.fa @ |
     awk -v label="${label}" '{$2=label; print}' \
     > test_lalign
     #
-    input=test_lalign
+    time find ${output_split_dir}/ -name split_* -type f | head -n 100 |
+    xargs -I @ ./DAJIN/src/test_intact_lalign.sh \
+        test_revcomp_targetseq.fa @ |
+    awk -v label="${label}" '{$2=label; print ">"$1"#"$2"\n"$3}' |
+    ./DAJIN/src/revcomp.sh - |
+    sed -e "s/^/#/g" |
+    tr -d "\n" |
+    sed "s/#>/\n>/g" | 
+    sed "s/#/ /g" \
+    > test_revcomp_lalign
+
+    #
+    cat test*_lalign > test_lalign_merge
+    cat test_lalign > test_lalign_merge
+    cat test_revcomp_lalign > test_lalign_merge
     percentile=0.5
-    per=$(cat ${input} |
+    per=$(cat test_lalign_merge |
     awk -v per=${percentile} '{
         percentile[NR]=$1}
         END{asort(percentile)
         print percentile[int(NR*per)]
     }')
     #
-    cat "${output_targetseq}" |
-    grep "${target}" > test_targetseq
-    mut_length=$(cat test_targetseq | awk '{print length($2)}')
+    mut_length=$(awk '!/[>|@]/ {print length($0)}' test_targetseq.fa)
     #
-    cat ${input} |
+    cat test_lalign_merge |
     awk -v per=${per} '$1>per' |
     cut -d " " -f 3 |
     awk -v mut_len=${mut_length} '{print substr($0,0,mut_len)}' \
     > ${output_lalign} # 1>/dev/null
-
-    >> "${output_lalign}"
 done
 #     # ! ----------------------------------------------------------
 #     awk -v cl="${cl}" -v target="${target}"\
@@ -181,7 +195,7 @@ done
 #     #
 #     # TRIM GAP
 #     gap_rm=$(cat test.fa |
-#     grep -v "^>" | 
+#     grep -v "^>" | \
 #     awk -F "" '
 #     {for(i=1; i<=NF; i++) seq[i]=seq[i]$i}
 #     END {

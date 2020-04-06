@@ -36,7 +36,7 @@ logo_exp.style_xticks(spacing=5)
 logo1 = lm.Logo(counts_intact, font_name='monospace', ax=ax[1],
                 color_scheme="colorblind_safe", width=0.9, vpad=0.1)
 logo1.style_xticks(spacing=5)
-plt.savefig(f"test_seqlogo.png")
+plt.savefig(f"test_seqlogo_merged.png")
 
 #
 # TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
