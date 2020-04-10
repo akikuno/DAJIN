@@ -1,3 +1,5 @@
+[![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
+
 [日本語はこちら](https://github.com/akikuno/DAJIN/blob/master/misc/README_JP.md)
 # DAJIN
 A simple, rapid, scalable whole-allelic profile of genome editing aminals using ONT MinION
