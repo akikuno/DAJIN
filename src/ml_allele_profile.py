@@ -19,8 +19,8 @@ from sklearn.preprocessing import OneHotEncoder
 
 from tensorflow.keras import backend as K
 from tensorflow.keras import regularizers, utils
-from tensorflow.keras.layers import (Activation, Conv1D, Dense, Flatten,
-                                    MaxPooling1D)
+from tensorflow.keras.layers import (Activation, Conv1D, Conv2D, Dense, Flatten, Embedding,
+                                    MaxPooling1D,MaxPooling2D, GRU, Bidirectional, Dropout)
 from tensorflow.keras.models import Model, Sequential, load_model
 
 
@@ -38,6 +38,7 @@ df.seq = "MIDS=" + df.seq
 
 df_sim = df[df.barcodeID.str.contains("simulated")].reset_index(drop=True)
 df_real = df[~df.barcodeID.str.contains("simulated")].reset_index(drop=True)
+# df_real = df_real[df_real.barcodeID=="barcode14"].reset_index(drop=True)
 
 # Output names
 fig_dirs = ["results/figures/png", "results/figures/svg"]
@@ -71,6 +72,9 @@ X_sim = X_onehot(df_sim.seq)
 print("One-hot encording real reads...")
 X_real = X_onehot(df_real.seq)
 
+# X_sim_reshape = X_sim.reshape([X_sim.shape[0], X_sim.shape[1], X_sim.shape[2], 1])
+# X_real_reshape = X_real.reshape([X_real.shape[0], X_real.shape[1], X_real.shape[2], 1])
+# X_real_reshape = X_real.reshape([X_real.shape[0], -1])
 # ====================================
 # ## Train test split
 # ====================================
@@ -83,46 +87,42 @@ X_train, X_test, Y_train, Y_test = train_test_split(
     X_sim, labels_categorical,
     test_size=0.2, shuffle=True)
 
+# X_train, X_test, Y_train, Y_test = train_test_split(
+#     X_sim_reshape.astype("float16"), labels_categorical,
+#     test_size=0.2, shuffle=True)
+
 # ====================================
 # # Model construction
 # ====================================
 
 model = Sequential()
 
-model.add(Conv1D(filters=32, kernel_size=32, activation="relu",
-                input_shape=(X_sim.shape[1], X_sim.shape[2]), name="1st_Conv1D"))
+model.add(Conv1D(filters=32, kernel_size=32, activation="relu", padding = "same",
+                input_shape=(X_train.shape[1], X_train.shape[2]), name="1st_Conv1D"))
 model.add(MaxPooling1D(pool_size=4, name="1st_MaxPooling1D"))
 
-model.add(Conv1D(filters=32, kernel_size=16,
+model.add(Conv1D(filters=64, kernel_size=16, padding = "same",
                 activation="relu", name="2nd_Conv1D"))
-model.add(MaxPooling1D(pool_size=4, name="2nd_MaxPooling1D"))
+model.add(MaxPooling1D(pool_size=8, name="2nd_MaxPooling1D"))
 
-model.add(Conv1D(filters=32, kernel_size=8,
+model.add(Conv1D(filters=128, kernel_size=8, padding = "same",
                 activation="relu", name="3rd_Conv1D"))
-model.add(MaxPooling1D(pool_size=4, name="3rd_MaxPooling1D"))
-
-model.add(Conv1D(filters=32, kernel_size=4,
-                activation="relu", name="4th_Conv1D"))
-model.add(MaxPooling1D(pool_size=4, name="4th_MaxPooling1D"))
-
-# model.add(Dense(64, activation='relu', name="1st_FC"),
-#     input_shape=(X_sim.shape[1], X_sim.shape[2]))
+model.add(MaxPooling1D(pool_size=16, name="3rd_MaxPooling1D"))
 
 model.add(Flatten(name="flatten"))
 
-model.add(Dense(64, activation='relu', name="2nd_FC"))
-
+# model.add(Dense(32, activation='relu', name="1st_FC"))
 # L2 <<<<<<<
 alpha = 0.1  # hyperparameter
-model.add(Dense(64, activation='linear',
-                activity_regularizer=regularizers.l2(alpha), name="L2-softmax"))
+model.add(Dense(32, activation='linear',
+                activity_regularizer=regularizers.l2(alpha), name="L2-normalization"))
 
 model.add(Dense(len(labels_index), activation='softmax', name="final_layer"))
 model.compile(optimizer='adam', loss='categorical_crossentropy',
             metrics=['accuracy'])
-# model.summary()
+model.summary()
 # -
-stack = model.fit(X_train, Y_train, epochs=10, verbose=1,
+stack = model.fit(X_train, Y_train, epochs=10, verbose=1, batch_size = 32,
                 validation_split=0.2, shuffle=True)
 
 
@@ -138,7 +138,7 @@ def get_score_cosine(model, train, test):
                 model.get_layer(index=-2).output)  # Delete FC layer
     # print(model_.summary())
     print("Obtain L2-normalized vectors from the simulated reads...")
-    normal_vector = model_.predict(train, verbose=1, batch_size=32)
+    normal_vector = model_.predict(train, verbose=1, batch_size=16)
     print("Obtain L2-normalized vectors of the real reads...")
     predict_vector = model_.predict(test, verbose=1, batch_size=32)
     score_len = len(predict_vector)
@@ -160,6 +160,7 @@ def cosine_similarity(x1, x2):
 
 
 X_all = np.concatenate([X_sim, X_real])
+# X_all = np.concatenate([X_sim_reshape, X_real_reshape])
 print("Abnormal allele detection...")
 cos_all, normal_vector, predict_vector = get_score_cosine(
     model, X_train[0:500], X_all)
@@ -187,6 +188,9 @@ df_anomaly["abnormal_prediction"] = df_all[df_all.label == -1].reset_index().cos
 # # Prediction
 # ====================================
 print("Predict allele types...")
+# X_real_original = X_real
+X_real = X_real_original
+# X_real = X_real_reshape
 iter_ = 1000
 predict = np.zeros(X_real.shape[0], dtype="uint8")
 for i in tqdm(range(0, X_real.shape[0], iter_)):
@@ -207,9 +211,8 @@ df_result = pd.DataFrame({"barcodeID": df_anomaly.iloc[:, 0],
 df_result.predict = df_result.predict.mask(
     df_result.anomaly.str.contains("abnormal"), df_result.anomaly)
 
-del df_result["anomaly"]
-# df_result = df_result.head(1000)
-
+df_result = df_result.drop('anomaly', axis=1)
+# df_result.predict.value_counts()
 
 # ====================================
 # Output the results
