@@ -170,7 +170,7 @@ done
 # ============================================================================
 
 # CRLF to LF
-cat ${fasta} |
+cat "${fasta}" |
 tr -d "\r" |
 grep -v "^$" \
 > .DAJIN_temp/fasta/fasta.fa
@@ -193,18 +193,20 @@ done
 
 wt_seqlen=$(cat .DAJIN_temp/fasta/wt.fa | awk '!/[>|@]/ {print length($0)}')
 
-convert_revcomp=$(minimap2 -ax splice .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/target.fa --cs 2>/dev/null |
-    awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-    sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
-    tr -d "\~\*\-\+atgc" |
-    awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
-    awk -v wt_seqlen="$wt_seqlen" \
-    '{if(wt_seqlen-$2>$1) print 0; else print 1}')
+if [ -e .DAJIN_temp/fasta/target.fa ]; then
+    convert_revcomp=$(minimap2 -ax splice .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/target.fa --cs 2>/dev/null |
+        awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
+        sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
+        tr -d "\~\*\-\+atgc" |
+        awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
+        awk -v wt_seqlen="$wt_seqlen" \
+        '{if(wt_seqlen-$2>$1) print 0; else print 1}')
 
-if [ "$convert_revcomp" -eq 1 ] ; then
-    ./DAJIN/src/revcomp.sh "${fasta_LF}" \
-    > .DAJIN_temp/fasta/fasta_revcomp.fa &&
-    fasta_LF=".DAJIN_temp/fasta/fasta_revcomp.fa"
+    if [ "$convert_revcomp" -eq 1 ] ; then
+        ./DAJIN/src/revcomp.sh "${fasta_LF}" \
+        > .DAJIN_temp/fasta/fasta_revcomp.fa &&
+        fasta_LF=".DAJIN_temp/fasta/fasta_revcomp.fa"
+    fi
 fi
 
 cat ${fasta_LF} | sed "s/^/@/g" | tr -d "\n" | sed -e "s/@>/\n>/g" -e "s/$/\n/g" | grep -v "^$" |
@@ -309,14 +311,28 @@ Converting ACGT into MIDS format
 
 reference=".DAJIN_temp/fasta_conv/wt.fa"
 query=".DAJIN_temp/fasta_conv/target.fa"
+query=".DAJIN_temp/fasta_conv/target#c140G_C.fa"
 
 # Get mutation loci...
-minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
-awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
-tr -d "\~\*\-\+atgc" |
-awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' \
-> .DAJIN_temp/data/mutation_points
+true > .DAJIN_temp/data/mutation_points
+for query in .DAJIN_temp/fasta_conv/target*.fa; do
+    minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
+    awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
+    sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
+    tr -d "\~\*\-\+atgc" |
+    awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' \
+    >> .DAJIN_temp/data/mutation_points
+done
+
+if [ "$(wc -l .DAJIN_temp/data/mutation_points | cut -d ' ' -f 1)" -gt 1 ]; then
+    cat .DAJIN_temp/data/mutation_points |
+    awk 'NR==1 {print $1}
+    END{print $NF}' |
+    tr "\n" " " |
+    sed "s/ $/\n/g" \
+    > .DAJIN_temp/data/mutation_points_$$
+    mv .DAJIN_temp/data/mutation_points_$$ .DAJIN_temp/data/mutation_points
+fi
 
 # MIDS conversion...
 find .DAJIN_temp/fasta_ont -type f | sort |
@@ -488,7 +504,7 @@ set -e
 
 printf "Visualizing alignment reads...\n"
 printf "Browser will be launched. Click 'igvjs.html'.\n"
-{ npx live-server DAJIN_results/igvjs/ & } 1>/dev/null 2>/dev/null
+{ npx live-server DAJIN_Report/igvjs/ & } 1>/dev/null 2>/dev/null
 
 # rm -rf .tmp_
 # rm .DAJIN_temp/tmp_* .DAJIN_temp/clustering/tmp_* 2>/dev/null
