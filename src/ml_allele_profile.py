@@ -17,6 +17,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 
+import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras import regularizers, utils
 from tensorflow.keras.layers import (Activation, Conv1D, Conv2D, Dense, Flatten, Embedding,
@@ -121,13 +122,10 @@ model.add(Dense(len(labels_index), activation='softmax', name="final_layer"))
 model.compile(optimizer='adam', loss='categorical_crossentropy',
             metrics=['accuracy'])
 model.summary()
+# tf.keras.utils.plot_model(model, show_shapes=True, show_layer_names=False, rankdir = "LR", to_file='model.png', dpi=350)
 # -
 stack = model.fit(X_train, Y_train, epochs=10, verbose=1, batch_size = 32,
                 validation_split=0.2, shuffle=True)
-
-
-# evaluate = model.evaluate(X_test, Y_test, verbose=0)
-
 
 # ====================================
 # ## Compute cosine similarity
