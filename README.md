@@ -18,7 +18,7 @@ conda config --add channels conda-forge
 ```
 conda update -y -n base conda
 conda create -y -n DAJIN python=3.6 anaconda git \
-  tensorflow-gpu keras tqdm hdbscan nodejs pdf2svg \
+  tensorflow-gpu keras keras-radam tqdm hdbscan nodejs pdf2svg \
   nanosim samtools htslib fasta3 clustalo weblogo
 ```
 ### 3. Activate the environment
