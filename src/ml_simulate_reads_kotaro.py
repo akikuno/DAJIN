@@ -66,22 +66,10 @@ def X_onehot(X_data):
 
 print("One-hot encording simulated reads...")
 X_sim = X_onehot(df_sim.seq)
-# X_sim_csr = scipy.sparse.csr_matrix(X_sim)
 
-# print(X_sim.shape)
-# print(f"{(X_sim.size * X_sim.itemsize)/10**9} GB")
-# np.savez_compressed(".DAJIN_temp/data/DAJIN.npz", X_sim=X_sim)
-# scipy.sparse.save_npz(".DAJIN_temp/data/DAJIN.npz", X_sim)
-
-# ====================================
-# # Load One-hot matrix
-# ====================================
-# np.load = partial(np.load, allow_pickle=True)
-# npz = np.load(f'drive/My Drive/DAJIN_materials/pointmutation/test_{read_num}.npz')
-# X_sim = npz["X_sim"]
-
-# from keras_lookahead import Lookahead
-# tf.compat.v1.disable_eager_execution()
+###############################################
+# Train-test split
+###############################################
 
 labels, labels_index = pd.factorize(df_sim.barcodeID)
 labels_categorical = utils.to_categorical(labels)
@@ -91,7 +79,7 @@ X_train, X_test, Y_train, Y_test = train_test_split(
     test_size=0.2, shuffle=True)
 
 ###############################################
-# モデルの構築
+# Model constraction
 ###############################################
 model = Sequential()
 
@@ -137,14 +125,55 @@ checkpoint = ModelCheckpoint(
     filepath=".DAJIN_temp/data/model_callback.h5",
     save_best_only=True)
 
+###############################################
+# Training
+###############################################
 history = model.fit(X_train, Y_train, epochs=100, verbose=1, batch_size = 64,
                 validation_split=0.2, shuffle=True,
                 callbacks = [checkpoint, early_stopping])
 
-model.save(f'.DAJIN_temp/data/model_final.h5')
+model.save('.DAJIN_temp/data/model_final.h5')
 
 test_loss, test_acc = model.evaluate(X_test, Y_test, verbose=0)
 print(f'test loss: {test_loss}, test acc: {test_acc}')
+
+###############################################
+# Cosine similarity
+###############################################
+
+def get_score_cosine(model, train, test):
+    model_ = Model(model.get_layer(index=0).input,
+                model.get_layer(index=-3).output)  # Delete FC layer
+    # print(model_.summary())
+    #print("Obtain L2-normalized vectors from the simulated reads...")
+    normal_vector = model_.predict(train, verbose=0, batch_size=64)
+    #print("Obtain L2-normalized vectors of the real reads...")
+    predict_vector = model_.predict(test, verbose=0, batch_size=64)
+    score_len = len(predict_vector)
+    score = np.zeros(score_len)
+    print("Calculate cosine similarity to detect abnormal allele ...")
+    for i in tqdm(range(score_len)):
+        score[i] = cosine_similarity(predict_vector[i], normal_vector).max()
+    return score, normal_vector, predict_vector
+
+def cosine_similarity(x1, x2):
+    if x1.ndim == 1:
+        x1 = x1[np.newaxis]
+    if x2.ndim == 1:
+        x2 = x2[np.newaxis]
+    x1_norm = np.linalg.norm(x1, axis=1)
+    x2_norm = np.linalg.norm(x2, axis=1)
+    cosine_sim = np.dot(x1, x2.T)/(x1_norm*x2_norm+1e-10)
+    return cosine_sim
+
+# print("Abnormal allele detection...")
+cos_all, normal_vector, predict_vector = get_score_cosine(
+    model, X_test, X_train)
+
+with open('.DAJIN_temp/data/cosine_sim.txt', 'a') as file:
+    np.savetxt(file, cos_all)
+
+np.savez_compressed('.DAJIN_temp/data/x_test.npz', X_test=X_test)
 
 # # Confusion matrix
 # from sklearn.metrics import confusion_matrix, accuracy_score
