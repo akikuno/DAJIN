@@ -275,7 +275,7 @@ for input in .DAJIN_temp/fasta_conv/*; do
         -dna_type linear \
         -c .DAJIN_temp/NanoSim/training \
         -rg "${input}" \
-        -n 3000 \
+        -n 100000 \
         -t "${threads:-1}" \
         -min "${len}" \
         -o "${output}_simulated"
@@ -311,7 +311,7 @@ Converting ACGT into MIDS format
 
 reference=".DAJIN_temp/fasta_conv/wt.fa"
 query=".DAJIN_temp/fasta_conv/target.fa"
-query=".DAJIN_temp/fasta_conv/target#c140G_C.fa"
+# query=".DAJIN_temp/fasta_conv/target#c140G_C.fa"
 
 # Get mutation loci...
 true > .DAJIN_temp/data/mutation_points
@@ -348,16 +348,34 @@ sed -e "s/_aligned_reads//g" |
 sort -k 1,1 \
 > ".DAJIN_temp/data/${output_file:-DAJIN}.txt"
 
-rm .DAJIN_temp/data/MIDS_* 2>/dev/null
-
 printf "Finished.\n${output_file:-DAJIN}.txt is generated.\n"
+
+# Split DAJIN data
+rm .DAJIN_temp/data/DAJIN_split_* 2>/dev/null
+
+cat ".DAJIN_temp/data/${output_file:-DAJIN}.txt" |
+grep simulate |
+awk 'BEGIN{OFS="\t"} 
+    {print $0, ++names[$3]}' |
+sort -k 4,4n |
+cut -f 1,2,3 |
+split -l 30000 - \
+.DAJIN_temp/data/DAJIN_split_
+
+split_num=$(find .DAJIN_temp/data/ -name DAJIN_split_* | wc -l)
+num=1
+for file in .DAJIN_temp/data/DAJIN_split_*; do
+    echo "training model: ${num}/${split_num}"
+    python DAJIN/src/ml_simulate_reads_kotaro.py "${file}"
+    num=$((num+1))
+done
 
 # ============================================================================
 # Prediction
 # ============================================================================
 printf "Start allele prediction...\n"
 #
-python DAJIN/src/ml_allele_profile.py ".DAJIN_temp/data/${output_file:-DAJIN}.txt"
+# python DAJIN/src/ml_allele_profile.py ".DAJIN_temp/data/${output_file:-DAJIN}.txt"
 # Rscript DAJIN/src/ml_abnormal_detection.R ".DAJIN_temp"/data/${output_file:-DAJIN}_MIDS.txt
 # python DAJIN/src/ml_abnormal_detection.py ".DAJIN_temp"/data/${output_file:-DAJIN}_MIDS.txt
 # Rscript DAJIN/src/ml_prediction.R ".DAJIN_temp"/data/${output_file:-DAJIN}_MIDS.txt
