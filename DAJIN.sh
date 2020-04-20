@@ -348,6 +348,8 @@ sed -e "s/_aligned_reads//g" |
 sort -k 1,1 \
 > ".DAJIN_temp/data/${output_file:-DAJIN}.txt"
 
+rm .DAJIN_temp/data/MIDS_*
+
 printf "Finished.\n${output_file:-DAJIN}.txt is generated.\n"
 
 # ============================================================================
