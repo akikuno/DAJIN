@@ -38,7 +38,7 @@ args = sys.argv
 file_name = args[1]
 # file_name = 'drive/My Drive/DAJIN_materials/pointmutation/test.txt.gz'
 # file_name = 'DAJIN_split_aa'
-# file_name = 'test_6000.txt'
+# file_name = '.DAJIN_temp/data/DAJIN_sim.txt'
 
 df_sim = pd.read_csv(file_name, header=None, sep='\t')
 df_sim.columns = ["seqID", "seq", "barcodeID"]
@@ -64,7 +64,7 @@ def X_onehot(X_data):
     X = X[:, :, 1:]
     return(X)
 
-print("One-hot encording simulated reads...")
+print("One-hot encording to simulated reads...")
 X_sim = X_onehot(df_sim.seq)
 
 ###############################################
@@ -72,6 +72,8 @@ X_sim = X_onehot(df_sim.seq)
 ###############################################
 
 labels, labels_index = pd.factorize(df_sim.barcodeID)
+pd.Series(labels_index.values).to_csv(".DAJIN_temp/data/labels_index.txt", index=False)
+
 labels_categorical = utils.to_categorical(labels)
 
 X_train, X_test, Y_train, Y_test = train_test_split(
@@ -173,7 +175,7 @@ cos_all, normal_vector, predict_vector = get_score_cosine(
 with open('.DAJIN_temp/data/cosine_sim.txt', 'a') as file:
     np.savetxt(file, cos_all)
 
-np.savez_compressed('.DAJIN_temp/data/x_test.npz', X_test=X_test)
+np.savez_compressed('.DAJIN_temp/data/x_test.npz', X_test=X_test[0:10000,])
 
 # # Confusion matrix
 # from sklearn.metrics import confusion_matrix, accuracy_score

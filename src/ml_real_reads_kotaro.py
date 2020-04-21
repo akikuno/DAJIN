@@ -41,7 +41,7 @@ from keras_radam import RAdam
 args = sys.argv
 file_name = args[1]
 
-# file_name = '.DAJIN_temp/data/DAJIN_real_2000.txt'
+# file_name = '.DAJIN_temp/data/DAJIN_real.txt'
 
 df_real = pd.read_csv(file_name, header=None, sep='\t')
 df_real.columns = ["seqID", "seq", "barcodeID"]
@@ -64,35 +64,40 @@ def X_onehot(X_data):
     X = X[:, :, 1:]
     return(X)
 
-print("One-hot encording simulated reads...")
+print("One-hot encording to real reads...")
 X_real = X_onehot(df_real.seq)
 
 ###############################################
-# load model
+# load model and X_test
 ###############################################
 
 model = load_model(".DAJIN_temp/data/model_final.h5",
                    custom_objects={'RAdam': RAdam})
 
+X_test = np.load(".DAJIN_temp/data/x_test.npz")
+X_test = X_test["X_test"]
+
+labels_index = pd.read_csv(".DAJIN_temp/data/labels_index.txt")
+labels_index.columns = ["label"]
 ###############################################
 # Read cos sim simulation file
 ###############################################
 
 sim_score = pd.read_csv(".DAJIN_temp/data/cosine_sim.txt", header=None, names=["score"])
-cossim_threshold = sim_score.score.quantile(0.001)
+cossim_threshold = sim_score.score.quantile(0.0001)
 
 ###############################################
 # Compute cosine similarity
 ###############################################
 
-def get_score_cosine(model, train, test):
+def get_score_cosine(model, reference, query):
     model_ = Model(model.get_layer(index=0).input,
                 model.get_layer(index=-3).output)  # Delete FC layer
     # print(model_.summary())
     #print("Obtain L2-normalized vectors from the simulated reads...")
-    normal_vector = model_.predict(train, verbose=0, batch_size=64)
+    normal_vector = model_.predict(reference, verbose=0, batch_size=64)
     #print("Obtain L2-normalized vectors of the real reads...")
-    predict_vector = model_.predict(test, verbose=0, batch_size=64)
+    predict_vector = model_.predict(query, verbose=0, batch_size=64)
     score_len = len(predict_vector)
     score = np.zeros(score_len)
     print("Calculate cosine similarity to detect abnormal allele ...")
@@ -111,7 +116,7 @@ def cosine_similarity(x1, x2):
     return cosine_sim
 
 cos_all, normal_vector, predict_vector = get_score_cosine(
-    model, X_test, X_real)
+    model, X_test[:10000,], X_real)
 
 # df_all = pd.concat([df_real.reset_index(
 #    drop=True), pd.DataFrame(cos_all)], axis=1)
@@ -121,3 +126,38 @@ df_anomaly = df_real[["barcodeID", "seqID"]]
 df_anomaly["abnormal_prediction"] = pd.Series(cos_all).apply(
     lambda x: "normal" if x > cossim_threshold else "abnormal")
 
+
+# ====================================
+# # Prediction
+# ====================================
+print("Predict allele types...")
+iter_ = 1000
+predict = np.zeros(X_real.shape[0], dtype="uint8")
+for i in tqdm(range(0, X_real.shape[0], iter_)):
+    predict_ = model.predict(X_real[i: i + iter_, :, :].astype("float16"),
+                             verbose=0, batch_size=32)
+    predict[i:i+iter_] = np.argmax(predict_, axis=1)
+
+df_predict = pd.Series(predict, dtype="str") + "_"
+
+for i, j in enumerate(labels_index["label"].str.replace("_simulated.*$", "")):
+    df_predict = df_predict.str.replace(str(i)+"_", j)
+
+df_result = pd.DataFrame({"barcodeID": df_anomaly.iloc[:, 0],
+                          "seqID": df_anomaly.iloc[:, 1],
+                          "predict": df_predict,
+                          "anomaly": df_anomaly.iloc[:, 2]})
+
+df_result.predict = df_result.predict.mask(
+    df_result.anomaly.str.contains("abnormal"), df_result.anomaly)
+
+del df_result["anomaly"]
+# df_result = df_result.head(1000)
+
+# ====================================
+# ## Output result
+# ====================================
+
+df_result.to_csv('.DAJIN_temp/data/DAJIN_prediction_result.txt',
+                 sep='\t', index=False, header=False)
+                 
