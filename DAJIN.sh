@@ -361,21 +361,24 @@ rm -rf .DAJIN_temp/data/split 2>/dev/null
 mkdir -p .DAJIN_temp/data/split
 
 cat ".DAJIN_temp/data/${output_file:-DAJIN}.txt" |
-grep simulate |
-awk 'BEGIN{OFS="\t"} 
-    {print $0, ++names[$3]}' |
-sort -k 4,4n |
-cut -f 1,2,3 |
-split -l 30000 - \
-.DAJIN_temp/data/split/DAJIN_split_
+grep simulate \
+> ".DAJIN_temp/data/DAJIN_sim.txt"
+# |
+# awk 'BEGIN{OFS="\t"} 
+#     {print $0, ++names[$3]}' |
+# sort -k 4,4n |
+# cut -f 1,2,3 |
+# split -l 30000 - \
+# .DAJIN_temp/data/split/DAJIN_split_
 
-split_num=$(find .DAJIN_temp/data/split -name "DAJIN_split_*" | wc -l)
-num=1
-for file in .DAJIN_temp/data/split/DAJIN_split_*; do
-    echo "training model: ${num}/${split_num}"
-    python DAJIN/src/ml_simulate_reads_kotaro.py "${file}"
-    num=$((num+1))
-done
+python DAJIN/src/ml_simulate_reads_kotaro.py ".DAJIN_temp/data/DAJIN_sim.txt"
+# split_num=$(find .DAJIN_temp/data/split -name "DAJIN_split_*" | wc -l)
+# num=1
+# for file in .DAJIN_temp/data/split/DAJIN_split_*; do
+#     echo "training model: ${num}/${split_num}"
+#     python DAJIN/src/ml_simulate_reads_kotaro.py "${file}"
+#     num=$((num+1))
+# done
 
 # ============================================================================
 # Abnormal detection and prediction
