@@ -88,7 +88,7 @@ X_train, X_test, Y_train, Y_test = train_test_split(
 model = Sequential()
 
 model.add(Conv1D(filters=32, kernel_size=32, activation="relu",
-                input_shape=(X_sim.shape[1], X_sim.shape[2]), name="1st_Conv1D"))
+                input_shape=(X_train.shape[1], X_train.shape[2]), name="1st_Conv1D"))
 model.add(MaxPooling1D(pool_size=4, name="1st_MaxPooling1D"))
 
 model.add(Conv1D(filters=32, kernel_size=16,
@@ -117,7 +117,7 @@ model.compile(optimizer='adam', loss='categorical_crossentropy',
             metrics=['accuracy'])
 # model.summary()
 # -
-stack = model.fit(X_train, Y_train, epochs=20, verbose=0,
+stack = model.fit(X_train, Y_train, epochs=20, verbose=1,
                 validation_split=0.2, shuffle=True)
 
 

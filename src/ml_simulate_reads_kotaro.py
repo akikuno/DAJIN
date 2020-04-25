@@ -37,8 +37,8 @@ from keras_radam import RAdam
 args = sys.argv
 file_name = args[1]
 # file_name = 'drive/My Drive/DAJIN_materials/pointmutation/test.txt.gz'
-# file_name = 'DAJIN_split_aa'
-# file_name = '.DAJIN_temp/data/DAJIN_sim.txt'
+# file_name = 'DAJIN_sim_test.txt'
+# file_name = 'DAJIN_sim.txt'
 
 df_sim = pd.read_csv(file_name, header=None, sep='\t')
 df_sim.columns = ["seqID", "seq", "barcodeID"]
@@ -67,6 +67,10 @@ def X_onehot(X_data):
 print("One-hot encording to simulated reads...")
 X_sim = X_onehot(df_sim.seq)
 
+# np.savez_compressed('.DAJIN_temp/data/x_sim.npz', X_sim=X_sim)
+# X_sim = np.load('.DAJIN_temp/data/x_sim.npz')
+# X_sim = X_sim["X_sim"]
+
 ###############################################
 # Train-test split
 ###############################################
@@ -79,6 +83,7 @@ labels_categorical = utils.to_categorical(labels)
 X_train, X_test, Y_train, Y_test = train_test_split(
     X_sim, labels_categorical,
     test_size=0.2, shuffle=True)
+del X_sim
 
 ###############################################
 # Model constraction
@@ -101,12 +106,12 @@ model.add(MaxPooling1D(pool_size=2, name="2nd_MaxPooling1D"))
 
 model.add(Flatten(name="flatten"))
 
-alpha = 0.1  # hyperparameter
-model.add(Dense(256, activation='linear',
+model.add(Dense(128, activation='relu'))
+
+alpha = 0.0000001  # hyperparameter
+alpha = 0.0001  # hyperparameter
+model.add(Dense(128, activation='linear',
                 activity_regularizer=regularizers.l2(alpha), name="L2-normalization"))
-
-model.add(Dense(256, activation='relu'))
-
 model.add(Dense(len(labels_index), activation='softmax', name="final_layer",
                kernel_regularizer=l2(0.001),
                  bias_regularizer=l2(0.001)))
@@ -119,20 +124,20 @@ model.compile(loss='categorical_crossentropy',
 
 # model.summary()
 # -
-if(os.path.exists('.DAJIN_temp/data/model_callback.h5')):
-    model.load_weights(".DAJIN_temp/data/model_callback.h5")
+# if(os.path.exists('.DAJIN_temp/data/model_callback.h5')):
+#     model.load_weights(".DAJIN_temp/data/model_callback.h5")
 
 early_stopping = EarlyStopping(monitor='val_loss', patience=10) 
-checkpoint = ModelCheckpoint(
-    filepath=".DAJIN_temp/data/model_callback.h5",
-    save_best_only=True)
+# checkpoint = ModelCheckpoint(
+#     filepath=".DAJIN_temp/data/model_callback.h5",
+#     save_best_only=True)
 
 ###############################################
 # Training
 ###############################################
 history = model.fit(X_train, Y_train, epochs=100, verbose=1, batch_size = 64,
                 validation_split=0.2, shuffle=True,
-                callbacks = [checkpoint, early_stopping])
+                callbacks = [early_stopping])
 
 model.save('.DAJIN_temp/data/model_final.h5')
 
@@ -145,7 +150,7 @@ print(f'test loss: {test_loss}, test acc: {test_acc}')
 
 def get_score_cosine(model, train, test):
     model_ = Model(model.get_layer(index=0).input,
-                model.get_layer(index=-3).output)  # Delete FC layer
+                model.get_layer(index=-2).output)  # Delete FC layer
     # print(model_.summary())
     #print("Obtain L2-normalized vectors from the simulated reads...")
     normal_vector = model_.predict(train, verbose=0, batch_size=64)
@@ -170,10 +175,12 @@ def cosine_similarity(x1, x2):
 
 # print("Abnormal allele detection...")
 cos_all, normal_vector, predict_vector = get_score_cosine(
-    model, X_test, X_train)
+    model, X_test[0: 10000, ], X_train[0: 10000, ])
+# pd.Series(cos_all).describe()
+np.savetxt('.DAJIN_temp/data/cosine_sim.txt', cos_all)
 
-with open('.DAJIN_temp/data/cosine_sim.txt', 'a') as file:
-    np.savetxt(file, cos_all)
+# with open('.DAJIN_temp/data/cosine_sim.txt', 'a') as file:
+#     np.savetxt(file, cos_all)
 
 np.savez_compressed('.DAJIN_temp/data/x_test.npz', X_test=X_test[0:10000,])
 
