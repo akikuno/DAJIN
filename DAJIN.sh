@@ -56,9 +56,6 @@ error_exit() {
     ${2+:} false && echo "${0##*/}: $2" 1>&2
     exit $1
 }
-warning() {
-    ${1+:} false && echo "${0##*/}: $1" 1>&2
-}
 
 # ============================================================================
 # Prerequisit
@@ -139,7 +136,7 @@ fi
 set -e
 
 # ##################################################
-# Define threads
+# Allocate threads
 # ##################################################
 set +u
 # Linux and similar...
@@ -275,7 +272,7 @@ for input in .DAJIN_temp/fasta_conv/*; do
         -dna_type linear \
         -c .DAJIN_temp/NanoSim/training \
         -rg "${input}" \
-        -n 100000 \
+        -n 10000 \
         -t "${threads:-1}" \
         -min "${len}" \
         -o "${output}_simulated"
@@ -311,12 +308,11 @@ Converting ACGT into MIDS format
 
 reference=".DAJIN_temp/fasta_conv/wt.fa"
 query=".DAJIN_temp/fasta_conv/target.fa"
-# query=".DAJIN_temp/fasta_conv/target#c140G_C.fa"
 
 # Get mutation loci...
 true > .DAJIN_temp/data/mutation_points
 for query in .DAJIN_temp/fasta_conv/target*.fa; do
-    minimap2 -ax splice ${reference} ${query} --cs 2>/dev/null |
+    minimap2 -ax splice "${reference}" "${query}" --cs 2>/dev/null |
     awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
     sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
     tr -d "\~\*\-\+atgc" |
@@ -346,12 +342,9 @@ sh -
 cat .DAJIN_temp/data/MIDS_* |
 sed -e "s/_aligned_reads//g" |
 sort -k 1,1 \
-> ".DAJIN_temp/data/${output_file:-DAJIN}.txt"
+> ".DAJIN_temp/data/DAJIN_MIDS.txt"
 
 rm .DAJIN_temp/data/MIDS_*
-
-printf "Finished.\n${output_file:-DAJIN}.txt is generated.\n"
-
 # ============================================================================
 # Training
 # ============================================================================
@@ -360,9 +353,9 @@ printf "Finished.\n${output_file:-DAJIN}.txt is generated.\n"
 rm -rf .DAJIN_temp/data/split 2>/dev/null
 mkdir -p .DAJIN_temp/data/split
 
-cat ".DAJIN_temp/data/${output_file:-DAJIN}.txt" |
-grep simulate \
-> ".DAJIN_temp/data/DAJIN_sim.txt"
+# cat ".DAJIN_temp/data/DAJIN_MIDS.txt" |
+# grep simulate \
+# > ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
 # |
 # awk 'BEGIN{OFS="\t"} 
 #     {print $0, ++names[$3]}' |
@@ -371,7 +364,7 @@ grep simulate \
 # split -l 30000 - \
 # .DAJIN_temp/data/split/DAJIN_split_
 
-python DAJIN/src/ml_simulate_reads_kotaro.py ".DAJIN_temp/data/DAJIN_sim.txt"
+# python DAJIN/src/ml_simulate_reads_kotaro.py ".DAJIN_temp/data/DAJIN_sim.txt"
 # split_num=$(find .DAJIN_temp/data/split -name "DAJIN_split_*" | wc -l)
 # num=1
 # for file in .DAJIN_temp/data/split/DAJIN_split_*; do
@@ -384,22 +377,22 @@ python DAJIN/src/ml_simulate_reads_kotaro.py ".DAJIN_temp/data/DAJIN_sim.txt"
 # Abnormal detection and prediction
 # ============================================================================
 
-cat ".DAJIN_temp/data/${output_file:-DAJIN}.txt" |
-grep -v simulate \
-> ".DAJIN_temp/data/DAJIN_real.txt"
+# cat ".DAJIN_temp/data/DAJIN_MIDS.txt" |
+# grep -v simulate \
+# > ".DAJIN_temp/data/DAJIN_real.txt"
 
 # ============================================================================
 # Prediction
 # ============================================================================
 printf "Start allele prediction...\n"
 #
-# python DAJIN/src/ml_allele_profile.py ".DAJIN_temp/data/${output_file:-DAJIN}.txt"
-# Rscript DAJIN/src/ml_abnormal_detection.R ".DAJIN_temp"/data/${output_file:-DAJIN}_MIDS.txt
-# python DAJIN/src/ml_abnormal_detection.py ".DAJIN_temp"/data/${output_file:-DAJIN}_MIDS.txt
-# Rscript DAJIN/src/ml_prediction.R ".DAJIN_temp"/data/${output_file:-DAJIN}_MIDS.txt
+python DAJIN/src/ml_allele_profile.py ".DAJIN_temp/data/DAJIN_MIDS.txt"
+# Rscript DAJIN/src/ml_abnormal_detection.R ".DAJIN_temp"/data/DAJIN_MIDS_MIDS.txt
+# python DAJIN/src/ml_abnormal_detection.py ".DAJIN_temp"/data/DAJIN_MIDS_MIDS.txt
+# Rscript DAJIN/src/ml_prediction.R ".DAJIN_temp"/data/DAJIN_MIDS_MIDS.txt
 
 
-# python DAJIN/src/anomaly_detection.py ".DAJIN_temp"/data/${output_file:-DAJIN}_trimmed.txt
+# python DAJIN/src/anomaly_detection.py ".DAJIN_temp"/data/DAJIN_MIDS_trimmed.txt
 #
 # rm .DAJIN_temp/onehot_*
 # mutation_type=$(
@@ -415,57 +408,55 @@ printf "Start allele prediction...\n"
 #
 # cp .DAJIN_temp/anomaly_classification.txt .DAJIN_temp/anomaly_classification_revised.txt
 #
-# python DAJIN/src/prediction.py ".DAJIN_temp"/data/${output_file:-DAJIN}_trimmed.txt
+# python DAJIN/src/prediction.py ".DAJIN_temp"/data/DAJIN_MIDS_trimmed.txt
 #
 printf "Prediction was finished...\n"
 #
 # ============================================================================
 # Report allele percentage
 # ============================================================================
-input=".DAJIN_temp/data/${output_file:-DAJIN}_prediction_result.txt"
-output=".DAJIN_temp/data/${output_file:-DAJIN}_prediction_allele_percentage.txt"
+input=".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
+output=".DAJIN_temp/data/DAJIN_MIDS_prediction_allele_percentage.txt"
 # ----------------------------------------------------------------------------
 cat "${input}"  |
 cut -f 1,3 |
 sort |
-uniq -c \
-> .DAJIN_temp/tmp_prediction_$$
-
-cat .DAJIN_temp/tmp_prediction_$$ |
+uniq -c |
+tee -a ".DAJIN_temp/tmp_prediction" |
 awk '{barcode[$2]+=$1} END{for(key in barcode) print key,barcode[key]}' |
 sort |
-join -1 1 -2 2 - .DAJIN_temp/tmp_prediction_$$ |
+join -1 1 -2 2 - ".DAJIN_temp/tmp_prediction" |
 awk '{print $1, int($3/$2*100+0.5), $4}' \
-> .DAJIN_temp/tmp_prediction_$$_proportion
+> ".DAJIN_temp/tmp_prediction_proportion"
 
 # Filter low-percent alleles ---------
-per_refab=$(cat ".DAJIN_temp"/tmp_prediction_$$_proportion | 
+per_refab=$(cat ".DAJIN_temp"/tmp_prediction_proportion | 
     grep "${ont_ref_barcodeID:=barcode21}" | #! define "barcode30" by automate manner
     grep abnormal |
     cut -d " " -f 2)
 
-cat .DAJIN_temp/tmp_prediction_$$_proportion |
+cat .DAJIN_temp/tmp_prediction_proportion |
 awk -v refab="${per_refab}" \
     '!($2<refab+5 && $3 == "abnormal")' |
-awk '($2 > 5 && $3 != "target") || ($2 > 0 && $3 == "target")' \
-> .DAJIN_temp/tmp_prediction_filtered_$$
-
+# Less than 5% allele type is removed except for target allele
+awk '($2 > 5 && $3 != "target") || ($2 > 0 && $3 == "target")' |
+tee -a ".DAJIN_temp/tmp_prediction_filtered" |
 # Report allele percentage -------------
-cat .DAJIN_temp/tmp_prediction_filtered_$$ |
 awk '{array[$1]+=$2}
     END{for(key in array) print key, array[key]}' |
 sort |
-join - .DAJIN_temp/tmp_prediction_filtered_$$ |
+join - ".DAJIN_temp/tmp_prediction_filtered" |
 awk '{print $1, int($3*100/$2+0.5),$4}' \
 > "${output}"
 
-rm .DAJIN_temp/tmp_*$$
+rm .DAJIN_temp/tmp_*
+
 # ============================================================================
 # Clustering within each allele type
 # ============================================================================
 
-input=".DAJIN_temp/data/DAJIN_prediction_allele_percentage.txt"
-control="${ont_ref_barcodeID:=barcode21}" #! define "barcode30" by automate manner
+input=".DAJIN_temp/data/DAJIN_MIDS_prediction_allele_percentage.txt"
+control="${ont_ref_barcodeID:=barcode26}" #! define "barcode30" by automate manner
 # ./DAJIN/src/test_clustering.sh ${barcode} ${control} ${allele}
 # cat .tmp_/clustering_results_*
 
@@ -484,7 +475,8 @@ cut -d " " -f 1,3 |
 awk -v cont=${control} \
     '{print "./DAJIN/src/clustering.sh",$1, cont, $2, "&"}' |
  #! ---------------------------------
-# grep -e barcode03 -e barcode04 -e barcode26 |
+# grep -e barcode18 -e barcode23 -e barcode26 |
+grep -e barcode18 |
  #! ---------------------------------
  awk -v th=${threads:-1} '{
     if (NR%th==0) gsub("&","&\nwait",$0)

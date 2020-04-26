@@ -1,5 +1,7 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH']='true'
+
 import warnings
 warnings.filterwarnings("ignore")
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -18,11 +20,10 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
 from tensorflow.keras import regularizers, utils
-from tensorflow.keras.layers import (Activation, Conv1D, Conv2D, Dense, Flatten, Embedding,
-                                    MaxPooling1D,MaxPooling2D, GRU, Bidirectional, Dropout)
+from tensorflow.keras.layers import Activation, Conv1D, Dense, Flatten,MaxPooling1D
 from tensorflow.keras.models import Model, Sequential, load_model
+from tensorflow.keras.callbacks import EarlyStopping
 
 
 # ====================================
@@ -41,13 +42,6 @@ df_sim = df[df.barcodeID.str.contains("simulated")].reset_index(drop=True)
 df_real = df[~df.barcodeID.str.contains("simulated")].reset_index(drop=True)
 # df_real = df_real[df_real.barcodeID=="barcode14"].reset_index(drop=True)
 
-# Output names
-fig_dirs = ["results/figures/png", "results/figures/svg"]
-output_name = file_name.replace(".txt", "")
-# output_npz = file_name.replace(".txt", ".npz")
-# output_figure = file_name.replace(".txt", "").replace("data_for_ml/", "")
-# output_model = file_name.replace(".txt", ".h5")
-
 # # ====================================
 # # One-hot encording
 # # ====================================
@@ -65,7 +59,7 @@ def X_onehot(X_data):
             len(integer_encoded_seq), 1)
         onehot_encoded_seq = onehot_encoder.fit_transform(integer_encoded_seq)
         X[i] = onehot_encoded_seq
-    X = X[:, :, 1:]
+    # X = X[:, :, 1:]
     return(X)
 
 print("One-hot encording simulated reads...")
@@ -124,8 +118,11 @@ model.compile(optimizer='adam', loss='categorical_crossentropy',
 model.summary()
 # tf.keras.utils.plot_model(model, show_shapes=True, show_layer_names=False, rankdir = "LR", to_file='model.png', dpi=350)
 # -
-stack = model.fit(X_train, Y_train, epochs=10, verbose=1, batch_size = 32,
-                validation_split=0.2, shuffle=True)
+early_stopping = EarlyStopping(monitor='val_loss', patience=10) 
+
+stack = model.fit(X_train, Y_train, epochs=100, verbose=1, batch_size = 32,
+                validation_split=0.2, shuffle=True,
+                callbacks = [early_stopping])
 
 # ====================================
 # ## Compute cosine similarity
@@ -136,7 +133,7 @@ def get_score_cosine(model, train, test):
                 model.get_layer(index=-2).output)  # Delete FC layer
     # print(model_.summary())
     print("Obtain L2-normalized vectors from the simulated reads...")
-    normal_vector = model_.predict(train, verbose=1, batch_size=16)
+    normal_vector = model_.predict(train, verbose=1, batch_size=32)
     print("Obtain L2-normalized vectors of the real reads...")
     predict_vector = model_.predict(test, verbose=1, batch_size=32)
     score_len = len(predict_vector)
@@ -144,7 +141,7 @@ def get_score_cosine(model, train, test):
     print("Calculate cosine similarity to detect abnormal allele ...")
     for i in tqdm(range(score_len)):
         score[i] = cosine_similarity(predict_vector[i], normal_vector).max()
-    return score, normal_vector, predict_vector
+    return score
 
 def cosine_similarity(x1, x2):
     if x1.ndim == 1:
@@ -156,38 +153,33 @@ def cosine_similarity(x1, x2):
     cosine_sim = np.dot(x1, x2.T)/(x1_norm*x2_norm+1e-10)
     return cosine_sim
 
-
-X_all = np.concatenate([X_sim, X_real])
-# X_all = np.concatenate([X_sim_reshape, X_real_reshape])
 print("Abnormal allele detection...")
-cos_all, normal_vector, predict_vector = get_score_cosine(
-    model, X_train[0:500], X_all)
+cos_all = get_score_cosine(model, X_train[0:500], np.concatenate([X_sim, X_real]))
+# del X_sim
 
-df_name = pd.concat([df_sim[["barcodeID", "seqID"]].reset_index(drop=True),
+df_anomaly = pd.concat([df_sim[["barcodeID", "seqID"]].reset_index(drop=True),
                     df_real[["barcodeID", "seqID"]].reset_index(drop=True)])
 
-df_all = pd.concat([df_name.reset_index(
-    drop=True), pd.DataFrame(cos_all)], axis=1)
-df_all.columns = ["barcodeID", "seqID", "cos_similarity"]
+df_anomaly["cos_sim"] = cos_all
 
-df_all["label"] = df_all.barcodeID.apply(
+df_anomaly["label"] = df_anomaly.barcodeID.apply(
     lambda x: 1 if "simulated" in x else -1)
 
-optimal_threshold = df_all[df_all.label == 1].cos_similarity.quantile(0.0001)
+optimal_threshold = df_anomaly[df_anomaly.label == 1].cos_sim.quantile(0.001)
 
-df_all["abnormal_prediction"] = df_all.cos_similarity.apply(
-    lambda x: 1 if x > optimal_threshold else - 1)
-    
-df_anomaly = df_real[["barcodeID", "seqID"]]
-df_anomaly["abnormal_prediction"] = df_all[df_all.label == -1].reset_index().cos_similarity.apply(
-    lambda x: "normal" if x > optimal_threshold else "abnormal")
-
+df_anomaly["abnormal_prediction"] = (
+    df_anomaly[df_anomaly.label == -1].reset_index().
+    cos_sim.apply(lambda x: "normal" if x > optimal_threshold else "abnormal")
+)
+df_anomaly.drop(["cos_sim", "label"], axis=1, inplace=True)
+df_anomaly = df_anomaly[~df_anomaly.barcodeID.str.contains("simulated")].reset_index(drop=True)
+# df_anomaly.groupby("barcodeID").abnormal_prediction.value_counts()
 # ====================================
 # # Prediction
 # ====================================
 print("Predict allele types...")
 # X_real_original = X_real
-X_real = X_real_original
+# X_real = X_real_original
 # X_real = X_real_reshape
 iter_ = 1000
 predict = np.zeros(X_real.shape[0], dtype="uint8")
@@ -195,6 +187,8 @@ for i in tqdm(range(0, X_real.shape[0], iter_)):
     predict_ = model.predict(X_real[i: i + iter_, :, :].astype("float16"),
                              verbose=0, batch_size=32)
     predict[i:i+iter_] = np.argmax(predict_, axis=1)
+
+# del X_real
 
 df_predict = pd.Series(predict, dtype="str") + "_"
 
@@ -216,6 +210,6 @@ df_result = df_result.drop('anomaly', axis=1)
 # Output the results
 # ====================================
 
-df_result.to_csv(f'{output_name}_prediction_result.txt',
+df_result.to_csv('.DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt',
                  sep='\t', index=False, header=False)
 

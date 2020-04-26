@@ -18,33 +18,25 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # input=".DAJIN_temp/fasta_ont/barcode30.fa"
 # input="barcode30.fa"
 # genotype="target"
-# alleletype_original=${alleletype}
-# [ "$alleletype_original" = "target" ] && pid="HOGE"
-# [ "$alleletype_original" = "wt" ] && pid="FUGA"
-# [ "$alleletype_original" = "abnormal" ] && pid="FOO"
-# suffix="${barcode}"_"${alleletype}"_"${pid}"
-# [ "$alleletype" = "abnormal" ] && alleletype="wt"
-# echo $suffix
 
 # insertion_skip="control"
 
 input=${1}
 genotype=${2}
-pid=${3}
 
 set +u
-if [ "${4}" = "" ]; then
+if [ "${3}" = "" ]; then
     insertion_skip=""
 else
-    insertion_skip=${4}
+    insertion_skip=${3}
 fi
 set -u
 
 parent_dir=".DAJIN_temp"
 output=$(echo "${input}" | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
-output_MIDS="${parent_dir}/data/MIDS_${output}_${pid}"
-tmp_mapping="${parent_dir}/tmp_${output}_mapping_${pid}"
-tmp_seqID="${parent_dir}/tmp_${output}_seqID_${pid}"
+output_MIDS="${parent_dir}/data/MIDS_${output}_${genotype}"
+tmp_mapping="${parent_dir}/tmp_${output}_mapping_${genotype}"
+tmp_seqID="${parent_dir}/tmp_${output}_seqID_${genotype}"
 
 # ======================================
 # Mapping

@@ -8,15 +8,15 @@ pacman::p_load(tidyverse, dbscan, vroom, umap)
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Import data
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# suffix <- "barcode14_target_HOGE"
-# que <- paste0(".DAJIN_temp/clustering//query_score_", sprintf("%s",suffix))
-# label <- paste0(".DAJIN_temp/clustering//query_labels_", sprintf("%s", suffix))
-# df_que <- vroom(que, col_names = F, col_types = cols())
+# suffix <- "barcode26_wt"
+# que <- paste0(".DAJIN_temp/clustering/query_score_", sprintf("%s",suffix))
+# label <- paste0(".DAJIN_temp/clustering/query_labels_", sprintf("%s", suffix))
+# df_que <- vroom(que, col_names = F, col_types = cols(), delim = ",")
 # df_label <- vroom(label, col_names = c("id", "label"), col_types = cols())
 # output_suffix <- label %>% str_remove(".*labels_")
 
 args <- commandArgs(trailingOnly = TRUE)
-df_que <- vroom(args[1], col_names = F, col_types = cols())
+df_que <- vroom(args[1], col_names = F, col_types = cols(), delim = ",")
 df_label <- vroom(args[2], col_names = c("id", "label"), col_types = cols())
 output_suffix <- args[2] %>% str_remove(".*labels_")
 
@@ -34,20 +34,21 @@ df_que_rm0 <- df_que[, colSums(df_que) != 0]
 # print("Dimension reduction by PCA...")
 
 input_pca <- df_que_rm0
-# //////////////////////////////////////////////////////////
+# --------------------------------------------------
 pca_res <- prcomp(input_pca, scale. = F)
 
-components <- seq(1, 10)
+components <- 1:10
 output_pca <- pca_res$x[, components]
 output_pca_importance <- summary(pca_res)$importance[2, components]
-for (i in components) output_pca[, i] <- output_pca[, i] * output_pca_importance[i]
-
+for (i in components){
+    output_pca[, i] <- output_pca[, i] * output_pca_importance[i]
+}
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # HDBSCAN
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # print("Clustering by HDBSCAN...")
 input_hdbscan <- output_pca
-# //////////////////////////////////////////////////////////
+# --------------------------------------------------
 if (nrow(input_hdbscan) < 250) {
     cl_sizes <- seq(10, nrow(input_hdbscan), length = 10)
 } else {
@@ -82,39 +83,40 @@ output_hdbscan <- cl$cluster + 1
 # output_hdbscan %>% table()
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-pca_plot <- as_tibble(output_pca) %>%
-    bind_cols(cluster = factor(output_hdbscan)) %>%
-    select(PC1, PC2, cluster)
+# pca_plot <- as_tibble(output_pca) %>%
+#     bind_cols(cluster = factor(output_hdbscan)) %>%
+#     select(PC1, PC2, cluster)
 
-g <- ggplot(
-    data = pca_plot,
-    aes(
-        x = PC1, y = PC2,
-        color = cluster
-    )
-) +
-    geom_point(size = 3) +
-    theme_bw(base_size = 20) # +
+# g <- ggplot(
+#     data = pca_plot,
+#     aes(
+#         x = PC1, y = PC2,
+#         color = cluster
+#     )
+# ) +
+#     geom_point(size = 3) +
+#     theme_bw(base_size = 20) # +
 
-ggsave(
-    plot = g,
-    filename = sprintf(".DAJIN_temp/clustering/pca_%s.png", output_suffix),
-    width = 10, height = 8
-)
+# ggsave(
+#     plot = g,
+#     filename = sprintf(".DAJIN_temp/clustering/pca_%s.png", output_suffix),
+#     width = 10, height = 8
+# )
 
 # # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # # Extract feature nucleotide position
 # # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 input_que <- df_que_rm0
 input_cl <- output_hdbscan
+# --------------------------------------------------
 
 zero_to_one <- function(x) (x - min(x)) / (max(x) - min(x))
 
 df_cluster <- tibble(loc = integer(), cluster = integer(), score = double())
 for (i in unique(input_cl)) {
     tmp_score <- input_que[input_cl == i, ] %>%
-        colSums() # %>%
-    # zero_to_one()
+        colSums() %>%
+    zero_to_one()
 
     tmp_df <- tibble(
         loc = seq_len(ncol(input_que)),
@@ -124,41 +126,45 @@ for (i in unique(input_cl)) {
     df_cluster <- df_cluster %>% bind_rows(tmp_df)
 }
 
+# g <- ggplot(df_cluster, aes(x=loc, y=score)) +
+#     geom_point() +
+#     facet_wrap(~ cluster)
+# ggsave(filename="test.png", g)
+
 # # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # # Cosine similarity to merge similar clusters
 # # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# print("Merge similar clusters...")
 input_cossim <- df_cluster
 output_cl <- output_hdbscan
-# //////////////////////////////////////////////////////////
+# --------------------------------------------------
 cosine_sim <- function(a, b) crossprod(a, b) / sqrt(crossprod(a) * crossprod(b))
 
 cluster <- input_cossim %>%
     group_by(cluster) %>%
     count() %>%
-    select(cluster)
+    pull(cluster)
 
-if (nrow(cluster) > 1) {
-    cl_combn <- combn(cluster$cluster, 2)
+if (length(cluster) > 1) {
+    cl_combn <- combn(cluster, 2)
     df_cossim <- NULL
     i <- 1
-    for (i in seq_along(1:ncol(cl_combn))) {
+    for (i in seq(ncol(cl_combn))) {
         df_1 <- input_cossim %>%
             filter(cluster == cl_combn[1, i]) %>%
-            select(score)
+            pull(score)
         #
         df_2 <- input_cossim %>%
             filter(cluster == cl_combn[2, i]) %>%
-            select(score)
+            pull(score)
 
         df_ <- tibble(
             one = cl_combn[1, i],
             two = cl_combn[2, i],
-            score = cosine_sim(df_1$score, df_2$score)
+            score = cosine_sim(df_1, df_2)
         )
         df_cossim <- bind_rows(df_cossim, df_)
     }
-    df_cossim_filtered <- df_cossim %>% filter(score > 0.90)
+    df_cossim_filtered <- df_cossim %>% filter(score > 0.95)
     #
     if (nrow(df_cossim_filtered) != 0) {
         for (i in seq_len(nrow(df_cossim_filtered))) {
@@ -180,7 +186,9 @@ query_ <- output_cl %>%
     order() %>%
     sort()
 
-for (i in seq_along(pattern_)) output_cl[output_cl == pattern_[i]] <- query_[i]
+for (i in seq_along(pattern_)){
+    output_cl[output_cl == pattern_[i]] <- query_[i]
+}
 
 result <- tibble(read_id = df_label$id, output_cl)
 write_tsv(result,
