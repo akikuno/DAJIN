@@ -154,7 +154,8 @@ set -u
 # ============================================================================
 rm -rf ".DAJIN_temp" 2>/dev/null
 dirs="fasta fasta_conv fasta_ont NanoSim data \
-    results/svg results/png results/igvjs"
+    results/svg results/png results/igvjs \
+    clustering/temp seqlogo/temp"
 
 echo "$dirs" | sed "s/ /\n/g" |
 while read -r dir; do
@@ -350,8 +351,8 @@ rm .DAJIN_temp/data/MIDS_*
 # ============================================================================
 
 # Split DAJIN data
-rm -rf .DAJIN_temp/data/split 2>/dev/null
-mkdir -p .DAJIN_temp/data/split
+# rm -rf .DAJIN_temp/data/split 2>/dev/null
+# mkdir -p .DAJIN_temp/data/split
 
 # cat ".DAJIN_temp/data/DAJIN_MIDS.txt" |
 # grep simulate \
@@ -457,16 +458,7 @@ rm .DAJIN_temp/tmp_*
 
 input=".DAJIN_temp/data/DAJIN_MIDS_prediction_allele_percentage.txt"
 control="${ont_ref_barcodeID:=barcode26}" #! define "barcode30" by automate manner
-# ./DAJIN/src/test_clustering.sh ${barcode} ${control} ${allele}
-# cat .tmp_/clustering_results_*
 
-#
-# rm -rf .DAJIN_temp/clustering
-# rm -rf DAJIN_Report/bam_clustering
-# rm -rf DAJIN_Report/allele_type
-# ============================================================================
-# Temporal directory
-# ============================================================================
 temp_dir=".DAJIN_temp/clustering/"
 mkdir -p "${temp_dir}"
 
@@ -483,8 +475,14 @@ grep -e barcode18 |
     print}
     END{print "wait"}' |
 sh -
-#
-# rm -rf .DAJIN_temp/clustering
+
+rm .DAJIN_temp/tmp_*
+
+# ============================================================================
+# Sequence logo
+# ============================================================================
+
+
 
 # ============================================================================
 # Joint sequence logo in 2-cut Exon deletion

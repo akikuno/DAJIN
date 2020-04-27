@@ -9,8 +9,8 @@ pacman::p_load(tidyverse, dbscan, vroom, umap)
 # Import data
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # suffix <- "barcode26_wt"
-# que <- paste0(".DAJIN_temp/clustering/query_score_", sprintf("%s",suffix))
-# label <- paste0(".DAJIN_temp/clustering/query_labels_", sprintf("%s", suffix))
+# que <- paste0(".DAJIN_temp/clustering/temp/query_score_", sprintf("%s",suffix))
+# label <- paste0(".DAJIN_temp/clustering/temp/query_labels_", sprintf("%s", suffix))
 # df_que <- vroom(que, col_names = F, col_types = cols(), delim = ",")
 # df_label <- vroom(label, col_names = c("id", "label"), col_types = cols())
 # output_suffix <- label %>% str_remove(".*labels_")
@@ -99,7 +99,7 @@ output_hdbscan <- cl$cluster + 1
 
 # ggsave(
 #     plot = g,
-#     filename = sprintf(".DAJIN_temp/clustering/pca_%s.png", output_suffix),
+#     filename = sprintf(".DAJIN_temp/clustering/temp/pca_%s.png", output_suffix),
 #     width = 10, height = 8
 # )
 
