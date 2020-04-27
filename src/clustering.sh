@@ -63,8 +63,8 @@ plot_mutsites=.DAJIN_temp/clustering/temp/tmp_mutation_"${suffix}"
 # -------------------------------
 # Report allele mutation info
 # -------------------------------
-output_alleleper=".DAJIN_temp/clustering/allele_percentage_${suffix}"
-output_result=".DAJIN_temp/clustering/result_alleleinfo_${suffix}"
+output_alleleper=".DAJIN_temp/clustering/result_allele_percentage_${suffix}".txt
+output_result=".DAJIN_temp/clustering/result_allele_mutinfo_${suffix}".txt
 
 # Get max sequence length
 seq_maxnum=$(
@@ -512,6 +512,8 @@ sed "s/_/ /g" |
 cut -d " " -f 1,2 |
 sed "s/$/ is finished.../g"
 
-set +eu
-# rm .DAJIN_temp/clustering/temp/tmp_*
+rm .DAJIN_temp/clustering/temp/*${barcode}*${alleletype}
+rm .DAJIN_temp/clustering/temp/*${control}*${alleletype}
+
+# set +eu
 # exit 0
