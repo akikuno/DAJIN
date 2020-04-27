@@ -333,7 +333,7 @@ fi
 
 # MIDS conversion...
 find .DAJIN_temp/fasta_ont -type f | sort |
-awk '{print "./DAJIN/src/mids_convertion.sh",$0, "wt", NR, "&"}' |
+awk '{print "./DAJIN/src/mids_convertion.sh",$0, "wt", "&"}' |
 awk -v th=${threads:-1} '{
     if (NR%th==0) gsub("&","&\nwait",$0)
     print}

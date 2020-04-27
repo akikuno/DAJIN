@@ -192,6 +192,6 @@ for (i in seq_along(pattern_)){
 
 result <- tibble(read_id = df_label$id, output_cl)
 write_tsv(result,
-    sprintf(".DAJIN_temp/clustering/hdbscan_%s", output_suffix),
+    sprintf(".DAJIN_temp/clustering/temp/hdbscan_%s", output_suffix),
     col_names = F
 )
