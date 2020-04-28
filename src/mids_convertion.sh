@@ -32,11 +32,10 @@ else
 fi
 set -u
 
-parent_dir=".DAJIN_temp"
 output=$(echo "${input}" | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
-output_MIDS="${parent_dir}/data/MIDS_${output}_${genotype}"
-tmp_mapping="${parent_dir}/tmp_${output}_mapping_${genotype}"
-tmp_seqID="${parent_dir}/tmp_${output}_seqID_${genotype}"
+output_MIDS=".DAJIN_temp/data/MIDS_${output}_${genotype}"
+tmp_mapping=".DAJIN_temp/tmp_${output}_mapping_${genotype}"
+tmp_seqID=".DAJIN_temp/tmp_${output}_seqID_${genotype}"
 
 # ======================================
 # Mapping
@@ -54,8 +53,8 @@ awk -v ref="${ref}" '$3 == ref' > "${tmp_mapping}"
 reflength=$(cat "${reference}" | grep -v "^>" | awk '{print length($0)}')
 ext=${ext:=100}
 #
-first_flank=$(cat ${parent_dir}/data/mutation_points | awk -v ext=${ext} '{print $1-ext}')
-second_flank=$(cat ${parent_dir}/data/mutation_points | awk -v ext=${ext} '{if(NF==2) print $2+ext; else print $1+ext}')
+first_flank=$(cat .DAJIN_temp/data/mutation_points | awk -v ext=${ext} '{print $1-ext}')
+second_flank=$(cat .DAJIN_temp/data/mutation_points | awk -v ext=${ext} '{if(NF==2) print $2+ext; else print $1+ext}')
 if [ "$first_flank" -lt 1 ]; then first_flank=1; fi
 if [ "$second_flank" -gt "$reflength" ]; then second_flank=$(($reflength)); fi
 
@@ -91,16 +90,11 @@ sort \
 cat "${tmp_mapping}" |
 sort |
 join - "${tmp_seqID}" |
-# join "${tmp_mapping}" - |
-# # Remove unpredictable long reads あまりにも長いリードは除去する
-# awk -v reflen=${reflength} \
-#     'length($10) < reflen*1.1' |
 # append alignment info
 awk '{
     if($2==0 || $2==16) {alignment="primary"} else {alignment="secondary"};
     for(i=1;i<=NF;i++) if($i ~ /cs:Z/) print $1,$4,alignment, $i
 }' |
-# cut -d " " -f 1-3 |
 sort -t " " -k 1,1 -k 2,2n |
 # concatenate primary and secondary (secondary is converted to "I")
 awk '{s=$2; alignment=$3; cstag=$4;
@@ -150,28 +144,12 @@ else
     # Delete insertion
     sed "s/+[a-z]*\([-|=|*]\)/\1/g"
 fi |
-
 # replace single-nuc substitution to "S"
 awk '{gsub(/\*[a|t|g|c]*/, "S", $3); print $0}' |
 # replace Deletion to "D"
 awk '{gsub(/[a|t|g|c]/, "D", $3); print $0}' |
 # erase remained symbols
 awk '{gsub(/[-|+|=]/, "", $3); print $0}' |
-# # replace splice sites to "D"
-# awk '{seq=cstag=$3;
-#     gsub("~","",cstag);
-#     gsub("[^0-9~]","",seq);
-#     sub("^~","",seq);
-#     count=split(seq, splice_num, "~");
-#     for (i=1; i<=count; i++){
-#         SPLICE="D"
-#         for (j=1; j<splice_num[i]; j++){
-#             SPLICE=SPLICE"D"
-#         }
-#         sub(splice_num[i],SPLICE,cstag)
-#     }
-#     print $1,$2,toupper(cstag)
-# }' |
 # complement seqences to match sequence length (insert "=")
 ## start
 awk '{start=""; for(i=1; i < $2; i++) start=start"="; print $1,$2,start""$3}' |
@@ -182,6 +160,8 @@ awk -v reflen="${reflength}" '{
     if(seqlen>reflen) {print $1,substr($3,1,reflen)}
     else {for(i=seqlen; i < reflen; i++) end=end"="; print $1,$3""end}
 }' |
+# 全てが変異になったリードがあれば除去する。
+awk '$2 !~ /^[I|D|S]+$/' |
 sed -e "s/$/\t${label}/g" -e "s/ /\t/g" \
 > "${output_MIDS}"
 #

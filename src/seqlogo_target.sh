@@ -10,7 +10,7 @@
 #     DAJIN/src/revcomp.sh - |
 #     sed "s/^/${grna},/g")
 
-barcode=barcode18
+barcode=barcode14
 alleletype=target
 suffix="${barcode}_${alleletype}"
 

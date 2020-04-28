@@ -3,12 +3,12 @@
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 options(repos = "https://cran.ism.ac.jp/")
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
-pacman::p_load(tidyverse, dbscan, vroom, umap)
+pacman::p_load(tidyverse, dbscan, vroom)
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Import data
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# suffix <- "barcode26_wt"
+# suffix <- "barcode14_target"
 # que <- paste0(".DAJIN_temp/clustering/temp/query_score_", sprintf("%s",suffix))
 # label <- paste0(".DAJIN_temp/clustering/temp/query_labels_", sprintf("%s", suffix))
 # df_que <- vroom(que, col_names = F, col_types = cols(), delim = ",")
