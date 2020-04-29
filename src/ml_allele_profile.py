@@ -178,9 +178,7 @@ df_anomaly = df_anomaly[~df_anomaly.barcodeID.str.contains("simulated")].reset_i
 # # Prediction
 # ====================================
 print("Predict allele types...")
-# X_real_original = X_real
-# X_real = X_real_original
-# X_real = X_real_reshape
+
 iter_ = 1000
 predict = np.zeros(X_real.shape[0], dtype="uint8")
 for i in tqdm(range(0, X_real.shape[0], iter_)):
