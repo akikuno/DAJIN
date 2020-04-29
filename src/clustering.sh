@@ -22,7 +22,7 @@ error_exit() {
 # ----------------------------------------
 # Input
 # ----------------------------------------
-# barcode="barcode18"
+# barcode="barcode23"
 # alleletype="target"
 
 # control="barcode26"
