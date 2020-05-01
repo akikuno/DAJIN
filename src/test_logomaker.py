@@ -24,11 +24,12 @@ control = args[1]
 query = args[2]
 
 barcode = query.split("_")[-2]
-allele = query.split("_")[-1]
+# allele = query.split("_")[-1]
 
-control = pd.read_csv(control, skiprows=1, sep=" ", header=None, names=["seq"])
+control = pd.read_csv(control, sep=" ", header=None, names=["seq"])
+allele = control.seq[0].replace(">","")
 query = pd.read_csv(query, sep=" ", header=None, names=["seq"])
-counts_control = lm.alignment_to_matrix(control["seq"],
+counts_control = lm.alignment_to_matrix(control.iloc[1],
                                        to_type="counts",
                                        characters_to_ignore='.-X')
 counts_query= lm.alignment_to_matrix(query["seq"],

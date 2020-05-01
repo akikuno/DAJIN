@@ -10,16 +10,18 @@
 #     DAJIN/src/revcomp.sh - |
 #     sed "s/^/${grna},/g")
 
-barcode=barcode23
+barcode=barcode14
 alleletype=target
 suffix="${barcode}_${alleletype}"
 
 fasta=.DAJIN_temp/fasta_ont/"${barcode}".fa
 clustering_id=$(find .DAJIN_temp/clustering/result_allele_id* | grep "$suffix")
 
+mkdir -p .DAJIN_temp/seqlogo/temp/
 tmp_fa=".DAJIN_temp/seqlogo/temp/${suffix}.fa"
 tmp_targetseq=".DAJIN_temp/seqlogo/temp/targetseq_${suffix}"
 tmp_targetseq_fa=".DAJIN_temp/seqlogo/temp/targetseq_${suffix}.fa"
+tmp_targetseq_trimmed_fa=".DAJIN_temp/seqlogo/temp/targetseq_trimmed_${suffix}.fa"
 tmp_mappedseq=".DAJIN_temp/seqlogo/temp/mapped_seq_${suffix}"
 tmp_lalign=".DAJIN_temp/seqlogo/temp/lalign_${suffix}"
 tmp_lalignseq=".DAJIN_temp/seqlogo/temp/lalignseq_${suffix}"
@@ -57,31 +59,65 @@ mutation_type=$(
         else if($0~"S") print "P"
         }'
 )
-# ------------------------------------------------------------
-# 2cut deletionの場合
-# ------------------------------------------------------------
+if [ "$mutation_type" = "D" ]; then
+    # ------------------------------------------------------------
+    # 2cut deletionの場合：
+    # 結合部から±50塩基を抽出する
+    # ------------------------------------------------------------
+    minimap2 -ax map-ont \
+            .DAJIN_temp/fasta_conv/wt.fa \
+            .DAJIN_temp/fasta_conv/target.fa --cs=long 2>/dev/null |
+        grep -v "^@" |
+        awk '{print $(NF-1)}' |
+        sed "s/[a-z]*=//g" |
+        awk '{
+            match($0, "-")
+            print toupper(substr($0, RSTART-50, 101))
+        }' |
+        sed -e "s/^/>target /g" -e "s/-//g" |
+    cat - > "$tmp_targetseq"
+elif [ "$mutation_type" = "I" ]; then
+    # ------------------------------------------------------------
+    # Knock-inの場合：
+    # Knock-in配列全長を抽出する
+    # ------------------------------------------------------------
+    minimap2 -ax map-ont \
+            .DAJIN_temp/fasta_conv/wt.fa \
+            .DAJIN_temp/fasta_conv/target.fa \
+            --cs=long 2>/dev/null |
+        grep -v "^@" |
+        awk '{print $(NF-1), $10}' |
+        awk '{seq=$2
+            gsub("[A|C|G|T]", "",$1)
+            gsub("cs:Z:=", "", $1)
+            gsub("=", "", $1)
+            split($1, array, "+")
+            for(key in array) print toupper(array[key]), seq}' |
+        sed 1d |
+        awk '{
+            seq_center=int(length($1)/2)
+            match($2, $1)
+        print toupper(substr($2, RSTART+seq_center-10, 20))
+        }' |        
+        # sed "s///g" |
+        # awk '{; print}' |
+        # sed "s/-/\n/g" |
+        # sed "s/=//g" |
+        # grep -v "^$" |
+        awk '{print ">target"NR,$0}' |
+    cat - > "$tmp_targetseq"
+fi
 
-# 結合部から±50塩基を抽出する
-# if [ "${alleletype}" = "target" ]; then
-minimap2 -ax map-ont \
-        .DAJIN_temp/fasta_conv/wt.fa \
-        .DAJIN_temp/fasta_conv/target.fa --cs=long 2>/dev/null |
-    grep -v "^@" |
-    awk '{print $(NF-1)}' |
-    sed "s/[a-z]*=//g" |
-    awk '{match($0, "-")
-    print substr($0, RSTART-50, 101)
-    }' |
-    sed -e "s/^/>target /g" -e "s/-//g" |
-cat - > "$tmp_targetseq"
+# ------------------------------------------------------------
+# クラスタごとのリードをターゲット配列にalignment
+# ------------------------------------------------------------
 
 seqlen=$(awk '!/[>|@]/ {print length($0)}' .DAJIN_temp/fasta_conv/target.fa)
 
 true > "$tmp_mappedseq"
-input=$(cat "${tmp_targetseq}")
+input=$(head -n1 "$tmp_targetseq")
 cat "${tmp_targetseq}" |
 while read -r input; do
-    label=$(echo "${input}" | cut -d " " -f 1)
     echo "$input" |
         # -----------------------------
         # 足りない配列をNで補う
@@ -113,6 +149,10 @@ done
 # ============================================================================
 # Sequence logo
 # ============================================================================
+
+input=$(head -n1 "$tmp_mappedseq" |
+cut -d " " -f 1,3 | sort -u)
+
 cat "$tmp_mappedseq" |
 cut -d " " -f 1,3 | sort -u |
 while read -r input; do
@@ -141,7 +181,7 @@ while read -r input; do
         grep "${target}" - |
         sed "s/ /\n/g" |
     cat - > "$tmp_targetseq_fa"
-    #
+
     find "${tmp_split_dir}/" -name "split_*" -type f |
         xargs -I @ ./DAJIN/src/test_intact_lalign.sh \
             "$tmp_targetseq_fa" @ |
@@ -165,16 +205,22 @@ while read -r input; do
     mut_length=$(awk '!/[>|@]/ {print length($0)}' "$tmp_targetseq_fa")
     #
     cat "$tmp_lalign" |
-        awk -v per=${per} '$1>per' |
+        awk -v per=${per} '$1>=per' |
         cut -d " " -f 3 |
-        awk -v mut_len=${mut_length} '{print substr($0,0,mut_len)}' |
+        # 最初と最後の5塩基（合計10塩基）を取り除きます
+        awk -v mut_len=${mut_length} '{print substr($0,5,mut_len-10)}' |
     cat - > ${tmp_lalignseq}
+    #
+    # 最初と最後の5塩基（合計10塩基）を取り除きます
+    cat "$tmp_targetseq_fa" |
+        awk '{if($1!~/^>/) $0=substr($0,5, length($0)-10)
+            print}' |
+    cat - > "$tmp_targetseq_trimmed_fa"
     # ----------------------------------------
     # 配列ロゴ
     # ----------------------------------------
     # echo $tmp_targetseq_fa $tmp_lalignseq
-    python DAJIN/src/test_logomaker.py $tmp_targetseq_fa $tmp_lalignseq
-
+    python DAJIN/src/test_logomaker.py "$tmp_targetseq_trimmed_fa" "$tmp_lalignseq"
 done
 
 exit 0
