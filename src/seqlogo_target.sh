@@ -10,7 +10,7 @@
 #     DAJIN/src/revcomp.sh - |
 #     sed "s/^/${grna},/g")
 
-barcode=barcode14
+barcode=barcode18
 alleletype=target
 suffix="${barcode}_${alleletype}"
 
@@ -72,7 +72,7 @@ if [ "$mutation_type" = "D" ]; then
         sed "s/[a-z]*=//g" |
         awk '{
             match($0, "-")
-            print toupper(substr($0, RSTART-50, 101))
+            print toupper(substr($0, RSTART-55, 106))
         }' |
         sed -e "s/^/>target /g" -e "s/-//g" |
     cat - > "$tmp_targetseq"
@@ -97,7 +97,7 @@ elif [ "$mutation_type" = "I" ]; then
         awk '{
             seq_center=int(length($1)/2)
             match($2, $1)
-        print toupper(substr($2, RSTART+seq_center-10, 20))
+        print toupper(substr($2, RSTART+seq_center-30, 60))
         }' |        
         # sed "s///g" |
         # awk '{; print}' |
