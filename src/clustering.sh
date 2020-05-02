@@ -22,8 +22,8 @@ error_exit() {
 # ----------------------------------------
 # Input
 # ----------------------------------------
-# barcode="barcode23"
-# alleletype="target"
+# barcode="barcode26"
+# alleletype="wt"
 
 # control="barcode21" # cables2
 # control="barcode26" # prdm14
