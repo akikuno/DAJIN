@@ -3,12 +3,6 @@
 # ============================================================================
 # I/O and Arguments
 # ============================================================================
-# mkdir -p .DAJIN_temp/seqlogo/
-# gRNAのデータを保存する
-# grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
-# grna=$(echo "${grna}" |
-#     DAJIN/src/revcomp.sh - |
-#     sed "s/^/${grna},/g")
 
 barcode=barcode18
 alleletype=target
