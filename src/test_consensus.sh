@@ -9,6 +9,38 @@
 # I/O and Arguments
 # ============================================================================
 
+
+# ============================================================================
+# ngmlrとsnifflesによるVCF出力
+# ============================================================================
+# conda install -y -n DAJIN -c bioconda ngmlr sniffles
+
+ref=".DAJIN_temp/fasta_conv/wt.fa"
+que=".DAJIN_temp/fasta_ont/barcode14.fa"
+threads=12
+ngmlr -t "$threads" -r "$ref" -q "$que" -x ont |
+samtools sort -@ "$threads" -O BAM -o mapped.sort.bam -
+samtools index -@ "$threads" mapped.sort.bam
+
+sniffles -t "$threads" -m mapped.sort.bam -v output.vcf
+
+wc -l output.vcf
+
+cat output.vcf | 
+bcftools sort - |
+bgzip -f -c > output.vcf.gz
+tabix -f -p vcf output.vcf.gz
+
+# VCFtools
+# cat "$ref" | vcf-consensus output.vcf.gz > out.fa
+
+# Bcftools
+cat "$ref" | bcftools consensus output.vcf.gz > out.fa
+
+# GATK FastaAlternateReferenceMaker
+# conda install -y -n DAJIN -c bioconda gatk
+# gatk3 FastaAlternateReferenceMaker -R "$ref" -o output.fa -V output.vcf
+
 # ============================================================================
 # nanosv
 # ============================================================================
