@@ -9,19 +9,116 @@
 # I/O and Arguments
 # ============================================================================
 
+# ============================================================================
+# I/O and Arguments
+# ============================================================================
+
+barcode=barcode23
+alleletype=target
+suffix="${barcode}_${alleletype}"
+
+fasta=.DAJIN_temp/fasta_ont/"${barcode}".fa
+clustering_id=$(find .DAJIN_temp/clustering/result_allele_id* | grep "$suffix")
+
+mkdir -p .DAJIN_temp/seqlogo/temp/
+tmp_fa=".DAJIN_temp/seqlogo/temp/${suffix}.fa"
+tmp_targetseq=".DAJIN_temp/seqlogo/temp/targetseq_${suffix}"
+tmp_targetseq_fa=".DAJIN_temp/seqlogo/temp/targetseq_${suffix}.fa"
+tmp_targetseq_trimmed_fa=".DAJIN_temp/seqlogo/temp/targetseq_trimmed_${suffix}.fa"
+tmp_mappedseq=".DAJIN_temp/seqlogo/temp/mapped_seq_${suffix}"
+tmp_lalign=".DAJIN_temp/seqlogo/temp/lalign_${suffix}"
+tmp_lalignseq=".DAJIN_temp/seqlogo/temp/lalignseq_${suffix}"
 
 # ============================================================================
-# ngmlrとsnifflesによるVCF出力
+# FASTAリードにクラスタ番号をラベルづけする
 # ============================================================================
-# conda install -y -n DAJIN -c bioconda ngmlr sniffles
 
-ref=".DAJIN_temp/fasta_conv/wt.fa"
-que=".DAJIN_temp/fasta_ont/barcode14.fa"
+cat "${fasta}" |
+    awk '{if(NR % 2 != 0) $1="HOGE"$1
+        else $1="FUGA"$1
+        print}' |
+    tr -d "\n" |
+    sed -e "s/HOGE/\n/g" -e "s/FUGA/ /g" |
+    awk '{print $1,$NF}' |
+    sed "s/^[@|>]//g" |
+    grep -v "^$" |
+    sort -t " " |
+    join - "${clustering_id}" |
+    awk '{print ">"$NF"@@@"$1"\n"$2}' |
+head -n 20000 > ${tmp_fa}
+
+# # --------------------------------
+# # コントロールも10000本とってくる
+# # --------------------------------
+# cat .DAJIN_temp/fasta_ont/barcode26.fa |
+# head -n 20000 > tmp_cont.fa
+
+# # ============================================================================
+# # ngmlrとsnifflesによるVCF出力
+# # ============================================================================
+# # conda install -y -n DAJIN -c bioconda ngmlr sniffles
+# # --------------------------------
+# # コントロールのコンセンサス配列づくり
+# # --------------------------------
+
+# ref=".DAJIN_temp/fasta_conv/wt.fa"
+# # que=".DAJIN_temp/fasta_ont/barcode18.fa"
+# # que="$tmp_fa"
+# que="tmp_cont.fa"
+# # que=".DAJIN_temp/fasta_ont/barcode26.fa"
+# threads=12
+# ngmlr -t "$threads" -r "$ref" -q "$que" -x ont |
+# samtools sort -@ "$threads" -O BAM -o mapped.sort.bam -
+# samtools index -@ "$threads" mapped.sort.bam
+
+# sniffles -t "$threads" -m mapped.sort.bam -v output.vcf
+
+# wc -l output.vcf
+
+# cat output.vcf | 
+# bcftools sort - |
+# bgzip -f -c > output.vcf.gz
+# tabix -f -p vcf output.vcf.gz
+
+# # VCFtools
+# # cat "$ref" | vcf-consensus output.vcf.gz > out.fa
+
+# # Bcftools
+# cat "$ref" |
+#     bcftools consensus output.vcf.gz |
+#     awk '{if($1 ~/^>/) $0=$0"HOGE"
+#         printf $0}' |
+#     sed -e "s/$/\n/g" -e "s/HOGE/\n/g" |
+# cat - > cont_consensus.fa
+
+# diff $ref cont_consensus.fa
+# --------------------------------
+# targetのコンセンサス
+# --------------------------------
+ref=".DAJIN_temp/fasta_conv/target.fa"
+que="$tmp_fa"
+# que=".DAJIN_temp/fasta_ont/barcode18.fa"
 threads=12
 ngmlr -t "$threads" -r "$ref" -q "$que" -x ont |
 samtools sort -@ "$threads" -O BAM -o mapped.sort.bam -
 samtools index -@ "$threads" mapped.sort.bam
 
+# bcftools
+bcftools mpileup -f "$ref" mapped.sort.bam | bcftools call -mv -Ob -o calls.bcf
+bcftools view -i '%QUAL>=20' calls.bcf
+
+bcftools mpileup -f "$ref" mapped.sort.bam | bcftools call -mv -Oz -o calls.vcf.gz
+bcftools index calls.vcf.gz
+cat "$ref" |
+    bcftools consensus calls.vcf.gz |
+    awk '{if($1 ~/^>/) $0=$0"HOGE"
+        printf $0}' |
+    sed -e "s/$/\n/g" -e "s/HOGE/\n/g" |
+cat - > consensus.fa
+diff $ref consensus.fa
+
+
+# sniffles
 sniffles -t "$threads" -m mapped.sort.bam -v output.vcf
 
 wc -l output.vcf
@@ -31,15 +128,15 @@ bcftools sort - |
 bgzip -f -c > output.vcf.gz
 tabix -f -p vcf output.vcf.gz
 
-# VCFtools
-# cat "$ref" | vcf-consensus output.vcf.gz > out.fa
-
 # Bcftools
-cat "$ref" | bcftools consensus output.vcf.gz > out.fa
+cat "$ref" |
+    bcftools consensus output.vcf.gz |
+    awk '{if($1 ~/^>/) $0=$0"HOGE"
+        printf $0}' |
+    sed -e "s/$/\n/g" -e "s/HOGE/\n/g" |
+cat - > cont_consensus.fa
 
-# GATK FastaAlternateReferenceMaker
-# conda install -y -n DAJIN -c bioconda gatk
-# gatk3 FastaAlternateReferenceMaker -R "$ref" -o output.fa -V output.vcf
+diff $ref cont_consensus.fa
 
 # ============================================================================
 # nanosv
