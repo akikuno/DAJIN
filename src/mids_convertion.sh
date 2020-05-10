@@ -150,7 +150,7 @@ awk '{gsub(/\*[a|t|g|c]*/, "S", $3); print $0}' |
 awk '{gsub(/[a|t|g|c]/, "D", $3); print $0}' |
 # erase remained symbols
 awk '{gsub(/[-|+|=]/, "", $3); print $0}' |
-# complement seqences to match sequence length (insert "=")
+# complement seqences to match sequence length (insert "=" and "D")
 ## start
 awk '{start=""; for(i=1; i < $2; i++) start=start"="; print $1,$2,start""$3}' |
 ## end
@@ -158,7 +158,7 @@ awk -v reflen="${reflength}" '{
     seqlen=length($3);
     end="";
     if(seqlen>reflen) {print $1,substr($3,1,reflen)}
-    else {for(i=seqlen; i < reflen; i++) end=end"="; print $1,$3""end}
+    else {for(i=seqlen; i < reflen; i++) end=end"D"; print $1,$3""end}
 }' |
 # 全てが変異になったリードがあれば除去する。
 awk '$2 !~ /^[I|D|S]+$/' |
