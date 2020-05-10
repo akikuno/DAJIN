@@ -77,8 +77,17 @@ print("Model training...")
 labels, labels_index = pd.factorize(df_sim.barcodeID)
 labels_categorical = utils.to_categorical(labels)
 
+#! -------------------------------------------------------------------------
+"""
+テスト：一塩基置換の場合に、WTだけ学習させて異常検知を試みる
+"""
+X_sim_wt = X_sim[df_sim.barcodeID.str.contains("wt")]
+labels, labels_index = pd.factorize(df_sim.barcodeID[df_sim.barcodeID.str.contains("wt")])
+labels_categorical = utils.to_categorical(labels)
+#! -------------------------------------------------------------------------
+
 X_train, X_test, Y_train, Y_test = train_test_split(
-    X_sim, labels_categorical,
+    X_sim_wt, labels_categorical,
     test_size=0.2, shuffle=True)
 
 # ====================================
@@ -158,6 +167,25 @@ X_all = np.concatenate([X_sim, X_real])
 print("Abnormal allele detection...")
 cos_all, normal_vector, predict_vector = get_score_cosine(
     model, X_train[0:1000], X_all)
+
+"""
+コサイン類似度のベクトル化（sklearn使用）で高速化を図る
+"""
+# train = X_train[np.random.randint(X_train.shape[0], size=1000), :]
+# test = X_all[np.random.randint(X_all.shape[0], size=10), :]
+# test.shape
+# cos_all, normal_vector, predict_vector = get_score_cosine(
+#     model, train, test)
+# cos_all
+# normal_vector
+# predict_vector
+
+# from sklearn.metrics.pairwise import cosine_similarity as cos_sim
+# cos_norm = cos_sim(normal_vector, predict_vector)
+# cos_norm.shape
+# cos_norm = cos_norm.max(axis=0)
+# cos_norm.shape
+# cos_norm
 
 df_name = pd.concat([df_sim[["barcodeID", "seqID"]].reset_index(drop=True),
                     df_real[["barcodeID", "seqID"]].reset_index(drop=True)])

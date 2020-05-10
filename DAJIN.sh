@@ -192,13 +192,17 @@ done
 wt_seqlen=$(cat .DAJIN_temp/fasta/wt.fa | awk '!/[>|@]/ {print length($0)}')
 
 if [ -e .DAJIN_temp/fasta/target.fa ]; then
-    convert_revcomp=$(minimap2 -ax splice .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/target.fa --cs 2>/dev/null |
+    convert_revcomp=$(
+        minimap2 -ax splice \
+        .DAJIN_temp/fasta/wt.fa \
+        .DAJIN_temp/fasta/target.fa --cs 2>/dev/null |
         awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
         sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
         tr -d "\~\*\-\+atgc" |
         awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
         awk -v wt_seqlen="$wt_seqlen" \
-        '{if(wt_seqlen-$2>$1) print 0; else print 1}')
+        '{if(wt_seqlen-$2>$1) print 0; else print 1}'
+        )
 
     if [ "$convert_revcomp" -eq 1 ] ; then
         ./DAJIN/src/revcomp.sh "${fasta_LF}" \
@@ -207,11 +211,56 @@ if [ -e .DAJIN_temp/fasta/target.fa ]; then
     fi
 fi
 
-cat ${fasta_LF} | sed "s/^/@/g" | tr -d "\n" | sed -e "s/@>/\n>/g" -e "s/$/\n/g" | grep -v "^$" |
+# 別々のFASTAファイルとして保存する
+cat "${fasta_LF}" |
+sed "s/^/@/g" |
+tr -d "\n" |
+sed -e "s/@>/\n>/g" -e "s/$/\n/g" |
+grep -v "^$" |
 while read -r input; do
-    output=$(echo "${input}" | sed -e "s/@.*//g" -e "s#>#.DAJIN_temp/fasta_conv/#g" -e "s/$/.fa/g")
-    echo "${input}" | sed "s/@/\n/g" > "$output"
+    output=$(
+        echo "${input}" |
+        sed -e "s/@.*//g" \
+            -e "s#>#.DAJIN_temp/fasta_conv/#g" \
+            -e "s/$/.fa/g"
+        )
+    echo "${input}" |
+        sed "s/@/\n/g" |
+    cat - > "$output"
 done
+
+# ----------------------------------------------------------------------------
+# 変異のタイプ（deletion, knock-in, or point-mutation）を判定する
+# ----------------------------------------------------------------------------
+mutation_type=$(
+    ref=$(find .DAJIN_temp/fasta_conv -name "wt*.fa")
+    que=$(find .DAJIN_temp/fasta_conv -name "target*.fa" | head -n 1)
+    #
+    minimap2 -ax map-ont \
+    "$ref" "$que" --cs 2>/dev/null |
+    grep -v "^@" |
+    awk '{
+        cstag=$(NF-1)
+        if(cstag ~ "-") print "D"
+        else if(cstag ~ "+") print "I"
+        else if(cstag ~ "*") print "P"
+        }'
+)
+
+# ----------------------------------------------------------------------------
+# Targetが一塩基変異の場合: 
+# Cas9の切断部に対して
+# 10塩基のindelを入れたものを異常アレルとして作成する
+# ----------------------------------------------------------------------------
+if [ "$mutation_type" = "P" ]; then
+    seq_length=10 &&
+    od -A n  -t u4 -N $(($seq_length*100)) /dev/urandom |
+    tr -d "\n" |
+    sed 's/[^0-9]//g' |
+    sed "s/[4-9]//g" |
+    sed -e "s/0/A/g" -e "s/1/G/g" -e "s/2/C/g" -e "s/3/T/g" |
+    awk -v seq_length=$seq_length '{print substr($0, 1, seq_length)}'
+fi
 
 # ============================================================================
 # Format ONT reads into FASTA file
@@ -313,37 +362,38 @@ query=".DAJIN_temp/fasta_conv/target.fa"
 # Get mutation loci...
 true > .DAJIN_temp/data/mutation_points
 for query in .DAJIN_temp/fasta_conv/target*.fa; do
-    minimap2 -ax splice "${reference}" "${query}" --cs 2>/dev/null |
-    awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-    sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
-    tr -d "\~\*\-\+atgc" |
-    awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' \
-    >> .DAJIN_temp/data/mutation_points
+    cat "$reference" |
+        minimap2 -ax splice - "${query}" --cs 2>/dev/null |
+        awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
+        sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
+        tr -d "\~\*\-\+atgc" |
+        awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
+    cat - >> .DAJIN_temp/data/mutation_points
 done
 
 if [ "$(wc -l .DAJIN_temp/data/mutation_points | cut -d ' ' -f 1)" -gt 1 ]; then
     cat .DAJIN_temp/data/mutation_points |
-    awk 'NR==1 {print $1}
-    END{print $NF}' |
-    tr "\n" " " |
-    sed "s/ $/\n/g" \
-    > .DAJIN_temp/data/mutation_points_$$
+        awk 'NR==1 {print $1}
+        END{print $NF}' |
+        tr "\n" " " |
+        sed "s/ $/\n/g" |
+    cat - > .DAJIN_temp/data/mutation_points_$$
     mv .DAJIN_temp/data/mutation_points_$$ .DAJIN_temp/data/mutation_points
 fi
 
 # MIDS conversion...
 find .DAJIN_temp/fasta_ont -type f | sort |
-awk '{print "./DAJIN/src/mids_convertion.sh",$0, "wt", "&"}' |
-awk -v th=${threads:-1} '{
-    if (NR%th==0) gsub("&","&\nwait",$0)
-    print}
-    END{print "wait"}' |
+    awk '{print "./DAJIN/src/mids_convertion.sh",$0, "wt", "&"}' |
+    awk -v th=${threads:-1} '{
+        if (NR%th==0) gsub("&","&\nwait",$0)
+        print}
+        END{print "wait"}' |
 sh -
 #
 cat .DAJIN_temp/data/MIDS_* |
-sed -e "s/_aligned_reads//g" |
-sort -k 1,1 \
-> ".DAJIN_temp/data/DAJIN_MIDS.txt"
+    sed -e "s/_aligned_reads//g" |
+    sort -k 1,1 |
+cat - > ".DAJIN_temp/data/DAJIN_MIDS.txt"
 
 rm .DAJIN_temp/data/MIDS_*
 # ============================================================================
