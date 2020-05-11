@@ -174,8 +174,26 @@ def cosine_similarity(x1, x2):
     return cosine_sim
 
 # print("Abnormal allele detection...")
-cos_all, normal_vector, predict_vector = get_score_cosine(
-    model, X_test[0: 10000, ], X_train[0: 10000, ])
+# import time
+# start = time.time()
+# cos_all, normal_vector, predict_vector = get_score_cosine(
+#     model, X_test[0: 1000, ], X_all[0:50000])
+# end_iter = time.time()
+# time_iter = end_iter - start
+
+# start = time.time()
+# model_ = Model(model.get_layer(index=0).input,
+#                 model.get_layer(index=-2).output)  
+# print("Obtain L2-normalized vectors from the simulated reads...")
+# normal_vector = model_.predict(X_train[0:1000], verbose=1, batch_size=32)
+# print("Obtain L2-normalized vectors of the all reads...")
+# predict_vector = model_.predict(X_all[0:50000], verbose=1, batch_size=32)
+# cos_score = cos_sim(normal_vector, predict_vector).max(axis=0)
+# end_vec = time.time()
+# time_vec = end_vec - start
+
+# time_iter
+# time_vec
 # pd.Series(cos_all).describe()
 np.savetxt('.DAJIN_temp/data/cosine_sim.txt', cos_all)
 

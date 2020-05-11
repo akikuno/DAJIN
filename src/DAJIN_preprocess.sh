@@ -11,7 +11,7 @@ threads=13
 # ============================================================
 wt_seqlen=$(awk '!/[>|@]/ {print length($0)}' "$ref")
 
-output_mids="DAJIN_new_mids"
+output_mids="DAJIN_new_mids.txt"
 true > "$output_mids"
 
 for que in .DAJIN_temp/fasta_ont/*; do
@@ -29,67 +29,66 @@ for que in .DAJIN_temp/fasta_ont/*; do
     # ============================================================
 
     minimap2 -t "$threads" -ax map-ont "$ref" "$que" --cs=long 2>/dev/null |
-    grep -v "^@" |
-    awk -v ref="$mapping_ref" '$3 == ref' |
-    awk '$2==0 || $2==16' |
-    # cat - > test.sam
-    # ============================================================
-    # MIDS conv
-    # ============================================================
-    # cat test.sam | grep target#c140G-C_1408_aligned_35356_F_1118_178_1500
-    awk '{print $1, $2, $4, $(NF-1)}' |
-    awk -v seqlen="$wt_seqlen" -v label="$label" \
-    '{
-        # annotate
-        id=$1; flag=$2; start=$3; cs=$4
-        # -------------------------------
-        # CS tag MIDS formatting...
-        # -------------------------------
-        sub("cs:Z:","",cs)
-        gsub("=", "", cs)
-        # Deletion
-        cs_del=""
-        split(cs,array,"-")
-        for(key in array){
-            del="D"
-            del_num=match(array[key], "^[a|c|g|t]+")
-            for(i=1; i<RLENGTH; i++) del=del"D"
-            sub("^[a|c|g|t]+",del,array[key])
-            cs_del=cs_del""array[key]
-        }
-        cs=cs_del
-        # Substitution
-        gsub("*[a|c|g|t][a|c|g|t]", "S", cs)
-        # Insertion
-        gsub("+[a|c|g|t]+.", "I", cs)
-        # Match
-        gsub("[A|C|G|T]", "M", cs)
-        # -------------------------------
-        # Padding start sites...
-        # -------------------------------
-        seq=""
-        for(i=1; i<start; i++) seq=seq"="
-        cs=seq""cs
-
-        # print cs
-
-        # -------------------------------
-        # Padding or trimming end sites...
-        # -------------------------------
-        # もし短い場合は"="を足す。長い場合は切る：
-        if(length(cs)<seqlen){
+        grep -v "^@" |
+        awk -v ref="$mapping_ref" '$3 == ref' |
+        awk '$2==0 || $2==16' |
+        # cat - > test.sam
+        # ============================================================
+        # MIDS conv
+        # ============================================================
+        # cat test.sam | grep target#c140G-C_1408_aligned_35356_F_1118_178_1500
+        awk '{print $1, $2, $4, $(NF-1)}' |
+        awk -v seqlen="$wt_seqlen" -v label="$label" \
+        '{
+            # annotate
+            id=$1; flag=$2; start=$3; cs=$4
+            # -------------------------------
+            # CS tag MIDS formatting...
+            # -------------------------------
+            sub("cs:Z:","",cs)
+            gsub("=", "", cs)
+            # Deletion
+            cs_del=""
+            split(cs,array,"-")
+            for(key in array){
+                del="D"
+                del_num=match(array[key], "^[a|c|g|t]+")
+                for(i=1; i<RLENGTH; i++) del=del"D"
+                sub("^[a|c|g|t]+",del,array[key])
+                cs_del=cs_del""array[key]
+            }
+            cs=cs_del
+            # Substitution
+            gsub("*[a|c|g|t][a|c|g|t]", "S", cs)
+            # Insertion
+            gsub("+[a|c|g|t]+.", "I", cs)
+            # Match
+            gsub("[A|C|G|T]", "M", cs)
+            # -------------------------------
+            # Padding start sites...
+            # -------------------------------
             seq=""
-            for(i=1; i<=seqlen-length(cs); i++) seq=seq"="
-            cs=cs""seq
-        } else {
-            cs=substr(cs,1,seqlen)
-        }
+            for(i=1; i<start; i++) seq=seq"="
+            cs=seq""cs
 
-        print id, cs, label
-    }' |
-    sed "s/ /\t/g" |
-    cat - \
-    >> "$output_mids"
+            # print cs
+
+            # -------------------------------
+            # Padding or trimming end sites...
+            # -------------------------------
+            # もし短い場合は"="を足す。長い場合は切る：
+            if(length(cs)<seqlen){
+                seq=""
+                for(i=1; i<=seqlen-length(cs); i++) seq=seq"="
+                cs=cs""seq
+            } else {
+                cs=substr(cs,1,seqlen)
+            }
+
+            print id, cs, label
+        }' |
+        sed "s/ /\t/g" |
+    cat - >> "$output_mids"
 done
 
 cat "$output_mids" |
@@ -129,7 +128,7 @@ grep -e 8ca3032a-4343-4a64-9393-7d9b35428c36 \
 # cat DAJIN_new_mids.txt | cut -f 2 | awk '{print length}' | sort | uniq -c
 
 
-# cat tmp_mids | awk '{print substr($3, 739, 1)}' | sort | uniq -c
+# cat DAJIN_new_mids.txt  | awk '{print substr($2, 739, 1)}' | sort | uniq -c
 # cat tmp_mids | cut -f 3 | awk '{print length}' | sort | uniq -c
 # cat tmp_mids | awk 'length($3)==2845' | head
 

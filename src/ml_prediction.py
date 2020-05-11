@@ -13,12 +13,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from tqdm import tqdm
 
-from tensorflow.keras.models import Sequential, load_model
-from tensorflow.keras.layers import (Activation, Conv1D, Dense, Flatten,
-                                     MaxPooling1D)
-from tensorflow.keras import regularizers, utils
-from tensorflow.keras import backend as K
-from tensorflow.keras.models import Model
+from tensorflow.keras.models import load_model
 
 
 # ====================================
@@ -36,16 +31,16 @@ labels_index = pd.read_csv(
     header=None, sep='\t')
 labels_index.columns = ["label"]
 
-fig_dirs = ["results/figures/png", "results/figures/svg"]
-
 output_npz = file_name.replace(".txt", ".npz")
-output_figure = file_name.replace(".txt", "")
 output_model = file_name.replace(".txt", ".h5")
+
+# fig_dirs = ["results/figures/png", "results/figures/svg"]
+# output_figure = file_name.replace(".txt", "")
 
 # ====================================
 # # Load One-hot matrix
 # ====================================
-np.load = partial(np.load, allow_pickle=True)
+# np.load = partial(np.load, allow_pickle=True)
 npz = np.load(output_npz)
 X_real = npz["X_real"]
 

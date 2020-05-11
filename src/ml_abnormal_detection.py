@@ -16,12 +16,14 @@ import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.metrics.pairwise import cosine_similarity as cos_sim
 
 from tensorflow.keras import backend as K
 from tensorflow.keras import regularizers, utils
 from tensorflow.keras.layers import (Activation, Conv1D, Dense, Flatten,
                                     MaxPooling1D)
 from tensorflow.keras.models import Model, Sequential, load_model
+from tensorflow.keras.callbacks import EarlyStopping
 
 # ====================================
 # Input and format data
@@ -39,10 +41,10 @@ df_sim = df[df.barcodeID.str.contains("simulated")].reset_index(drop=True)
 df_real = df[~df.barcodeID.str.contains("simulated")].reset_index(drop=True)
 
 # Output names
-fig_dirs = ["results/figures/png", "results/figures/svg"]
 output_npz = file_name.replace(".txt", ".npz")
-# output_figure = file_name.replace(".txt", "").replace("data_for_ml/", "")
 output_model = file_name.replace(".txt", ".h5")
+# fig_dirs = ["results/figures/png", "results/figures/svg"]
+# output_figure = file_name.replace(".txt", "").replace("data_for_ml/", "")
 
 # # ====================================
 # # One-hot encording
@@ -77,17 +79,8 @@ print("Model training...")
 labels, labels_index = pd.factorize(df_sim.barcodeID)
 labels_categorical = utils.to_categorical(labels)
 
-#! -------------------------------------------------------------------------
-"""
-テスト：一塩基置換の場合に、WTだけ学習させて異常検知を試みる
-"""
-X_sim_wt = X_sim[df_sim.barcodeID.str.contains("wt")]
-labels, labels_index = pd.factorize(df_sim.barcodeID[df_sim.barcodeID.str.contains("wt")])
-labels_categorical = utils.to_categorical(labels)
-#! -------------------------------------------------------------------------
-
 X_train, X_test, Y_train, Y_test = train_test_split(
-    X_sim_wt, labels_categorical,
+    X_sim, labels_categorical,
     test_size=0.2, shuffle=True)
 
 # ====================================
@@ -125,10 +118,16 @@ model.add(Dense(len(labels_index), activation='softmax', name="final_layer"))
 model.compile(optimizer='adam', loss='categorical_crossentropy',
             metrics=['accuracy'])
 # model.summary()
-# -
-stack = model.fit(X_train, Y_train, epochs=20, verbose=1,
-                validation_split=0.2, shuffle=True)
 
+###############################################
+# Training
+###############################################
+early_stopping = EarlyStopping(monitor='val_loss', patience=10) 
+
+history = model.fit(X_train, Y_train, epochs=100, verbose=1,
+                    batch_size = 64,
+                    validation_split=0.2, shuffle=True,
+                    callbacks = [early_stopping])
 
 # evaluate = model.evaluate(X_test, Y_test, verbose=0)
 
@@ -137,74 +136,39 @@ stack = model.fit(X_train, Y_train, epochs=20, verbose=1,
 # ## Compute cosine similarity
 # ====================================
 
-def get_score_cosine(model, train, test):
-    model_ = Model(model.get_layer(index=0).input,
-                model.get_layer(index=-2).output)  # Delete FC layer
-    # print(model_.summary())
-    print("Obtain L2-normalized vectors from the simulated reads...")
-    normal_vector = model_.predict(train, verbose=1, batch_size=32)
-    print("Obtain L2-normalized vectors of the real reads...")
-    predict_vector = model_.predict(test, verbose=1, batch_size=32)
-    score_len = len(predict_vector)
-    score = np.zeros(score_len)
-    print("Calculate cosine similarity to detect abnormal allele ...")
-    for i in tqdm(range(score_len)):
-        score[i] = cosine_similarity(predict_vector[i], normal_vector).max()
-    return score, normal_vector, predict_vector
-
-def cosine_similarity(x1, x2):
-    if x1.ndim == 1:
-        x1 = x1[np.newaxis]
-    if x2.ndim == 1:
-        x2 = x2[np.newaxis]
-    x1_norm = np.linalg.norm(x1, axis=1)
-    x2_norm = np.linalg.norm(x2, axis=1)
-    cosine_sim = np.dot(x1, x2.T)/(x1_norm*x2_norm+1e-10)
-    return cosine_sim
-
-
 X_all = np.concatenate([X_sim, X_real])
 print("Abnormal allele detection...")
-cos_all, normal_vector, predict_vector = get_score_cosine(
-    model, X_train[0:1000], X_all)
 
-"""
-コサイン類似度のベクトル化（sklearn使用）で高速化を図る
-"""
-# train = X_train[np.random.randint(X_train.shape[0], size=1000), :]
-# test = X_all[np.random.randint(X_all.shape[0], size=10), :]
-# test.shape
-# cos_all, normal_vector, predict_vector = get_score_cosine(
-#     model, train, test)
-# cos_all
-# normal_vector
-# predict_vector
+model_ = Model(model.get_layer(index=0).input,
+                model.get_layer(index=-2).output)  
+print("Obtain L2-normalized vectors from the simulated reads...")
+normal_vector = model_.predict(X_train[0:1000], verbose=1, batch_size=32)
+print("Obtain L2-normalized vectors of the all reads...")
+predict_vector = model_.predict(X_all, verbose=1, batch_size=32)
+cos_score = cos_sim(normal_vector, predict_vector).max(axis=0)
+# del normal_vector, predict_vector
 
-# from sklearn.metrics.pairwise import cosine_similarity as cos_sim
-# cos_norm = cos_sim(normal_vector, predict_vector)
-# cos_norm.shape
-# cos_norm = cos_norm.max(axis=0)
-# cos_norm.shape
-# cos_norm
+# ====================================
+# ## Compute cosine similarity
+# ====================================
 
-df_name = pd.concat([df_sim[["barcodeID", "seqID"]].reset_index(drop=True),
+df_anomaly = pd.concat([df_sim[["barcodeID", "seqID"]].reset_index(drop=True),
                     df_real[["barcodeID", "seqID"]].reset_index(drop=True)])
 
-df_all = pd.concat([df_name.reset_index(
-    drop=True), pd.DataFrame(cos_all)], axis=1)
-df_all.columns = ["barcodeID", "seqID", "cos_similarity"]
+df_anomaly["cos_sim"] = cos_score
 
-df_all["label"] = df_all.barcodeID.apply(
+df_anomaly["label"] = df_anomaly.barcodeID.apply(
     lambda x: 1 if "simulated" in x else -1)
 
-optimal_threshold = df_all[df_all.label == 1].cos_similarity.quantile(0.001)
+optimal_threshold = df_anomaly[df_anomaly.label == 1].cos_sim.quantile(0.01)
 
-df_all["abnormal_prediction"] = df_all.cos_similarity.apply(
-    lambda x: 1 if x > optimal_threshold else -1)
+df_anomaly["abnormal_prediction"] = (
+    df_anomaly[df_anomaly.label == -1].reset_index().
+    cos_sim.apply(lambda x: "normal" if x > optimal_threshold else "abnormal")
+)
+df_anomaly.drop(["cos_sim", "label"], axis=1, inplace=True)
+df_anomaly = df_anomaly[~df_anomaly.barcodeID.str.contains("simulated")].reset_index(drop=True)
 
-df_anomaly = df_real[["barcodeID", "seqID"]]
-df_anomaly["abnormal_prediction"] = df_all[df_all.label == -1].reset_index().cos_similarity.apply(
-    lambda x: "normal" if x > optimal_threshold else "abnormal")
 
 # ====================================
 # Output the results

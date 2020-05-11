@@ -1,7 +1,7 @@
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Install required packages
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-options(repos = "https://cran.ism.ac.jp/")
+options(repos='https://cloud.r-project.org/')
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
 pacman::p_load(tidyverse, dbscan, vroom)
 

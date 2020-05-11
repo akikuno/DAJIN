@@ -22,7 +22,7 @@ error_exit() {
 # ----------------------------------------
 # Input
 # ----------------------------------------
-# barcode="barcode08"
+# barcode="barcode12"
 # alleletype="normal"
 
 # control="barcode21" # cables2
@@ -92,36 +92,36 @@ seq_maxnum=$(
 # MIDS conversion for Point mutation
 # ----------------------------------------------------------
 
-# find .DAJIN_temp/fasta_ont/ -type f |
-#     grep "${barcode}" |
-#     xargs -I @ ./DAJIN/src/mids_convertion_nonslip.sh @ "${alleletype}" |
-# cat - > "${MIDS_que}"
+find .DAJIN_temp/fasta_ont/ -type f |
+    grep "${barcode}" |
+    xargs -I @ ./DAJIN/src/mids_convertion_nonslip.sh @ "${alleletype}" |
+cat - > "${MIDS_que}"
 
-# # If no control MIDS files, output... 
-# if [ ! -s "${MIDS_ref}" ]; then
-#     find .DAJIN_temp/fasta_ont/ -type f |
-#         grep "${control}" |
-#         xargs -I @ ./DAJIN/src/mids_convertion_nonslip.sh @ "${alleletype}" |
-#     cat - > "${MIDS_ref}"
-# fi
+# If no control MIDS files, output... 
+if [ ! -s "${MIDS_ref}" ]; then
+    find .DAJIN_temp/fasta_ont/ -type f |
+        grep "${control}" |
+        xargs -I @ ./DAJIN/src/mids_convertion_nonslip.sh @ "${alleletype}" |
+    cat - > "${MIDS_ref}"
+fi
 
 # # ----------------------------------------------------------
 # # MIDS conversion
 # # ----------------------------------------------------------
 
-find .DAJIN_temp/fasta_ont/ -type f | grep "${barcode}" |
-xargs -I @ ./DAJIN/src/mids_convertion.sh @ "${alleletype}" &&
-mv ".DAJIN_temp/data/MIDS_${barcode}_${alleletype}" "${MIDS_que}"
+# find .DAJIN_temp/fasta_ont/ -type f | grep "${barcode}" |
+# xargs -I @ ./DAJIN/src/mids_convertion.sh @ "${alleletype}" &&
+# mv ".DAJIN_temp/data/MIDS_${barcode}_${alleletype}" "${MIDS_que}"
 
-# If no control MIDS files, output... 
-if [ ! -s "${MIDS_ref}" ]; then
-    find .DAJIN_temp/fasta_ont/ -type f | grep "${control}" |
-    xargs -I @ ./DAJIN/src/mids_convertion.sh @ "${alleletype}" "control" &&
-    mv ".DAJIN_temp/data/MIDS_${control}_${alleletype}" "${MIDS_ref}"
-fi
+# # If no control MIDS files, output... 
+# if [ ! -s "${MIDS_ref}" ]; then
+#     find .DAJIN_temp/fasta_ont/ -type f | grep "${control}" |
+#     xargs -I @ ./DAJIN/src/mids_convertion.sh @ "${alleletype}" "control" &&
+#     mv ".DAJIN_temp/data/MIDS_${control}_${alleletype}" "${MIDS_ref}"
+# fi
 
-rm .DAJIN_temp/tmp_${barcode}*${alleletype}
-rm .DAJIN_temp/tmp_${control}*${alleletype}
+# rm .DAJIN_temp/tmp_${barcode}*${alleletype}
+# rm .DAJIN_temp/tmp_${control}*${alleletype}
 
 # ----------------------------------------------------------
 # Mutation scoring of samples
@@ -140,42 +140,42 @@ cat "${MIDS_que}" |
     sed "s/ /\t/g" |
 cat - > "${output_label}"
 
-# ----------------------------------------
-# 挿入塩基を1つの挿入塩基数にまとめて配列のズレを無くす
-# ----------------------------------------
-cat "${MIDS_que}" |
-grep "${barcode}" |
-sort -k 1,1 |
-join -1 1 -2 2 - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-awk -v atype="${alleletype_original}" \
-'$NF==atype' |
-cut -d " " -f 2 |
-awk -F "" '{
-    for(i=1; i<=NF; i++){
-        if($i=="I") num=num+1
-        if($i=="I" && $(i+1)!="I") {
-            # -----------------------------------
-            # e.g) if num=10, num becomes "a"
-            # -----------------------------------
-            if(num>=10 && num<=35) num=sprintf("%c", num+87)
-            else if(num>=36) num="z"
-            #
-            $(i+1)=num; num=0}
-        }
-    print $0}' |
-sed -e "s/I//g" -e "s/ //g" |
-# ----------------------------------------
-# 短い配列をPaddingする
-# ----------------------------------------
-awk -v seqnum="${seq_maxnum}" \
-    'BEGIN{OFS=""}
-    { if(length($0) < seqnum){
-        seq="="
-        for(i=length($0)+1; i<=seqnum; i++) $i=seq
-        print $0}
-    }' \
-> "${output_query_seq}"
-
+# # ----------------------------------------
+# # 挿入塩基を1つの挿入塩基数にまとめて配列のズレを無くす
+# # ----------------------------------------
+# cat "${MIDS_que}" |
+# grep "${barcode}" |
+# sort -k 1,1 |
+# join -1 1 -2 2 - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
+# awk -v atype="${alleletype_original}" \
+# '$NF==atype' |
+# cut -d " " -f 2 |
+# awk -F "" '{
+#     for(i=1; i<=NF; i++){
+#         if($i=="I") num=num+1
+#         if($i=="I" && $(i+1)!="I") {
+#             # -----------------------------------
+#             # e.g) if num=10, num becomes "a"
+#             # -----------------------------------
+#             if(num>=10 && num<=35) num=sprintf("%c", num+87)
+#             else if(num>=36) num="z"
+#             #
+#             $(i+1)=num; num=0}
+#         }
+#     print $0}' |
+# sed -e "s/I//g" -e "s/ //g" |
+# # ----------------------------------------
+# # 短い配列をPaddingする
+# # ----------------------------------------
+# awk -v seqnum="${seq_maxnum}" \
+#     'BEGIN{OFS=""}
+#     { if(length($0) < seqnum){
+#         seq="="
+#         for(i=length($0)+1; i<=seqnum; i++) $i=seq
+#         print $0}
+#     }' \
+# > "${output_query_seq}"
+# ! これはMIDS_nonslipですでにやっている…？Insertionの数はやっていない。
 # ----------------------------------------------------------
 # Output Genomic coodinates (Control)
 # ----------------------------------------------------------
@@ -186,7 +186,7 @@ cat "${MIDS_ref}" |
 grep "${control}" |
 sort -k 1,1 |
 join -1 1 -2 2 - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-awk -v alelle="$alleletype_original" '$NF==alelle' |
+awk '$NF=="wt"' |
 cut -d " " -f 2 |
 # Insertion annotation
 awk -F "" '{
@@ -225,13 +225,8 @@ awk -v seqnum="${seq_maxnum}" \
 # MI
 # ----------------------------------------
 awk -F "" \
-    '{ for (i=1; i<=NF; i++)  { a[NR,i] = $i } }
-    END {    
-        for(j=1; j<=NF; j++) {
-            str=a[1,j]
-            for(i=2; i<=NR; i++){ str=str""a[i,j] }
-            print str }
-    }' |
+    '{for(i=1; i<=NF; i++) array[i]=array[i]""$i}
+    END{for(key in array) print array[key]}' |
 # ----------------------------------------
 # シークエンスエラーを描出する
 # ----------------------------------------
@@ -258,40 +253,35 @@ awk -F "" '{
 # ----------------------------------------------------------
 
 cat "${output_query_seq}" |
-    # ----------------------------------------
-    # 行を「リード指向」から「塩基部位指向」に変換する
-    # ----------------------------------------
-    awk -F "" \
-    '{ for (i=1; i<=NF; i++)  { a[NR,i] = $i } }
-    END {    
-        for(j=1; j<=NF; j++) {
-            str=a[1,j]
-            for(i=2; i<=NR; i++){ str=str""a[i,j] }
-            print str }
-    }'|
-    # ----------------------------------------
-    # 変異部の数を数える
-    # ----------------------------------------
-    awk -F "" 'BEGIN{OFS=","}{
-        totalI=gsub(/[1-9]|[a-z]/,"@",$0)
-        totalD=gsub("D","D",$0)
-        totalS=gsub("S","S",$0)
-        for(i=1; i<=NF; i++){
-            if($i=="=") $i=0
-            else if($i=="M") $i=0
-            else if($i=="@") $i=totalI
-            else if($i=="D") $i=totalD*(-1)
-            else if($i=="S") $i=totalS
-        }
-        print $0
-        }' |
-    # ----------------------------------------
-    # シークエンスエラーはMatchとしてあつかつ
-    # ----------------------------------------
-    paste - "${output_ref_score}" |
-    awk '{if($NF==2) $1=0
-        print $1}' |
-cat - > "${output_query_score}"
+# ----------------------------------------
+# 行を「リード指向」から「塩基部位指向」に変換する
+# ----------------------------------------
+awk -F "" \
+    '{for(i=1; i<=NF; i++) array[i]=array[i]""$i}
+    END{for(key in array) print array[key]}' |
+# ----------------------------------------
+# 変異部の数を数える
+# ----------------------------------------
+awk -F "" 'BEGIN{OFS=","}{
+    totalI=gsub(/[1-9]|[a-z]/,"@",$0)
+    totalD=gsub("D","D",$0)
+    totalS=gsub("S","S",$0)
+    for(i=1; i<=NF; i++){
+        if($i=="=") $i=0
+        else if($i=="M") $i=0
+        else if($i=="@") $i=totalI
+        else if($i=="D") $i=totalD*(-1)
+        else if($i=="S") $i=totalS
+    }
+    print $0
+    }' |
+# ----------------------------------------
+# シークエンスエラーはMatchとしてあつかつ
+# ----------------------------------------
+paste - "${output_ref_score}" |
+awk '{if($NF==2) $1=0
+    print $1}' \
+> "${output_query_score}"
 
 # ----------------------------------------------------------
 # Clustering by HDBSCAN
@@ -310,56 +300,54 @@ hdbscan_id_NR=$(cat "${hdbscan_id}" | wc -l)
 # ----------------------------------------------------------
 # Remove minor allele (< 10%) 
 # ----------------------------------------------------------
-cat "${hdbscan_id}" |
-    awk '{print $NF}' |
-    sort |
-    uniq -c |
-    awk -v nr="${hdbscan_id_NR}" \
-    '{if($1/nr>0.1) print $2,int($1/nr*100+0.5)}' |
-cat - > .DAJIN_temp/clustering/temp/tmp_"${suffix}"
+cat "${hdbscan_id}" | awk '{print $NF}' | sort | uniq -c |
+awk -v nr="${hdbscan_id_NR}" \
+'{if($1/nr>0.1) print $2,int($1/nr*100+0.5)}' \
+> .DAJIN_temp/clustering/temp/tmp_"${suffix}"
 
 per=$(awk '{sum+=$2} END{print sum}' .DAJIN_temp/clustering/temp/tmp_"${suffix}" )
-
 cat .DAJIN_temp/clustering/temp/tmp_"${suffix}" |
-    awk -v per="${per}" '{print $1, NR, int($2*100/per+0.5)}' |
-cat - > "${output_alleleper}"
+awk -v per="${per}" '{print $1, NR, int($2*100/per+0.5)}' \
+> "${output_alleleper}"
 
 # ----------------------------------------------------------
 # Extract mutation sites
 # ----------------------------------------------------------
-
+#! ISSUE: 複数のtargetに対応していない！
 minimap2 -ax map-ont \
     .DAJIN_temp/fasta_conv/target.fa \
     .DAJIN_temp/fasta_conv/wt.fa --cs 2>/dev/null |
-    grep -v "^@" |
-    awk '{print $(NF-1)}' |
-    sed -e "s/cs:Z:://g" | 
-    sed -e "s/:/ /g" |
-    sed -e "s/\([-|+|*]\)/ \1 /g" |
-    awk '{$NF=""
-        for(i=1; i<NF; i++){if($i~/[a|t|g|c]/) $i=num+length($i)}
-        print $0}' |
-    awk '{num=0
-        for(i=1; i<=NF; i++){ if($i!~/[-|+|*]/) {num=num+$i; $i=num} }
-        print $0}' |
-    sed -e "s/[-|+|*|=]/,/g" |
-    sed -e "s/ , /,/g" -e "s/ /,/g" |
-cat - > "${plot_mutsites}"
+grep -v "^@" |
+awk '{print $(NF-1)}' |
+sed -e "s/cs:Z:://g" | 
+sed -e "s/:/ /g" |
+sed -e "s/\([-|+|*]\)/ \1 /g" |
+awk '{$NF=""
+    for(i=1; i<NF; i++){if($i~/[a|t|g|c]/) $i=num+length($i)}
+    print $0}' |
+awk '{num=0
+    for(i=1; i<=NF; i++){ if($i!~/[-|+|*]/) {num=num+$i; $i=num} }
+    print $0}' |
+sed -e "s/[-|+|*|=]/,/g" |
+sed -e "s/ , /,/g" -e "s/ /,/g" \
+> "${plot_mutsites}"
+
+# ----------------------------------------------------------
+# Subtract Control from Query
+# ----------------------------------------------------------
 
 # ------------------------------------------
 # annotate Deletion(D), Knock-in(I), or Point mutation(P)
 # ------------------------------------------
 mutation_type=$(
     minimap2 -ax map-ont \
-    .DAJIN_temp/fasta/wt.fa \
     .DAJIN_temp/fasta/target.fa \
-    --cs 2>/dev/null |
+    .DAJIN_temp/fasta/wt.fa 2>/dev/null |
     grep -v "^@" |
-    awk '{
-        cstag=$(NF-1)
-        if(cstag ~ "-") print "D"
-        else if(cstag ~ "+") print "I"
-        else if(cstag ~ "*") print "P"
+    cut -f 6 |
+    awk '{if($0~"I") print "D"
+        else if($0~"D") print "I"
+        else if($0~"S") print "P"
         }'
 )
 
@@ -377,13 +365,8 @@ for cluster in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
     # 行を「リード指向」から「塩基部位指向」に変換する
     # ----------------------------------------
     awk -F "" \
-    '{ for (i=1; i<=NF; i++)  { a[NR,i] = $i } }
-    END {    
-        for(j=1; j<=NF; j++) {
-            str=a[1,j]
-            for(i=2; i<=NR; i++){ str=str""a[i,j] }
-            print str }
-    }' |
+        '{for(i=1; i<=NF; i++) array[i]=array[i]""$i}
+        END{for(key in array) print array[key]}' |
     awk -F "" '{sequence=$0
         sum[1]=gsub("=","=",sequence)
         sum[2]=gsub("M","M",sequence)
@@ -413,7 +396,7 @@ for cluster in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
     # ------------------------------------------
     # 各塩基部位にたいして「Mの頻度、Iの頻度、Dの頻度、Sの頻度、Iの個数」を表示する
     # ------------------------------------------
-    # head test |
+    # cat tmp_test |
     awk 'function abs(v) {return v < 0 ? -v : v}
         $NF==1 {
             I=abs($6-$(NF-3))
@@ -467,8 +450,8 @@ for cluster in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
         awk -v seqnum="${seq_maxnum}" '$1 <= seqnum'
     else
         cat -
-    fi |
-    cat - >> "${output_plot}"
+    fi \
+    >> "${output_plot}"
 done
 
 # ----------------------------------------------------------
