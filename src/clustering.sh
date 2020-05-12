@@ -164,6 +164,15 @@ cat "${MIDS_que}" |
             }
         print $0}' |
     # ----------------------------------------
+    # MIDS変換で末尾がDになった配列を=に変換する
+    # ----------------------------------------
+    sed -e "s/I//g" -e "s/ //g" |
+    sed "s/\(D*$\)/ \1/g" |
+    awk '{
+        for(i=1; i<=NF; i++) if($i~/^D*$/) gsub(/./, "=", $i)
+    }1' |
+    sed "s/ //g" |
+    # ----------------------------------------
     # 短い配列を"="でPaddingする
     # ----------------------------------------
     awk -v seqnum="${seq_maxnum}" \
@@ -204,6 +213,15 @@ cat "${MIDS_ref}" |
         }' |
     sed -e "s/I//g" -e "s/ //g" |
     # ----------------------------------------
+    # MIDS変換で末尾がDになった配列を=に変換する
+    # ----------------------------------------
+    sed -e "s/I//g" -e "s/ //g" |
+    sed "s/\(D*$\)/ \1/g" |
+    awk '{
+        for(i=1; i<=NF; i++) if($i~/^D*$/) gsub(/./, "=", $i)
+    }1' |
+    sed "s/ //g" |
+    # ----------------------------------------
     # 短い配列をPaddingする
     # ----------------------------------------
     awk -v seqnum="${seq_maxnum}" \
@@ -231,6 +249,8 @@ cat "${MIDS_ref}" |
                 for(i=2; i<=NR; i++){ str=str""a[i,j] }
                 print str }
         }' |
+    cat - tmp_test | #!--------------------------------
+    cat tmp_test | # head -n 740 | tail -n 5 | #!--------------------------------
     # ----------------------------------------
     # シークエンスエラーを描出する
     # ----------------------------------------
@@ -241,15 +261,17 @@ cat "${MIDS_ref}" |
         sum[4]=gsub("D","D",$0)
         sum[5]=gsub("S","S",$0)
         # ----------------------------------------
-        ### Controlにおいて変異塩基が10%を超える塩基部位をシークエンスエラーとする
+        ### Controlにおいて系統的な変異が10%を超える部位をシークエンスエラーとする
         # ----------------------------------------
-        per=10
-        if(sum[3]+sum[4]+sum[5] > NF*per/100) num = 2
+        per=20
+        if(sum[3] > NF*per/100) num = 2
+        else if(sum[4] > NF*per/100) num = 2
+        else if(sum[5] > NF*per/100) num = 2
         else num=1
         #
         print NR, "@", sum[1], sum[2], sum[3], sum[4], sum[5], "@", \
             (sum[1]+sum[2])/NF, sum[3]/NF,sum[4]/NF,sum[5]/NF, num
-    }' |
+    }' | head -n 740 | awk '$NF==2' #!--------------------
 cat - > "${output_ref_score}"
 
 # ----------------------------------------------------------
@@ -367,7 +389,7 @@ cut_start=$(cut -d "," -f 1 "${plot_mutsites}")
 del_size=$(awk -F "," '{print $2-$1}' "${plot_mutsites}")
 
 true > "${output_plot}"
-cluster=1
+cluster=3
 
 cat "${output_alleleper}" |
 cut -d " " -f 2 |
@@ -392,6 +414,7 @@ do
             for(i=2; i<=NR; i++){ str=str""a[i,j] }
             print str }
     }' |
+    head -n 740 | #! -----------------------------
     # ------------------------------------------
     # 各塩基部位において最多の変異をレポートする
     # ------------------------------------------
@@ -411,7 +434,7 @@ do
         # ------------------------------------------
         max=0; ins_num=0
         if(num==3) {
-            for(i=1; i<=NF; i++){array[$i]++}
+            for(i=1; i<=NF; i++) { if($i ~ /[0-9]|[a-z]/) array[$i]++ }
             for(key in array){if(max<array[key]) {max=array[key]; ins_num=key}} 
         }
         
@@ -419,6 +442,8 @@ do
         }' |
     #
     paste - "${output_ref_score}" |
+    head -n 740 | tail -n 5 | #! -----------------------------
+
     # ------------------------------------------
     # 各塩基部位にたいして「Mの頻度、Iの頻度、Dの頻度、Sの頻度、Iの個数」を表示する
     # ------------------------------------------
@@ -480,109 +505,6 @@ do
     cat - >> "${output_plot}"
 done
 
-# for cluster in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
-#     index=$(cat "${output_alleleper}" | sed -n "${cluster}"p | cut -d " " -f 1)
-#     #
-#     paste "${output_query_seq}" "${hdbscan_id}" |
-#     awk -v cl="${index}" '$NF==cl' |
-#     cut -f 1 |
-#     # ----------------------------------------
-#     # 行を「リード指向」から「塩基部位指向」に変換する
-#     # ----------------------------------------
-#     awk -F "" \
-#     '{ for (i=1; i<=NF; i++)  { a[NR,i] = $i } }
-#     END {    
-#         for(j=1; j<=NF; j++) {
-#             str=a[1,j]
-#             for(i=2; i<=NR; i++){ str=str""a[i,j] }
-#             print str }
-#     }' |
-#     awk -F "" '{sequence=$0
-#         sum[1]=gsub("=","=",sequence)
-#         sum[2]=gsub("M","M",sequence)
-#         sum[3]=gsub(/[1-9]|[a-z]/,"@", sequence)
-#         sum[4]=gsub("D","D",sequence)
-#         sum[5]=gsub("S","S",sequence)
-#         # ------------------------------------------
-#         # 各塩基部位において最多の変異(MIDS=)をレポートする
-#         # ------------------------------------------
-#         max=sum[1]; num=1
-#         for(i=2; i<=5;i++){if(max<sum[i]){max=sum[i]; num=i}}
-#         # print max, num # <<<<<<<<<<<<<<<<<<<<<<<<<
-#         # ------------------------------------------
-#         # Insertion数をレポートする
-#         # ------------------------------------------
-#         max=0; ins_num=0
-#         if(num==3) {
-#             for(i=1; i<=NF; i++){array[$i]++}
-#             for(key in array){if(max<array[key]) {max=array[key]; ins_num=key}} 
-#         }
-        
-#         print num, NR, ins_num, "@", (sum[1]+sum[2])/NF,sum[3]/NF,sum[4]/NF,sum[5]/NF
-#         }' |
-#     #
-#     paste - "${output_ref_score}" |
-#     # head -n 400 | tail | #! ---------------
-#     # ------------------------------------------
-#     # 各塩基部位にたいして「Mの頻度、Iの頻度、Dの頻度、Sの頻度、Iの個数」を表示する
-#     # ------------------------------------------
-#     # head test |
-#     awk 'function abs(v) {return v < 0 ? -v : v}
-#         $NF==1 {
-#             I=abs($6-$(NF-3))
-#             D=abs($7-$(NF-2))
-#             S=abs($8-$(NF-1))
-#             M=abs(1-I-D-S)
-#             print $2, M, I, D, S, $3
-#         }
-#         # Sequence error annontated as Match
-#         $NF==2 {
-#             print $2, 1, 0, 0, 0, 0
-#         }' |
-#     # ------------------------------------------
-#     # 各塩基部位にたいして「最大頻度の変異と挿入塩基数」を表示する
-#     # ------------------------------------------
-#     awk '{max=0; num=0
-#         for(i=2; i<=5;i++){if(max<$i){max=$i; num=i}}
-#         print num, $1, $NF}' |
-#     awk -v cl="${cluster}" \
-#     '{if($1==1) print $2, "M", cl, $NF
-#     else if($1==2) print $2, "M", cl, $NF
-#     else if($1==3) print $2, "I", cl, $NF
-#     else if($1==4) print $2, "D", cl, $NF
-#     else if($1==5) print $2, "S", cl, $NF}' |
-#     # ------------------------------------------
-#     # 「2cut-deletionかつアレルタイプがTarget」のとき、
-#     # 変異箇所の行番号に変異サイズを追加して、
-#     # seq_maxより長い配列をトリミングします。
-#     # ------------------------------------------
-#     if [ "${mutation_type}" = "D" ] && [ "${alleletype_original}" = "target" ] ; then    
-#         cat - |
-#         awk -v cut="${cut_start}" -v del="${del_size}" \
-#         '{if($1>cut) $1=$1+del
-#         print}' |
-#         awk -v seqnum="${seq_maxnum}" '$1 <= seqnum'
-#     else
-#         cat -
-#     fi |
-#     # ------------------------------------------
-#     # 「knock-inかつアレルタイプがTarget」かつ「KI箇所がM」のとき、
-#     # KI箇所の配列情報を”T”に置換します
-#     # ------------------------------------------
-#     if [ "${mutation_type}" = "I" ] && [ "${alleletype_original}" = "target" ] ; then    
-#         cat - |
-#         awk -v mut=$(cat "$plot_mutsites") \
-#         '{split(mut, array, ",")
-#         for(i=1; i<=length(array); i=i+2){
-#             if($1 >= array[i] && $1 <= array[i+1] && $2 == "M") $2="T"
-#             }
-#         print}' |
-#         awk -v seqnum="${seq_maxnum}" '$1 <= seqnum'
-#     else
-#         cat -
-#     fi |
-#     cat - >> "${output_plot}"
-# done
 
 # ----------------------------------------------------------
 # Plot mutation loci
@@ -681,7 +603,8 @@ cat - > ".DAJIN_temp/clustering/temp/tmp_${suffix}"
 # ----------------------------------------------------------
 # barcode, alleletype, クラスター番号, アレル頻度、変異、変異部位、ソート番号を出力する
 # ----------------------------------------------------------
-cat "$output_alleleper" | cut -d " " -f 2- |
+cat "$output_alleleper" |
+    cut -d " " -f 2- |
     sort |
     join - ".DAJIN_temp/clustering/temp/tmp_${suffix}" |
     sort -t " " -k 1,1n  -k 3,3n |
