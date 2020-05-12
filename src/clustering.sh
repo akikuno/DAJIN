@@ -22,7 +22,7 @@ error_exit() {
 # ----------------------------------------
 # Input
 # ----------------------------------------
-# barcode="barcode08"
+# barcode="barcode12"
 # alleletype="normal"
 
 # control="barcode21" # cables2
@@ -39,7 +39,7 @@ control="${2}"
 alleletype="${3}"
 alleletype_original=${3}
 suffix="${barcode}"_"${alleletype}"
-# [ "$alleletype" = "normal" ] && alleletype="wt"
+[ "$alleletype" = "normal" ] && alleletype="wt"
 [ "$alleletype" = "abnormal" ] && alleletype="wt"
 
 mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
@@ -88,22 +88,6 @@ seq_maxnum=$(
 # ==============================================================================
 # Clustering
 # ==============================================================================
-# ----------------------------------------------------------
-# MIDS conversion for Point mutation
-# ----------------------------------------------------------
-
-# find .DAJIN_temp/fasta_ont/ -type f |
-#     grep "${barcode}" |
-#     xargs -I @ ./DAJIN/src/mids_convertion_nonslip.sh @ "${alleletype}" |
-# cat - > "${MIDS_que}"
-
-# # If no control MIDS files, output... 
-# if [ ! -s "${MIDS_ref}" ]; then
-#     find .DAJIN_temp/fasta_ont/ -type f |
-#         grep "${control}" |
-#         xargs -I @ ./DAJIN/src/mids_convertion_nonslip.sh @ "${alleletype}" |
-#     cat - > "${MIDS_ref}"
-# fi
 
 # # ----------------------------------------------------------
 # # MIDS conversion
@@ -249,8 +233,6 @@ cat "${MIDS_ref}" |
                 for(i=2; i<=NR; i++){ str=str""a[i,j] }
                 print str }
         }' |
-    cat - tmp_test | #!--------------------------------
-    cat tmp_test | # head -n 740 | tail -n 5 | #!--------------------------------
     # ----------------------------------------
     # シークエンスエラーを描出する
     # ----------------------------------------
@@ -263,7 +245,7 @@ cat "${MIDS_ref}" |
         # ----------------------------------------
         ### Controlにおいて系統的な変異が10%を超える部位をシークエンスエラーとする
         # ----------------------------------------
-        per=20
+        per=10
         if(sum[3] > NF*per/100) num = 2
         else if(sum[4] > NF*per/100) num = 2
         else if(sum[5] > NF*per/100) num = 2
@@ -271,7 +253,7 @@ cat "${MIDS_ref}" |
         #
         print NR, "@", sum[1], sum[2], sum[3], sum[4], sum[5], "@", \
             (sum[1]+sum[2])/NF, sum[3]/NF,sum[4]/NF,sum[5]/NF, num
-    }' | head -n 740 | awk '$NF==2' #!--------------------
+    }' |
 cat - > "${output_ref_score}"
 
 # ----------------------------------------------------------
@@ -414,7 +396,7 @@ do
             for(i=2; i<=NR; i++){ str=str""a[i,j] }
             print str }
     }' |
-    head -n 740 | #! -----------------------------
+    # head -n 740 | #! -----------------------------
     # ------------------------------------------
     # 各塩基部位において最多の変異をレポートする
     # ------------------------------------------
@@ -442,8 +424,7 @@ do
         }' |
     #
     paste - "${output_ref_score}" |
-    head -n 740 | tail -n 5 | #! -----------------------------
-
+    #head -n 740 | tail -n 5 | #! -----------------------------
     # ------------------------------------------
     # 各塩基部位にたいして「Mの頻度、Iの頻度、Dの頻度、Sの頻度、Iの個数」を表示する
     # ------------------------------------------
@@ -653,28 +634,6 @@ do
     samtools index "${output_bamdir}/${barcode}_${alleletype_original}_${cluster}.bam"
 done
 
-
-# for i in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
-#     index=$(cat "${output_alleleper}" | sed -n "${i}"p | cut -d " " -f 1)
-#     #
-#     cat "${hdbscan_id}" | grep "${index}$" | cut -f 1 | sort \
-#     > ".DAJIN_temp/clustering/temp/tmp_id_${suffix}"
-#     #
-#     samtools view -h DAJIN_Report/bam/"${barcode}".bam |
-#     grep "^@" > ".DAJIN_temp/clustering/temp/tmp_header_${suffix}" 
-#     #
-#     samtools view DAJIN_Report/bam/"${barcode}".bam |
-#     sort |
-#     join - ".DAJIN_temp/clustering/temp/tmp_id_${suffix}" 2>/dev/null |
-#     sed "s/ /\t/g" 2>/dev/null |
-#     head -n 100 \
-#     >> ".DAJIN_temp/clustering/temp/tmp_header_${suffix}"
-#     #
-#     samtools sort ".DAJIN_temp/clustering/temp/tmp_header_${suffix}" \
-#     > "${output_bamdir}/${barcode}_${alleletype_original}_${i}.bam"
-#     samtools index "${output_bamdir}/${barcode}_${alleletype_original}_${i}.bam"
-# done
-
 # ============================================================================
 # Finish call
 # ============================================================================
@@ -684,8 +643,7 @@ sed "s/_/ /g" |
 cut -d " " -f 1,2 |
 sed "s/$/ is finished.../g"
 
-rm .DAJIN_temp/clustering/temp/*${barcode}*${alleletype}
-rm .DAJIN_temp/clustering/temp/*${control}*${alleletype}
+rm .DAJIN_temp/clustering/temp/*${suffix}*
 
 # set +eu
 # exit 0
