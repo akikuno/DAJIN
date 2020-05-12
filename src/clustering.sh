@@ -144,37 +144,36 @@ cat - > "${output_label}"
 # 挿入塩基を1つの挿入塩基数にまとめて配列のズレを無くす
 # ----------------------------------------
 cat "${MIDS_que}" |
-grep "${barcode}" |
-sort -k 1,1 |
-join -1 1 -2 2 - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-awk -v atype="${alleletype_original}" \
-'$NF==atype' |
-cut -d " " -f 2 |
-awk -F "" '{
-    for(i=1; i<=NF; i++){
-        if($i=="I") num=num+1
-        if($i=="I" && $(i+1)!="I") {
-            # -----------------------------------
-            # e.g) if num=10, num becomes "a"
-            # -----------------------------------
-            if(num>=10 && num<=35) num=sprintf("%c", num+87)
-            else if(num>=36) num="z"
-            #
-            $(i+1)=num; num=0}
-        }
-    print $0}' |
-sed -e "s/I//g" -e "s/ //g" |
-# ----------------------------------------
-# 短い配列をPaddingする
-# ----------------------------------------
-awk -v seqnum="${seq_maxnum}" \
-    'BEGIN{OFS=""}
-    { if(length($0) < seqnum){
-        seq="="
-        for(i=length($0)+1; i<=seqnum; i++) $i=seq
-        print $0}
-    }' \
-> "${output_query_seq}"
+    grep "${barcode}" |
+    sort -k 1,1 |
+    join -1 1 -2 2 - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
+    awk -v atype="${alleletype_original}" \
+    '$NF==atype' |
+    cut -d " " -f 2 |
+    awk -F "" '{
+        for(i=1; i<=NF; i++){
+            if($i=="I") num=num+1
+            if($i=="I" && $(i+1)!="I") {
+                # -----------------------------------
+                # e.g) if num=10, num becomes "a"
+                # -----------------------------------
+                if(num>=10 && num<=35) num=sprintf("%c", num+87)
+                else if(num>=36) num="z"
+                #
+                $(i+1)=num; num=0}
+            }
+        print $0}' |
+    # ----------------------------------------
+    # 短い配列を"="でPaddingする
+    # ----------------------------------------
+    awk -v seqnum="${seq_maxnum}" \
+        'BEGIN{OFS=""}
+        { if(length($0) < seqnum){
+            seq="="
+            for(i=length($0)+1; i<=seqnum; i++) $i=seq
+            print $0}
+        }' |
+cat - > "${output_query_seq}"
 
 # ----------------------------------------------------------
 # Output Genomic coodinates (Control)
@@ -183,75 +182,75 @@ awk -v seqnum="${seq_maxnum}" \
 # 挿入塩基を1つの挿入塩基数にまとめて配列のズレを無くす
 # ----------------------------------------
 cat "${MIDS_ref}" |
-grep "${control}" |
-sort -k 1,1 |
-join -1 1 -2 2 - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-awk -v alelle="$alleletype_original" '$NF==alelle' |
-cut -d " " -f 2 |
-# Insertion annotation
-awk -F "" '{
-    for(i=1; i<=NF; i++){
-        if($i=="I") num=num+1
-        if($i=="I" && $(i+1)!="I") {
-            # -----------------------------------
-            ### e.g) if num=10, num becomes "a"
-            # -----------------------------------
-            if(num>=10 && num<=35) {num=sprintf("%c", num+87)}
-            else if(num>=36) num="z"
-            ###
-            $(i+1)=num; num=0}
-        }
-    print $0
-    }' |
-sed -e "s/I//g" -e "s/ //g" |
-# ----------------------------------------
-# 短い配列をPaddingする
-# ----------------------------------------
-awk -v seqnum="${seq_maxnum}" \
-    'BEGIN{OFS=""}
-    { if(length($0) < seqnum){
-        seq="="
-        for(i=length($0)+1; i<=seqnum; i++) $i=seq
-        print $0}
-    }' |
-# ----------------------------------------
-# 行を「リード指向」から「塩基部位指向」に変換する
-# 例：
-# MMM
-# MII
-# ↓
-# MM
-# MI
-# MI
-# ----------------------------------------
-awk -F "" \
-    '{ for (i=1; i<=NF; i++)  { a[NR,i] = $i } }
-    END {    
-        for(j=1; j<=NF; j++) {
-            str=a[1,j]
-            for(i=2; i<=NR; i++){ str=str""a[i,j] }
-            print str }
-    }' |
-# ----------------------------------------
-# シークエンスエラーを描出する
-# ----------------------------------------
-awk -F "" '{
-    sum[1]=gsub("=","=",$0)
-    sum[2]=gsub("M","M",$0)
-    sum[3]=gsub(/[1-9]|[a-z]/,"@",$0)
-    sum[4]=gsub("D","D",$0)
-    sum[5]=gsub("S","S",$0)
+    grep "${control}" |
+    sort -k 1,1 |
+    join -1 1 -2 2 - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
+    awk -v alelle="$alleletype_original" '$NF==alelle' |
+    cut -d " " -f 2 |
+    # Insertion annotation
+    awk -F "" '{
+        for(i=1; i<=NF; i++){
+            if($i=="I") num=num+1
+            if($i=="I" && $(i+1)!="I") {
+                # -----------------------------------
+                ### e.g) if num=10, num becomes "a"
+                # -----------------------------------
+                if(num>=10 && num<=35) {num=sprintf("%c", num+87)}
+                else if(num>=36) num="z"
+                ###
+                $(i+1)=num; num=0}
+            }
+        print $0
+        }' |
+    sed -e "s/I//g" -e "s/ //g" |
     # ----------------------------------------
-    ### Controlにおいて変異塩基が10%を超える塩基部位をシークエンスエラーとする
+    # 短い配列をPaddingする
     # ----------------------------------------
-    per=10
-    if(sum[3]+sum[4]+sum[5] > NF*per/100) num = 2
-    else num=1
-    #
-    print NR, "@", sum[1], sum[2], sum[3], sum[4], sum[5], "@", \
-        (sum[1]+sum[2])/NF, sum[3]/NF,sum[4]/NF,sum[5]/NF, num
-}' \
-> "${output_ref_score}"
+    awk -v seqnum="${seq_maxnum}" \
+        'BEGIN{OFS=""}
+        { if(length($0) < seqnum){
+            seq="="
+            for(i=length($0)+1; i<=seqnum; i++) $i=seq
+            print $0}
+        }' |
+    # ----------------------------------------
+    # 行を「リード指向」から「塩基部位指向」に変換する
+    # 例：
+    # MMM
+    # MII
+    # ↓
+    # MM
+    # MI
+    # MI
+    # ----------------------------------------
+    awk -F "" \
+        '{ for (i=1; i<=NF; i++)  { a[NR,i] = $i } }
+        END {    
+            for(j=1; j<=NF; j++) {
+                str=a[1,j]
+                for(i=2; i<=NR; i++){ str=str""a[i,j] }
+                print str }
+        }' |
+    # ----------------------------------------
+    # シークエンスエラーを描出する
+    # ----------------------------------------
+    awk -F "" '{
+        sum[1]=gsub("=","=",$0)
+        sum[2]=gsub("M","M",$0)
+        sum[3]=gsub(/[1-9]|[a-z]/,"@",$0)
+        sum[4]=gsub("D","D",$0)
+        sum[5]=gsub("S","S",$0)
+        # ----------------------------------------
+        ### Controlにおいて変異塩基が10%を超える塩基部位をシークエンスエラーとする
+        # ----------------------------------------
+        per=10
+        if(sum[3]+sum[4]+sum[5] > NF*per/100) num = 2
+        else num=1
+        #
+        print NR, "@", sum[1], sum[2], sum[3], sum[4], sum[5], "@", \
+            (sum[1]+sum[2])/NF, sum[3]/NF,sum[4]/NF,sum[5]/NF, num
+    }' |
+cat - > "${output_ref_score}"
 
 # ----------------------------------------------------------
 # Output Genomic coodinates (Query)
@@ -298,30 +297,31 @@ cat - > "${output_query_score}"
 # ----------------------------------------------------------
 
 Rscript DAJIN/src/clustering.R \
-"${output_query_score}" "${output_label}" 2>/dev/null
+    "${output_query_score}" "${output_label}" \
+    2>/dev/null
 [ "$?" -eq 1 ] && error_exit 1 'Clustering error...'
 
 # ==============================================================================
 # Summarize and plot mutation loci
 # ==============================================================================
-
-hdbscan_id_NR=$(cat "${hdbscan_id}" | wc -l)
-
 # ----------------------------------------------------------
 # Remove minor allele (< 10%) 
 # ----------------------------------------------------------
+
 cat "${hdbscan_id}" |
     awk '{print $NF}' |
     sort |
     uniq -c |
-    awk -v nr="${hdbscan_id_NR}" \
+    awk -v nr="$(cat "${hdbscan_id}" | wc -l))" \
     '{if($1/nr>0.1) print $2,int($1/nr*100+0.5)}' |
 cat - > .DAJIN_temp/clustering/temp/tmp_"${suffix}"
 
-per=$(awk '{sum+=$2} END{print sum}' .DAJIN_temp/clustering/temp/tmp_"${suffix}" )
-
+# ----------------------------------------------------------------
+# 取り除かれたぶんの割合を調整して、合計の割合を100％とする
+# ----------------------------------------------------------------
 cat .DAJIN_temp/clustering/temp/tmp_"${suffix}" |
-    awk -v per="${per}" '{print $1, NR, int($2*100/per+0.5)}' |
+    awk -v per="$(awk '{sum+=$2} END{print sum}' .DAJIN_temp/clustering/temp/tmp_"${suffix}")" \
+    '{print $1, NR, int($2*100/per+0.5)}' |
 cat - > "${output_alleleper}"
 
 # ----------------------------------------------------------
@@ -367,8 +367,16 @@ cut_start=$(cut -d "," -f 1 "${plot_mutsites}")
 del_size=$(awk -F "," '{print $2-$1}' "${plot_mutsites}")
 
 true > "${output_plot}"
-for cluster in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
-    index=$(cat "${output_alleleper}" | sed -n "${cluster}"p | cut -d " " -f 1)
+cluster=1
+
+cat "${output_alleleper}" |
+cut -d " " -f 2 |
+sort -u |
+while read -r cluster
+do
+    index=$(cat "${output_alleleper}" |
+        sed -n "${cluster}"p |
+        cut -d " " -f 1)
     #
     paste "${output_query_seq}" "${hdbscan_id}" |
     awk -v cl="${index}" '$NF==cl' |
@@ -384,18 +392,20 @@ for cluster in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
             for(i=2; i<=NR; i++){ str=str""a[i,j] }
             print str }
     }' |
+    # ------------------------------------------
+    # 各塩基部位において最多の変異をレポートする
+    # ------------------------------------------
     awk -F "" '{sequence=$0
         sum[1]=gsub("=","=",sequence)
         sum[2]=gsub("M","M",sequence)
         sum[3]=gsub(/[1-9]|[a-z]/,"@", sequence)
         sum[4]=gsub("D","D",sequence)
         sum[5]=gsub("S","S",sequence)
-        # ------------------------------------------
-        # 各塩基部位において最多の変異(MIDS=)をレポートする
-        # ------------------------------------------
         max=sum[1]; num=1
         for(i=2; i<=5;i++){if(max<sum[i]){max=sum[i]; num=i}}
-        # print max, num # <<<<<<<<<<<<<<<<<<<<<<<<<
+
+        # print max, num
+
         # ------------------------------------------
         # Insertion数をレポートする
         # ------------------------------------------
@@ -409,7 +419,6 @@ for cluster in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
         }' |
     #
     paste - "${output_ref_score}" |
-    # head -n 400 | tail | #! ---------------
     # ------------------------------------------
     # 各塩基部位にたいして「Mの頻度、Iの頻度、Dの頻度、Sの頻度、Iの個数」を表示する
     # ------------------------------------------
@@ -471,24 +480,134 @@ for cluster in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
     cat - >> "${output_plot}"
 done
 
+# for cluster in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
+#     index=$(cat "${output_alleleper}" | sed -n "${cluster}"p | cut -d " " -f 1)
+#     #
+#     paste "${output_query_seq}" "${hdbscan_id}" |
+#     awk -v cl="${index}" '$NF==cl' |
+#     cut -f 1 |
+#     # ----------------------------------------
+#     # 行を「リード指向」から「塩基部位指向」に変換する
+#     # ----------------------------------------
+#     awk -F "" \
+#     '{ for (i=1; i<=NF; i++)  { a[NR,i] = $i } }
+#     END {    
+#         for(j=1; j<=NF; j++) {
+#             str=a[1,j]
+#             for(i=2; i<=NR; i++){ str=str""a[i,j] }
+#             print str }
+#     }' |
+#     awk -F "" '{sequence=$0
+#         sum[1]=gsub("=","=",sequence)
+#         sum[2]=gsub("M","M",sequence)
+#         sum[3]=gsub(/[1-9]|[a-z]/,"@", sequence)
+#         sum[4]=gsub("D","D",sequence)
+#         sum[5]=gsub("S","S",sequence)
+#         # ------------------------------------------
+#         # 各塩基部位において最多の変異(MIDS=)をレポートする
+#         # ------------------------------------------
+#         max=sum[1]; num=1
+#         for(i=2; i<=5;i++){if(max<sum[i]){max=sum[i]; num=i}}
+#         # print max, num # <<<<<<<<<<<<<<<<<<<<<<<<<
+#         # ------------------------------------------
+#         # Insertion数をレポートする
+#         # ------------------------------------------
+#         max=0; ins_num=0
+#         if(num==3) {
+#             for(i=1; i<=NF; i++){array[$i]++}
+#             for(key in array){if(max<array[key]) {max=array[key]; ins_num=key}} 
+#         }
+        
+#         print num, NR, ins_num, "@", (sum[1]+sum[2])/NF,sum[3]/NF,sum[4]/NF,sum[5]/NF
+#         }' |
+#     #
+#     paste - "${output_ref_score}" |
+#     # head -n 400 | tail | #! ---------------
+#     # ------------------------------------------
+#     # 各塩基部位にたいして「Mの頻度、Iの頻度、Dの頻度、Sの頻度、Iの個数」を表示する
+#     # ------------------------------------------
+#     # head test |
+#     awk 'function abs(v) {return v < 0 ? -v : v}
+#         $NF==1 {
+#             I=abs($6-$(NF-3))
+#             D=abs($7-$(NF-2))
+#             S=abs($8-$(NF-1))
+#             M=abs(1-I-D-S)
+#             print $2, M, I, D, S, $3
+#         }
+#         # Sequence error annontated as Match
+#         $NF==2 {
+#             print $2, 1, 0, 0, 0, 0
+#         }' |
+#     # ------------------------------------------
+#     # 各塩基部位にたいして「最大頻度の変異と挿入塩基数」を表示する
+#     # ------------------------------------------
+#     awk '{max=0; num=0
+#         for(i=2; i<=5;i++){if(max<$i){max=$i; num=i}}
+#         print num, $1, $NF}' |
+#     awk -v cl="${cluster}" \
+#     '{if($1==1) print $2, "M", cl, $NF
+#     else if($1==2) print $2, "M", cl, $NF
+#     else if($1==3) print $2, "I", cl, $NF
+#     else if($1==4) print $2, "D", cl, $NF
+#     else if($1==5) print $2, "S", cl, $NF}' |
+#     # ------------------------------------------
+#     # 「2cut-deletionかつアレルタイプがTarget」のとき、
+#     # 変異箇所の行番号に変異サイズを追加して、
+#     # seq_maxより長い配列をトリミングします。
+#     # ------------------------------------------
+#     if [ "${mutation_type}" = "D" ] && [ "${alleletype_original}" = "target" ] ; then    
+#         cat - |
+#         awk -v cut="${cut_start}" -v del="${del_size}" \
+#         '{if($1>cut) $1=$1+del
+#         print}' |
+#         awk -v seqnum="${seq_maxnum}" '$1 <= seqnum'
+#     else
+#         cat -
+#     fi |
+#     # ------------------------------------------
+#     # 「knock-inかつアレルタイプがTarget」かつ「KI箇所がM」のとき、
+#     # KI箇所の配列情報を”T”に置換します
+#     # ------------------------------------------
+#     if [ "${mutation_type}" = "I" ] && [ "${alleletype_original}" = "target" ] ; then    
+#         cat - |
+#         awk -v mut=$(cat "$plot_mutsites") \
+#         '{split(mut, array, ",")
+#         for(i=1; i<=length(array); i=i+2){
+#             if($1 >= array[i] && $1 <= array[i+1] && $2 == "M") $2="T"
+#             }
+#         print}' |
+#         awk -v seqnum="${seq_maxnum}" '$1 <= seqnum'
+#     else
+#         cat -
+#     fi |
+#     cat - >> "${output_plot}"
+# done
+
 # ----------------------------------------------------------
 # Plot mutation loci
 # ----------------------------------------------------------
 
 # printf "Plot mutation loci... \n"
 mkdir -p DAJIN_Report/alleletypes
-for cluster in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u)
+
+cat "${output_alleleper}" |
+cut -d " " -f 2 |
+sort -u |
+while read -r cluster 
 do
     cat "${output_plot}" |
-    awk -v cl="${cluster}" '$3==cl' \
-    > .DAJIN_temp/clustering/temp/tmp_"${suffix}"_"${cluster}"
+        awk -v cl="${cluster}" '$3==cl' |
+    cat - > .DAJIN_temp/clustering/temp/tmp_"${suffix}"_"${cluster}"
     #
     Rscript DAJIN/src/clustering_alleleplot.R \
-    .DAJIN_temp/clustering/temp/tmp_"${suffix}"_"${cluster}" "${plot_mutsites}" 2>/dev/null
+        .DAJIN_temp/clustering/temp/tmp_"${suffix}"_"${cluster}" \
+        "${plot_mutsites}" 2>/dev/null
 done
 
 # ============================================================================
 # Report allele mutation info
+# 各リードとクラスターの対応付を行う（次のSequence logo描出のために必要）
 # ============================================================================
 
 true > .DAJIN_temp/clustering/temp/tmp_id_"${suffix}"
@@ -502,72 +621,73 @@ while read -r input; do
     '$2==bf {$2=af; print}' \
     >> .DAJIN_temp/clustering/temp/tmp_id_"${suffix}"
 done
+
 cat .DAJIN_temp/clustering/temp/tmp_id_"${suffix}" |
-sed "s/ /\t/g" |
-sort \
-> "${output_id}"
+    sed "s/ /\t/g" |
+    sort |
+cat - > "${output_id}"
 
 # ============================================================================
 # Report allele mutation info
 # ============================================================================
 
 cat "${output_plot}" |
-awk '{
-    num=1
-    cl_mut[$3]=cl_mut[$3]$2
-    if($2!="M"){
-        loc[NR] = $1
-        mut[NR] = $2
-        cl[NR] = $3
-        ins[NR] = $4
-    }}
-END{
-    # ----------------------------------------------------------
-    # もし変異がなければintactと表示する
-    # ----------------------------------------------------------
-    for(j in cl_mut) {
-        if (cl_mut[j] !~/[I|D|S]/) {print j, 0,"intact"}
-    }
-    # ----------------------------------------------------------
-    # 同じ変異が5つ飛ばし以内で続いている場合は連続した変異とみなす
-    # また、挿入塩基の場合は挿入塩基数を直接表記する
-    # ----------------------------------------------------------
-    for(i in loc){
-        if(loc[i+1] - loc[i] == 1 || \
-            loc[i+2] - loc[i] == 2 || \
-            loc[i+3] - loc[i] == 3 || \
-            loc[i+4] - loc[i] == 4 || \
-            loc[i+5] - loc[i] == 5) {num++}
-        # if( for(j=1; j<=5; j++){loc[j+1]-log[j] == 1}) num++
-        else if(ins[i]>0) {print cl[i], i, ins[i]""mut[i], loc[i]}
-        else {print cl[i], i, num""mut[i], loc[i]-num; num=1}
-}}' |
-# ----------------------------------------------------------
-# 挿入塩基数が10以上の場合に数値情報に逆変換する
-# ----------------------------------------------------------
-awk '{
-    if($3 ~ /[a-z]I/) {
-        for (i=10; i<=36; i++) {
-            num=i+87
-            ins=sprintf("%c", num)
-            if($3==ins"I") $3=i"I"
+    awk '{
+        num=1
+        cl_mut[$3]=cl_mut[$3]$2
+        if($2!="M"){
+            loc[NR] = $1
+            mut[NR] = $2
+            cl[NR] = $3
+            ins[NR] = $4
+        }}
+    END{
+        # ----------------------------------------------------------
+        # もし変異がなければintactと表示する
+        # ----------------------------------------------------------
+        for(j in cl_mut) {
+            if (cl_mut[j] !~/[I|D|S]/) {print j, 0,"intact"}
         }
-    }
-    print $0}' |
-sed "s/35I/>35I/g" |
-sort -t " " -k 1,1 -k 2,2n \
-> ".DAJIN_temp/clustering/temp/tmp_${suffix}"
+        # ----------------------------------------------------------
+        # 同じ変異が5つ飛ばし以内で続いている場合は連続した変異とみなす
+        # また、挿入塩基の場合は挿入塩基数を直接表記する
+        # ----------------------------------------------------------
+        for(i in loc){
+            if(loc[i+1] - loc[i] == 1 || \
+                loc[i+2] - loc[i] == 2 || \
+                loc[i+3] - loc[i] == 3 || \
+                loc[i+4] - loc[i] == 4 || \
+                loc[i+5] - loc[i] == 5) {num++}
+            # if( for(j=1; j<=5; j++){loc[j+1]-log[j] == 1}) num++
+            else if(ins[i]>0) {print cl[i], i, ins[i]""mut[i], loc[i]}
+            else {print cl[i], i, num""mut[i], loc[i]-num; num=1}
+    }}' |
+    # ----------------------------------------------------------
+    # 挿入塩基数が10以上の場合に数値情報に逆変換する
+    # ----------------------------------------------------------
+    awk '{
+        if($3 ~ /[a-z]I/) {
+            for (i=10; i<=36; i++) {
+                num=i+87
+                ins=sprintf("%c", num)
+                if($3==ins"I") $3=i"I"
+            }
+        }
+        print $0}' |
+    sed "s/35I/>35I/g" |
+    sort -t " " -k 1,1 -k 2,2n |
+cat - > ".DAJIN_temp/clustering/temp/tmp_${suffix}"
 
 # ----------------------------------------------------------
 # barcode, alleletype, クラスター番号, アレル頻度、変異、変異部位、ソート番号を出力する
 # ----------------------------------------------------------
 cat "$output_alleleper" | cut -d " " -f 2- |
-sort |
-join - ".DAJIN_temp/clustering/temp/tmp_${suffix}" |
-sort -t " " -k 1,1n  -k 3,3n |
-awk '{print $1,$2,$4,$5, NR}' |
-sed "s/^/${barcode} ${alleletype_original} /g" \
-> "${output_result}"
+    sort |
+    join - ".DAJIN_temp/clustering/temp/tmp_${suffix}" |
+    sort -t " " -k 1,1n  -k 3,3n |
+    awk '{print $1,$2,$4,$5, NR}' |
+    sed "s/^/${barcode} ${alleletype_original} /g" |
+cat - > "${output_result}"
 
 
 # ============================================================================
@@ -580,26 +700,57 @@ set +e
 rm ${output_bamdir}/${barcode}_${alleletype_original}* 2>/dev/null
 set -e
 
-for i in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
-    index=$(cat "${output_alleleper}" | sed -n "${i}"p | cut -d " " -f 1)
+cat "${output_alleleper}" |
+cut -d " " -f 2 |
+sort -u |
+while read -r cluster
+do
+    index=$(cat "${output_alleleper}" |
+        sed -n "${cluster}"p |
+        cut -d " " -f 1)
     #
-    cat "${hdbscan_id}" | grep "${index}$" | cut -f 1 | sort \
-    > ".DAJIN_temp/clustering/temp/tmp_id_${suffix}"
+    cat "${hdbscan_id}" |
+        grep "${index}$" |
+        cut -f 1 |
+        sort |
+    cat - > ".DAJIN_temp/clustering/temp/tmp_id_${suffix}"
     #
-    samtools view -h DAJIN_Report/bam/"${barcode}".bam |
-    grep "^@" > ".DAJIN_temp/clustering/temp/tmp_header_${suffix}" 
+    samtools view -H DAJIN_Report/bam/"${barcode}".bam |
+    cat - > ".DAJIN_temp/clustering/temp/tmp_header_${suffix}" 
     #
     samtools view DAJIN_Report/bam/"${barcode}".bam |
-    sort |
-    join - ".DAJIN_temp/clustering/temp/tmp_id_${suffix}" 2>/dev/null |
-    sed "s/ /\t/g" 2>/dev/null |
-    head -n 100 \
-    >> ".DAJIN_temp/clustering/temp/tmp_header_${suffix}"
+        sort |
+        join - ".DAJIN_temp/clustering/temp/tmp_id_${suffix}" 2>/dev/null |
+        sed "s/ /\t/g" 2>/dev/null |
+        head -n 100 |
+    cat - >> ".DAJIN_temp/clustering/temp/tmp_header_${suffix}"
     #
-    samtools sort ".DAJIN_temp/clustering/temp/tmp_header_${suffix}" \
-    > "${output_bamdir}/${barcode}_${alleletype_original}_${i}.bam"
-    samtools index "${output_bamdir}/${barcode}_${alleletype_original}_${i}.bam"
+    samtools sort ".DAJIN_temp/clustering/temp/tmp_header_${suffix}" |
+    cat - > "${output_bamdir}/${barcode}_${alleletype_original}_${cluster}.bam"
+    samtools index "${output_bamdir}/${barcode}_${alleletype_original}_${cluster}.bam"
 done
+
+
+# for i in $(cat "${output_alleleper}" | cut -d " " -f 2 | sort -u); do
+#     index=$(cat "${output_alleleper}" | sed -n "${i}"p | cut -d " " -f 1)
+#     #
+#     cat "${hdbscan_id}" | grep "${index}$" | cut -f 1 | sort \
+#     > ".DAJIN_temp/clustering/temp/tmp_id_${suffix}"
+#     #
+#     samtools view -h DAJIN_Report/bam/"${barcode}".bam |
+#     grep "^@" > ".DAJIN_temp/clustering/temp/tmp_header_${suffix}" 
+#     #
+#     samtools view DAJIN_Report/bam/"${barcode}".bam |
+#     sort |
+#     join - ".DAJIN_temp/clustering/temp/tmp_id_${suffix}" 2>/dev/null |
+#     sed "s/ /\t/g" 2>/dev/null |
+#     head -n 100 \
+#     >> ".DAJIN_temp/clustering/temp/tmp_header_${suffix}"
+#     #
+#     samtools sort ".DAJIN_temp/clustering/temp/tmp_header_${suffix}" \
+#     > "${output_bamdir}/${barcode}_${alleletype_original}_${i}.bam"
+#     samtools index "${output_bamdir}/${barcode}_${alleletype_original}_${i}.bam"
+# done
 
 # ============================================================================
 # Finish call
