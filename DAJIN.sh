@@ -15,7 +15,7 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # ============================================================================
 VERSION=1.0
 
-usuage(){
+usage(){
 cat <<- USAGE 1>&2
 Usage     : ./DAJIN.sh -f [text file](described at "Input")
 
@@ -40,8 +40,8 @@ Input     : Input file should be formatted as below:
 USAGE
 }
 
-usuage_and_exit(){
-    usuage
+usage_and_exit(){
+    usage
     exit "$1"
 }
 
@@ -58,13 +58,13 @@ error_exit() {
 # ============================================================================
 # Parse arguments
 # ============================================================================
-[ $# -eq 0 ] && usuage_and_exit 1
+[ $# -eq 0 ] && usage_and_exit 1
 
 while [ $# -gt 0 ]
 do
     case "$1" in
         --help | --hel | --he | --h | '--?' | -help | -hel | -he | -h | '-?')
-            usuage_and_exit 0
+            usage_and_exit 0
             ;;
         --version | --versio | --versi | --vers | --ver | --ve | --v | \
         -version | -versio | -versi | -vers | -ver | -ve | -v )
