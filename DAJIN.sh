@@ -101,13 +101,13 @@ then
     error_exit 1 "FASTA requires including \">target\" and \">wt\". "
 fi
 
-[ -d "$ont_dir" ] ||
-error_exit 1 "No such directory"
+[ -f "$fasta" ] || error_exit 1 "No such file"
+[ -d "$ont_dir" ] || error_exit 1 "No such directory"
 
 set -e
 
 # ============================================================================
-# Allocate threads
+# Define threads
 # ============================================================================
 
 set +u
@@ -125,6 +125,7 @@ set -u
 # ============================================================================
 # Required software
 # ============================================================================
+
 set +e
 
 type python 1>/dev/null 2>/dev/null || error_exit 1 'Command "python" not found'
