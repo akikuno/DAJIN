@@ -172,13 +172,15 @@ fasta_LF=".DAJIN_temp/fasta/fasta.fa"
 
 # Separate multiple-FASTA into FASTA files
 cat ${fasta_LF} |
-sed "s/^/@/g" |
-tr -d "\n" |
-sed -e "s/@>/\n>/g" -e "s/$/\n/g" |
-grep -v "^$" |
+    sed "s/^/@/g" |
+    tr -d "\n" |
+    sed -e "s/@>/\n>/g" -e "s/$/\n/g" |
+    grep -v "^$" |
 while read -r input; do
     output=$(echo "${input}" |
-    sed -e "s/@.*//g" -e "s#>#.DAJIN_temp/fasta/#g" -e "s/$/.fa/g")
+    sed -e "s/@.*//g" \
+        -e "s#>#.DAJIN_temp/fasta/#g" \
+        -e "s/$/.fa/g")
     #
     echo "${input}" |
         sed "s/@/\n/g" |
@@ -213,10 +215,10 @@ fi
 
 # 別々のFASTAファイルとして保存する
 cat "${fasta_LF}" |
-sed "s/^/@/g" |
-tr -d "\n" |
-sed -e "s/@>/\n>/g" -e "s/$/\n/g" |
-grep -v "^$" |
+    sed "s/^/@/g" |
+    tr -d "\n" |
+    sed -e "s/@>/\n>/g" -e "s/$/\n/g" |
+    grep -v "^$" |
 while read -r input; do
     output=$(
         echo "${input}" |
