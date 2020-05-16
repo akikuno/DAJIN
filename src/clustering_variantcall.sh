@@ -39,10 +39,10 @@ mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
 
 # Output Plot
 hdbscan_id=".DAJIN_temp/clustering/temp/hdbscan_${suffix}"
-output_plot=".DAJIN_temp/clustering/temp/plot_${suffix}"
+plot_mutation=".DAJIN_temp/clustering/temp/plot_${suffix}"
 
 # allele percentage on each cluster
-output_alleleper=".DAJIN_temp/clustering/temp/allele_percentage_${suffix}".txt
+allepe_percentage=".DAJIN_temp/clustering/temp/allele_percentage_${suffix}".txt
 
 # ----------------------------------------------------------
 # Output results
@@ -54,7 +54,7 @@ output_result=".DAJIN_temp/clustering/result_allele_mutinfo_${suffix}".txt
 # Report allele mutation info
 # ============================================================================
 
-cat "${output_plot}" |
+cat "${plot_mutation}" |
     awk '{
         num=1
         cl_mut[$3]=cl_mut[$3]$2
@@ -104,7 +104,7 @@ cat - > ".DAJIN_temp/clustering/temp/tmp_${suffix}"
 # ----------------------------------------------------------
 # barcode, alleletype, クラスター番号, アレル頻度、変異、変異部位、ソート番号を出力する
 # ----------------------------------------------------------
-cat "$output_alleleper" |
+cat "$allepe_percentage" |
     cut -d " " -f 2- |
     sort |
     join - ".DAJIN_temp/clustering/temp/tmp_${suffix}" |
@@ -121,7 +121,7 @@ cat - > "${output_result}"
 # ============================================================================
 
 true > .DAJIN_temp/clustering/temp/tmp_id_"${suffix}"
-cat "${output_alleleper}" |
+cat "${allepe_percentage}" |
 while read -r input; do
     before=$(echo "$input" | cut -d " " -f 1)
     after=$(echo "$input" | cut -d " " -f 2)
@@ -219,9 +219,9 @@ do
         fi 
 done
 
-mutation_type=$(cut -d " " -f 1 tmp_mutation_)
-mutation_site=$(cut -d " " -f 2 tmp_mutation_)
-mutation_nuc=$(cut -d " " -f 3 tmp_mutation_)
+mutation_type=$(cut -d " " -f 1 tmp_mutation_ | xargs echo)
+mutation_site=$(cut -d " " -f 2 tmp_mutation_ | xargs echo)
+mutation_nuc=$(cut -d " " -f 3 tmp_mutation_ | xargs echo)
 
 
 cat << EOF > test.html
@@ -258,6 +258,79 @@ p {
 <p>
 EOF
 
+# =================================
+# 指定の場所に指定の塩基を挿入します
+# 入力：AAAAAA
+# 出力：AttAAAAcccA
+# =================================
+
+# ---------------------------------
+# 入力の作製
+# ---------------------------------
+cat << EOF > sequence.txt
+AAAAAA
+EOF
+
+cat << EOF > insert.txt
+1 tt
+5 ccc
+EOF
+
+# ---------------------------------
+# 挿入塩基の出力
+# ---------------------------------
+loc=$(cat insert.txt | cut -d " " -f 1 | xargs echo) # xargs echoで1行にする
+ins=$(cat insert.txt | cut -d " " -f 2 | xargs echo) # xargs echoで1行にする
+
+cat sequence.txt |
+    awk -F "" -v loc="$loc" -v ins="$ins" \
+    'BEGIN{
+        split(loc, loc_, " ") # シェル変数を連想配列にする
+        split(ins, ins_, " ")
+    }
+    {for(i in loc_) $loc_[i]=$loc_[i]""ins_[i] }1' |
+    sed "s/ //g" |
+cat - > sequence_ins.txt
+
+cat sequence_ins.txt
+
+
+cat insert |
+while read -r input; do
+    loc=$(echo  $input | cut -d " " -f 1)
+    ins=$(echo  $input | cut -d " " -f 2)
+    cat test.txt |
+    awk -F "" -v loc="$loc" -v ins="$ins" \
+    '{$loc=$loc""ins; print $0}' |
+    sed "s/ //g"
+done
+
+var=$(cat insert | xargs echo)
+awk -v var="$var" \
+'BEGIN{
+    split(var, var_array, " ")
+    for(i in var_array){
+        gsub("g","G",var_array[i])
+        print var_array[i]
+    }
+}'
+
+
+cat test.txt |
+while read -r input; do
+    echo "$input" | sed "s/g/G/g"
+done
+
+var=$(cat test.txt | xargs echo)
+awk -v var="$var" \
+'BEGIN{
+    split(var, var_array, " ")
+    for(i in var_array){
+        gsub("g","G",var_array[i])
+        print var_array[i]
+    }
+}'
+
 hoge="hoge fuga"
 awk -F "" \
 -v type="${hoge}" -v site="${mutation_site}" -v nuc="${mutation_nuc}" '
@@ -267,9 +340,16 @@ BEGIN{
 '
 
 awk -F "" \
--v type="${mutation_type}" -v site="${mutation_site}" -v nuc="${mutation_nuc}" '
-BEGIN{print "hoge"type[2]}
-'
+-v type="${mutation_type}" -v site="${mutation_site}" -v nuc="${mutation_nuc}" \
+'BEGIN{
+    split(type, type_a, " ")
+    split(site, site_a, " ")
+    split(nuc, nuc_a, " ")
+    for(i in type_a){
+        print type_a[i], site_a[i]
+    }
+}'
+
 cat .DAJIN_temp/fasta/wt.fa |
 sed 1d |
 awk -F "" \
@@ -288,7 +368,6 @@ cat << EOF >> test.html
 </html>
 EOF
 
-pandoc test.html -o test.docx
 
 while read -r input
 do
