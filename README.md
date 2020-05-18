@@ -1,3 +1,4 @@
+
 <p align="center">
 <img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/DAJIN-logo.png" width="90%">  
 </p>
