@@ -1,3 +1,7 @@
+<p align="center">
+<img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/DAJIN-logo.png" width="90%">  
+</p>
+
 [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
 
 [日本語はこちら](https://github.com/akikuno/DAJIN/blob/master/misc/README_JP.md)
