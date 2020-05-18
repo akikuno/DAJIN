@@ -63,12 +63,6 @@ mutation_sites=.DAJIN_temp/clustering/temp/tmp_mutation_"${suffix}"
 output_alleleper=".DAJIN_temp/clustering/temp/allele_percentage_${suffix}".txt
 
 # ----------------------------------------------------------
-# Output results
-# ----------------------------------------------------------
-output_id=".DAJIN_temp/clustering/result_allele_id_${suffix}".txt
-output_result=".DAJIN_temp/clustering/result_allele_mutinfo_${suffix}".txt
-
-# ----------------------------------------------------------
 # Get max sequence length
 # ----------------------------------------------------------
 seq_maxnum=$(

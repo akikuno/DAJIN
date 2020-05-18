@@ -25,8 +25,9 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # [ "$alleletype" = "abnormal" ] && alleletype="wt"
 
 barcode="${1}"
+control="${2}"
 alleletype="${3}"
-alleletype_original=${3}
+alleletype_original="${3}"
 suffix="${barcode}"_"${alleletype}"
 [ "$alleletype" = "normal" ] && alleletype="wt"
 [ "$alleletype" = "abnormal" ] && alleletype="wt"
@@ -120,19 +121,32 @@ cat - > "${output_result}"
 #（次のVCF作製とSequence logo描出のために必要）
 # ============================================================================
 
-true > .DAJIN_temp/clustering/temp/tmp_id_"${suffix}"
-cat "${allepe_percentage}" |
-while read -r input; do
-    before=$(echo "$input" | cut -d " " -f 1)
-    after=$(echo "$input" | cut -d " " -f 2)
-    #
-    cat "${hdbscan_id}" |
-    awk -v bf="${before}" -v af="${after}" \
-    '$2==bf {$2=af; print}' \
-    >> .DAJIN_temp/clustering/temp/tmp_id_"${suffix}"
-done
+# true > .DAJIN_temp/clustering/temp/tmp_id_"${suffix}"
+# cat "${allepe_percentage}" |
+# while read -r input
+# do
+#     before=$(echo "$input" | cut -d " " -f 1)
+#     after=$(echo "$input" | cut -d " " -f 2)
+#     #
+#     cat "${hdbscan_id}" |
+#     awk -v bf="${before}" -v af="${after}" \
+#     '$2==bf {$2=af; print}' \
+#     >> .DAJIN_temp/clustering/temp/tmp_id_"${suffix}"
+# done
 
-cat .DAJIN_temp/clustering/temp/tmp_id_"${suffix}" |
+# cat .DAJIN_temp/clustering/temp/tmp_id_"${suffix}" |
+#     sed "s/ /\t/g" |
+#     sort |
+# cat - > "${output_id}"
+
+
+before=$(cat "${allepe_percentage}" | cut -d " " -f 1 | xargs echo)
+after=$(cat "${allepe_percentage}" | cut -d " " -f 2 | xargs echo)
+
+cat "${hdbscan_id}" |
+    awk -v bf="${before}" -v af="${after}" \
+    'BEGIN{split(bf,bf_," "); split(af,af_," ")}
+    {for(i in bf_){ if($2==bf_[i]) $2=af_[i] }}1' |
     sed "s/ /\t/g" |
     sort |
 cat - > "${output_id}"
@@ -141,19 +155,29 @@ cat - > "${output_id}"
 # 変異情報の同定
 # Variant call
 # ============================================================================
+ref=.DAJIN_temp/fasta/wt.fa
+cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
+    minimap2 -ax map-ont "${ref}" - --cs=long 2>/dev/null |
+    sort |
+cat - > tmp_sam
+
 cat "${output_id}" |
     grep "${cluster}$" |
     cut -f 1 |
     sort -u |
-cat - > .DAJIN_temp/clustering/temp/tmp_sorted_id_"${suffix}"_"${cluster}"
-
-ref=.DAJIN_temp/fasta/wt.fa
-cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
-minimap2 -ax map-ont "${ref}" - --cs=long 2>/dev/null |
-    sort |
-    join - .DAJIN_temp/clustering/temp/tmp_sorted_id_"${suffix}"_"${cluster}" |
+    join tmp_sam - |
     awk '{print $4, $(NF-1)}' |
 cat - > tmp_test
+
+# cat - > .DAJIN_temp/clustering/temp/tmp_sorted_id_"${suffix}"_"${cluster}"
+
+# ref=.DAJIN_temp/fasta/wt.fa
+# cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
+#     minimap2 -ax map-ont "${ref}" - --cs=long 2>/dev/null |
+#     sort |
+#     join - .DAJIN_temp/clustering/temp/tmp_sorted_id_"${suffix}"_"${cluster}" |
+#     awk '{print $4, $(NF-1)}' |
+# cat - > tmp_test
 
 true > tmp_mutation_
 cluster=2
