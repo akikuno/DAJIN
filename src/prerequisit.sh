@@ -1,20 +1,9 @@
-#!/bin/sh
-# ============================================================================
-# Initialize shell environment
-# ============================================================================
-
-set -eu
-umask 0022
-export LC_ALL=C
-type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
-export UNIX_STD=2003  # to make HP-UX conform to POSIX
-
 # ============================================================================
 # Define the functions for printing usage and error message
 # ============================================================================
 VERSION=1.0
 
-usuage(){
+usage(){
 cat <<- USAGE 1>&2
 Usage     : ./DAJIN.sh -f [text file](described at "Input")
 
@@ -39,8 +28,8 @@ Input     : Input file should be formatted as below:
 USAGE
 }
 
-usuage_and_exit(){
-    usuage
+usage_and_exit(){
+    usage
     exit "$1"
 }
 
@@ -57,13 +46,13 @@ error_exit() {
 # ============================================================================
 # Parse arguments
 # ============================================================================
-[ $# -eq 0 ] && usuage_and_exit 1
+[ $# -eq 0 ] && usage_and_exit 1
 
 while [ $# -gt 0 ]
 do
     case "$1" in
         --help | --hel | --he | --h | '--?' | -help | -hel | -he | -h | '-?')
-            usuage_and_exit 0
+            usage_and_exit 0
             ;;
         --version | --versio | --versi | --vers | --ver | --ve | --v | \
         -version | -versio | -versi | -vers | -ver | -ve | -v )
@@ -92,21 +81,21 @@ set +e
 
 if [ -z "$fasta" ] || [ -z "$ont_dir" ] || [ -z "$ont_cont" ] || [ -z "$genome" ] || [ -z "$grna" ]
 then
-    error_exit 1 "Required arguments are not specified: See ./DAJIN.sh -h"
+    error_exit 1 "Required arguments are not specified"
 fi
 
 if [ "$(grep -c '>target' ${fasta})" -eq 0 ] || [ "$(grep -c '>wt' ${fasta})" -eq 0 ]
 then
-    error_exit 1 "FASTA requires including \">target\" and \">wt\". See ./DAJIN.sh -h"
+    error_exit 1 "FASTA requires including \">target\" and \">wt\". "
 fi
 
-[ -d "$ont_dir" ] ||
-error_exit 1 "No such directory: See ./DAJIN.sh -h"
+[ -f "$fasta" ] || error_exit 1 "No such file"
+[ -d "$ont_dir" ] || error_exit 1 "No such directory"
 
 set -e
 
 # ============================================================================
-# Allocate threads
+# Define threads
 # ============================================================================
 
 set +u
@@ -124,6 +113,7 @@ set -u
 # ============================================================================
 # Required software
 # ============================================================================
+
 set +e
 
 type python 1>/dev/null 2>/dev/null || error_exit 1 'Command "python" not found'

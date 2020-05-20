@@ -16,7 +16,7 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 VERSION=1.0
 
 usage(){
-cat <<- USAGE 1>&2
+cat <<- USAGE
 Usage     : ./DAJIN.sh -f [text file](described at "Input")
 
 Example   : ./DAJIN.sh -f DAJIN/example/example.txt
@@ -24,63 +24,60 @@ Example   : ./DAJIN.sh -f DAJIN/example/example.txt
 Input     : Input file should be formatted as below:
             # Example
             ------
-            design=DAJIN/example/input.txt
-            sequence=DAJIN/example/demultiplex
-            control=barcode21
+            design=DAJIN/example/design.txt
+            input_dir=DAJIN/example/demultiplex
+            control=barcode03
             genome=mm10
-            grna=CCCTGCGGCCAGCTTTCAGGCAG
+            grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
+            output=Cables2
             threads=10
             ------
             - desing: a multi-FASTA file contains sequences of each genotype. ">wt" and ">target" must be included. 
-            - sequence: a directory contains FASTA or FASTQ files of long-read sequencing
+            - input_dir: a directory contains FASTA or FASTQ files of long-read sequencing
             - control: control barcode ID
             - genome: reference genome. e.g. mm10, hg38
-            - grna: gRNA sequence(s). multiple gRNA sequences must be deliminated by comma. e.g. CCCTGCGGCCAGCTTTCAGGCAG,CCCTGCGGCCAGCTTTCAGGCAG
+            - grna: gRNA sequence(s). multiple gRNA sequences must be deliminated by comma.
+            - output: output directory name. optional. default is DAJIN_results
             - threads: optional. default is two-thirds of available CPU threads.
 USAGE
 }
 
 usage_and_exit(){
     usage
-    exit "$1"
-}
-
-error(){
-    echo "$@" 1>&2
-    usage_and_exit 1
 }
 
 error_exit() {
-  ${2+:} false && echo "${0##*/}: $2" 1>&2
-  exit $1
+  echo "$@" 1>&2
 }
 
 # ============================================================================
 # Parse arguments
 # ============================================================================
-[ $# -eq 0 ] && usage_and_exit 1
+[ $# -eq 0 ] && usage_and_exit && return 1
 
 while [ $# -gt 0 ]
 do
     case "$1" in
         --help | --hel | --he | --h | '--?' | -help | -hel | -he | -h | '-?')
-            usage_and_exit 0
+            usage_and_exit && return 0
             ;;
         --version | --versio | --versi | --vers | --ver | --ve | --v | \
         -version | -versio | -versi | -vers | -ver | -ve | -v )
-            echo "DAJIN version: $VERSION"
-            exit 0
+            echo "DAJIN version: $VERSION" && return 0
             ;;
         --file | -f )
-            fasta=$(cat "$2" | grep "design" | sed -e "s/ //g" -e "s/.*=//g")
-            ont_dir=$(cat "$2" | grep "sequence" | sed -e "s/ //g" -e "s/.*=//g")
+            if [ -z "$2" ]; then
+                error_exit "Required arguments are not specified"; return 1
+            fi
+            design=$(cat "$2" | grep "design" | sed -e "s/ //g" -e "s/.*=//g")
+            ont_dir=$(cat "$2" | grep "input_dir" | sed -e "s/ //g" -e "s/.*=//g")
             ont_cont=$(cat "$2" | grep "control" | sed -e "s/ //g" -e "s/.*=//g")
             genome=$(cat "$2" | grep "genome" | sed -e "s/ //g" -e "s/.*=//g")
             grna=$(cat "$2" | grep "grna" | sed -e "s/ //g" -e "s/.*=//g")
             threads=$(cat "$2" | grep "threads" | sed -e "s/ //g" -e "s/.*=//g")
             ;;
         -* )
-        error "Unrecognized option : $1"
+        error_exit "Unrecognized option : $1" && return 1
             ;;
         *)
             break
@@ -89,53 +86,91 @@ do
     shift
 done
 
-set +e
 
-if [ -z "$fasta" ] || [ -z "$ont_dir" ] || [ -z "$ont_cont" ] || [ -z "$genome" ] || [ -z "$grna" ]
+if [ -z "$design" ] || [ -z "$ont_dir" ] || [ -z "$ont_cont" ] || [ -z "$genome" ] || [ -z "$grna" ]
 then
-    error_exit 1 "Required arguments are not specified"
+    error_exit "Required arguments are not specified" && return 1
 fi
 
-if [ "$(grep -c '>target' ${fasta})" -eq 0 ] || [ "$(grep -c '>wt' ${fasta})" -eq 0 ]
-then
-    error_exit 1 "FASTA requires including \">target\" and \">wt\". "
+# ----------------------------------------------------------------
+# Check fasta file
+# ----------------------------------------------------------------
+if ! [ -e "$design" ]; then
+    error_exit "$design: No such file" && return 1
 fi
 
-[ -f "$fasta" ] || error_exit 1 "No such file"
-[ -d "$ont_dir" ] || error_exit 1 "No such directory"
+if [ "$(grep -c '>target' ${design})" -eq 0 ] || [ "$(grep -c '>wt' ${design})" -eq 0 ]
+then
+    error_exit "$design: design must include \">target\" and \">wt\". " && return 1
+fi
 
-set -e
+# ----------------------------------------------------------------
+# Check directory
+# ----------------------------------------------------------------
+if ! [ -d "$ont_dir" ]; then
+    error_exit "$ont_dir: No such directory" && return 1
+fi
+
+# ----------------------------------------------------------------
+# Check control
+# ----------------------------------------------------------------
+
+# ----------------------------------------------------------------
+# Check genome
+# ----------------------------------------------------------------
+
+genome_check=$(
+    wget -qO - "https://gggenome.dbcls.jp/ja/help.html#db_list" |
+    grep "href" |
+    grep -c "/${genome:-XXX}/")
+
+if [ "$genome_check" -eq 0 ]; then
+    error_exit "$genome: No such reference genome" && return 1
+fi
+# ----------------------------------------------------------------
+# Check grna
+# ----------------------------------------------------------------
+
 
 # ============================================================================
 # Define threads
 # ============================================================================
 
-set +u
-# Linux and similar...
-[ -z "$threads" ] && threads=$(getconf _NPROCESSORS_ONLN 2>/dev/null | awk '{print int($0/1.5+0.5)}')
-# FreeBSD and similar...
-[ -z "$threads" ] && threads=$(getconf NPROCESSORS_ONLN | awk '{print int($0/1.5)+0.5}')
-# Solaris and similar...
-[ -z "$threads" ] && threads=$(ksh93 -c 'getconf NPROCESSORS_ONLN' | awk '{print int($0/1.5+0.5)}')
-# Give up...
-[ -z "$threads" ] && threads=1
-set -u
+expr "$threads" + 1 >/dev/null 2>&1
+if [ $? -lt 2 ]
+then
+    :
+else
+    unset threads
+    # Linux and similar...
+    threads=$(getconf _NPROCESSORS_ONLN 2>/dev/null | awk '{print int($0/1.5+0.5)}')
+    # FreeBSD and similar...
+    [ -z "$threads" ] && threads=$(getconf NPROCESSORS_ONLN | awk '{print int($0/1.5)+0.5}')
+    # Solaris and similar...
+    [ -z "$threads" ] && threads=$(ksh93 -c 'getconf NPROCESSORS_ONLN' | awk '{print int($0/1.5+0.5)}')
+    # Give up...
+    [ -z "$threads" ] && threads=1
+fi
 
 
 # ============================================================================
 # Required software
 # ============================================================================
 
-set +e
+type python 1>/dev/null 2>/dev/null
+if [ "$?" -gt 0 ]; then error_exit 'Command "python" not found'; return 1; fi
 
-type python 1>/dev/null 2>/dev/null || error_exit 1 'Command "python" not found'
-type samtools 1>/dev/null 2>/dev/null || error_exit 1 'Command "samtools" not found'
-type minimap2 1>/dev/null 2>/dev/null || error_exit 1 'Command "minimap2" not found'
-type gzip 1>/dev/null 2>/dev/null || error_exit 1 'Command "gzip" not found'
+type samtools 1>/dev/null 2>/dev/null
+if [ "$?" -gt 0 ]; then error_exit 'Command "samtools" not found'; return 1; fi
 
-python -c "import tensorflow as tf" \
-1>/dev/null 2>/dev/null ||  error_exit 1 '"Tensorflow" not found'
-set -e
+type minimap2 1>/dev/null 2>/dev/null
+if [ "$?" -gt 0 ]; then error_exit 'Command "minimap2" not found'; return 1; fi
+
+type gzip 1>/dev/null 2>/dev/null
+if [ "$?" -gt 0 ]; then error_exit 'Command "gzip" not found'; return 1; fi
+
+python -c "import tensorflow as tf" 1>/dev/null 2>/dev/null
+if [ "$?" -gt 0 ]; then error_exit '"Tensorflow" not found'; return 1; fi
 
 # ============================================================================
 # For WSL (Windows Subsystem for Linux)
@@ -146,32 +181,31 @@ grep Microsoft 1>/dev/null 2>/dev/null &&
 alias python="python.exe"
 
 # ============================================================================
-# Setting Directory
+# Make temporal directory
 # ============================================================================
+
 rm -rf ".DAJIN_temp" 2>/dev/null
 dirs="fasta fasta_conv fasta_ont NanoSim data \
-    results/svg results/png results/igvjs \
     clustering/temp seqlogo/temp"
 
-echo "$dirs" | sed "s/ /\n/g" |
-while read -r dir; do
-    mkdir -p ".DAJIN_temp/$dir"
-done
+echo "${dirs}" |
+sed "s:^:.DAJIN_temp/:g" |
+sed "s: : .DAJIN_temp/:g" |
+xargs mkdir -p
 
-# mkdir -p DAJIN_results/bam 
 # ============================================================================
 # Format FASTA file
 # ============================================================================
 
 # CRLF to LF
-cat "${fasta}" |
+cat "${design}" |
     tr -d "\r" |
     grep -v "^$" |
 cat - > .DAJIN_temp/fasta/fasta.fa
 fasta_LF=".DAJIN_temp/fasta/fasta.fa"
 
 # Separate multiple-FASTA into FASTA files
-cat ${fasta_LF} |
+cat ${design_LF} |
     sed "s/^/@/g" |
     tr -d "\n" |
     sed -e "s/@>/\n>/g" -e "s/$/\n/g" |
@@ -208,13 +242,13 @@ convert_revcomp=$(
     )
 
 if [ "$convert_revcomp" -eq 1 ] ; then
-    ./DAJIN/src/revcomp.sh "${fasta_LF}" \
+    ./DAJIN/src/revcomp.sh "${design_LF}" \
     > .DAJIN_temp/fasta/fasta_revcomp.fa &&
     fasta_LF=".DAJIN_temp/fasta/fasta_revcomp.fa"
 fi
 
 # 別々のFASTAファイルとして保存する
-cat "${fasta_LF}" |
+cat "${design_LF}" |
     sed "s/^/@/g" |
     tr -d "\n" |
     sed -e "s/@>/\n>/g" -e "s/$/\n/g" |
