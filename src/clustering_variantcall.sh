@@ -145,8 +145,13 @@ after=$(cat "${allepe_percentage}" | cut -d " " -f 2 | xargs echo)
 
 cat "${hdbscan_id}" |
     awk -v bf="${before}" -v af="${after}" \
-    'BEGIN{split(bf,bf_," "); split(af,af_," ")}
-    {for(i in bf_){ if($2==bf_[i]) $2=af_[i] }}1' |
+    'BEGIN{
+        split(bf,bf_," ")
+        split(af,af_," ")}
+    {for(i in bf_){
+        if($2==bf_[i]) $2=af_[i]
+        }
+    }1' |
     sed "s/ /\t/g" |
     sort |
 cat - > "${output_id}"
@@ -155,11 +160,23 @@ cat - > "${output_id}"
 # 変異情報の同定
 # Variant call
 # ============================================================================
-ref=.DAJIN_temp/fasta/wt.fa
+ref=".DAJIN_temp/fasta/wt.fa"
 cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
     minimap2 -ax map-ont "${ref}" - --cs=long 2>/dev/null |
     sort |
 cat - > tmp_sam
+
+set $(cat $output_result |
+    awk -v cl="${cluster}" \
+    '$3==cl {
+    gsub("[0-9]*","", $5)
+    type=type$5"_"
+    site=site$6"_"}
+    END{print type, site}')
+mutation_type=$(echo "$1" | sed "s/_/ /g") 
+mutation_site=$(echo "$2" | sed "s/_/ /g")
+echo $mutation_type
+echo $mutation_site
 
 cat "${output_id}" |
     grep "${cluster}$" |
@@ -167,113 +184,109 @@ cat "${output_id}" |
     sort -u |
     join tmp_sam - |
     awk '{print $4, $(NF-1)}' |
-cat - > tmp_test
-
-# cat - > .DAJIN_temp/clustering/temp/tmp_sorted_id_"${suffix}"_"${cluster}"
-
-# ref=.DAJIN_temp/fasta/wt.fa
-# cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
-#     minimap2 -ax map-ont "${ref}" - --cs=long 2>/dev/null |
-#     sort |
-#     join - .DAJIN_temp/clustering/temp/tmp_sorted_id_"${suffix}"_"${cluster}" |
-#     awk '{print $4, $(NF-1)}' |
-# cat - > tmp_test
-
-true > tmp_mutation_
-cluster=2
-cat $output_result |
-awk -v cl="${cluster}" '$3==cl' |
-while read -r input
-do
-    mutation_type=$(echo $input | cut -d " " -f 5 | sed "s/[0-9]*//g")
-    mutation_site=$(echo $input | cut -d " " -f 6)
-    # echo $mutation_type $mutation_site "${cluster}"
-    cat tmp_test |
-        sed "s/cs:Z://g" |
-        awk '{seq=""
-            padding=$1-1
-            for(i=1; i<=padding; i++) seq=seq"-"
-            print seq""$2}' |
-        if [ "$mutation_type" = "I" ]
-        then
-        # ------------------------------
-        # Insertion
-        # ------------------------------           
-        sed "s/*[a-z]/ /g" |
-        sed "s/[-|=]/ /g" |
-        sed "s/+/ +/g" |
-        awk -v mutsite="${mutation_site}" \
-        '{
-        len=0
-        for(i=1; i<=NF;i++) {
-            if(len >= mutsite) {print len, $i; break}
-            else if (len >= mutsite - 1) {print len, $i; break}
-            else {
-                if($i !~ /+/) len+=length($i)}
+    sed "s/cs:Z://g" |
+    awk '{seq=""
+        padding=$1-1
+        for(i=1; i<=padding; i++) seq=seq"-"
+        print seq""$2}' |
+    # -------------------------------------
+    # 条件分岐
+    # -------------------------------------
+    awk -v type="${mutation_type}" -v site="${mutation_site}" \
+    'BEGIN{
+        split(type, type_, " ")
+        split(site, site_, " ")
+        }
+    {original_seq = $0
+    for(i in type_){
+        $0 = original_seq
+        if(type_[i] == "I"){
+            gsub("*[a-z]", " ", $0)
+            gsub("+", " +", $0)
+            gsub("[-|=]", " ", $0)
+            len=0
+            for(j=1; j<=NF;j++) {
+                if(len >= site_[i]-1) {print type_[i], len, $j; break}
+                else { if($j !~ /+/) len+=length($j) }}
             }
-        }' |
-        sed "s/+//g" |
-        # ------------------------------
-        # Report mutation nucreotides
-        # ------------------------------
-        sort |
-        uniq -c |
-        awk '{if(max<$1){max=$1; loc=$2; max_mut=$3}}
-            END{print loc, max_mut}' |
-        sed "s/^/${mutation_type} /g" |
-    cat - >> tmp_mutation_
-        else
-        # ------------------------------
-        # Deletion and Substitution
-        # ------------------------------           
-        sed "s/*[a-z]//g" |
-        sed "s/[-|=]//g" |
-        sed "s/+[a-z]*//g" |
-        awk -v mutsite="${mutation_site}" \
-        '{print mutsite, substr($0, mutsite,1)}' |
-        # ------------------------------
-        # Report mutation nucreotides
-        # ------------------------------
-        sort |
-        uniq -c |
-        awk '{if(max<$1){max=$1; loc=$2; max_mut=$3}}
-            END{print loc, max_mut}' |
-        sed "s/^/${mutation_type} /g" |
-    cat - >> tmp_mutation_
-        fi 
-done
+        else {
+            gsub("*[a-z]", "=", $0)
+            gsub("+[a-z]*", "", $0)
+            gsub("[-=]", "", $0)
+            print type_[i], site_[i], substr($0, site_[i]+1, 1)
+            }
+        }
+    }' |
+    sort |
+    uniq -c |
+    sed "s/+//g" |
+    awk '{if(max[$2] < $1) {max[$2] = $1; out[$2]=$3" "$4}}
+        END{for(key in out) print key, out[key]}' |
+cat - > tmp_mutation_
 
+
+label=$(cat $output_result | awk -v cl="${cluster}" '$3==cl {print $1"_"$2"_#"$3}' | head -n 1)
 mutation_type=$(cut -d " " -f 1 tmp_mutation_ | xargs echo)
 mutation_site=$(cut -d " " -f 2 tmp_mutation_ | xargs echo)
 mutation_nuc=$(cut -d " " -f 3 tmp_mutation_ | xargs echo)
 
+cat .DAJIN_temp/fasta/wt.fa |
+sed 1d |
+awk -F "" -v type="${mutation_type}" -v site="${mutation_site}" -v nuc="${mutation_nuc}" \
+    'BEGIN{
+        split(type, type_, " ")
+        split(site, site_, " ")
+        split(nuc, nuc_, " ")
+    }
+    {for(i in type_){
+        if(type_[i] == "S"){
+            $(site_[i]+1) = "<span_class=\"Sub\">" nuc_[i] "</span>"
+            }
+        else if(type_[i] == "I"){
+            $(site_[i]+1) = $site_[i] "<span_class=\"Ins\">" nuc_[i] "</span>"
+            }
+        else if(type_[i] == "D"){
+            $(site_[i]+1) = "<span_class=\"Del\">" tolower(nuc_[i]) "</span>"
+            }
+    }}1' |
+sed -e "s/ //g" -e "s/_/ /g"|
+sed -e "1i >${label}" |
+cat - > test_htmlbody.html
 
-cat << EOF > test.html
+
+
+# ============================================================================
+# HTMLの作製
+# Output HTML file
+# ============================================================================
+cat << EOF > "${label}".html
 <!DOCTYPE html>
 <html>
 <head>
 <style>
-div {
-  width: 150px; 
-  border: 1px solid #000000;
-}
 p {
     font-family:"Courier New", Courier, monospace;
+    color: #585858; 
     width: 50%;
     word-wrap: break-word;
 }
-.ins {
-    color: red; 
-    font-weight:bold;
+.Ins {
+    color: white; 
+    background-color: #e2041b;
+    font-weight: bold;
+    font-size: 1.0em;
 }
-.del {
-    color: blue;
-    font-weight:bold;
-    text-decoration: line-through;
+.Del {
+    color: white; 
+    background-color: #2ca9e1;
+    font-weight: bold;
+    font-size: 1.0em;
 }
-.sub {
-    color: green; 
-    font-weight:bold;
+.Sub {
+    color: white; 
+    background-color: #007b43;
+    font-weight: bold;
+    font-size: 1.0em;
 }
 
 </style>
@@ -282,182 +295,17 @@ p {
 <p>
 EOF
 
-# =================================
-# 指定の場所に指定の塩基を挿入します
-# 入力：AAAAAA
-# 出力：AttAAAAcccA
-# =================================
+cat test_htmlbody.html >> "${label}".html
 
-# ---------------------------------
-# 入力の作製
-# ---------------------------------
-cat << EOF > sequence.txt
-AAAAAA
-EOF
-
-cat << EOF > insert.txt
-1 tt
-5 ccc
-EOF
-
-# ---------------------------------
-# 挿入塩基の出力
-# ---------------------------------
-loc=$(cat insert.txt | cut -d " " -f 1 | xargs echo) # xargs echoで1行にする
-ins=$(cat insert.txt | cut -d " " -f 2 | xargs echo) # xargs echoで1行にする
-
-cat sequence.txt |
-    awk -F "" -v loc="$loc" -v ins="$ins" \
-    'BEGIN{
-        split(loc, loc_, " ") # シェル変数を連想配列にする
-        split(ins, ins_, " ")
-    }
-    {for(i in loc_) $loc_[i]=$loc_[i]""ins_[i] }1' |
-    sed "s/ //g" |
-cat - > sequence_ins.txt
-
-cat sequence_ins.txt
-
-
-cat insert |
-while read -r input; do
-    loc=$(echo  $input | cut -d " " -f 1)
-    ins=$(echo  $input | cut -d " " -f 2)
-    cat test.txt |
-    awk -F "" -v loc="$loc" -v ins="$ins" \
-    '{$loc=$loc""ins; print $0}' |
-    sed "s/ //g"
-done
-
-var=$(cat insert | xargs echo)
-awk -v var="$var" \
-'BEGIN{
-    split(var, var_array, " ")
-    for(i in var_array){
-        gsub("g","G",var_array[i])
-        print var_array[i]
-    }
-}'
-
-
-cat test.txt |
-while read -r input; do
-    echo "$input" | sed "s/g/G/g"
-done
-
-var=$(cat test.txt | xargs echo)
-awk -v var="$var" \
-'BEGIN{
-    split(var, var_array, " ")
-    for(i in var_array){
-        gsub("g","G",var_array[i])
-        print var_array[i]
-    }
-}'
-
-hoge="hoge fuga"
-awk -F "" \
--v type="${hoge}" -v site="${mutation_site}" -v nuc="${mutation_nuc}" '
-BEGIN{
-    split(type, type_a, " ")
-    print "hoge"type_a[1], type_a[2]}
-'
-
-awk -F "" \
--v type="${mutation_type}" -v site="${mutation_site}" -v nuc="${mutation_nuc}" \
-'BEGIN{
-    split(type, type_a, " ")
-    split(site, site_a, " ")
-    split(nuc, nuc_a, " ")
-    for(i in type_a){
-        print type_a[i], site_a[i]
-    }
-}'
-
-cat .DAJIN_temp/fasta/wt.fa |
-sed 1d |
-awk -F "" \
--v type="${mutation_type}" -v site="${mutation_site}" -v nuc="${mutation_nuc}" '
-type=="S" {$site="<span_class=\"sub\">"nuc"</span>"; print $0}
-type=="D" {print}
-type=="I" {print}
-' |
-sed -e "s/ //g" -e "s/_/ /g"|
-#fold -80 |
-cat - >> test.html
-
-cat << EOF >> test.html
+cat << EOF >> "${label}".html
 </p>
+<hr>
+<p>
+<span class="Ins">Insertion</span> <span class="Del">Deletion</span>
+ <span class="Sub">Substitution</span>
+</p>
+
 </body>
 </html>
 EOF
-
-
-while read -r input
-do
-    mutation_type=$(cut -d " " -f 1 "${input}")
-    mutation_site=$(cut -d " " -f 2 "${input}")
-    mutation_nuc=$(cut -d " " -f 3 "${input}")
-    #
-    cat .DAJIN_temp/fasta/wt.fa
-
-done
-# cat "$ref" |
-# sed 1d |
-# awk '{mut=substr($0, 739,1)
-#     print mut}'
-
-
-
-# ref:    TTGCCAGATA
-# target: TTGCCAGATTA
-# sample: TTAGCCGATTG
-# 8塩基のAがATになる
-
-mutation_sites=20
-echo "=TT+attt=GC+acccc=C-a=GA+tt=T*ag" |
-sed "s/*[a-z]/ /g" |
-sed "s/[-|=]/ /g" |
-sed "s/+/ +/g" |
-awk -v mutsite="${mutation_sites}" \
-'{len=0
-for(i=1; i<=NF;i++) {
-    if(len >= mutsite) {print len, $i; break}
-    else {
-        if($i !~ /+/) len=len+length($i)}
-    }
-}'
-
-
-
-ref=.DAJIN_temp/fasta/wt.fa
-que=test.fa
-minimap2 -ax map-ont "${ref}" "${que}" --cs=long 2>/dev/null |
-awk '{print $4, $(NF-1)}' |
-cat - > tmp_test
-cat tmp_test |
-sed "s/cs:Z://g" |
-awk '{seq=""
-    padding=$1-1
-    for(i=1; i<=padding; i++) seq=seq"-"
-    print seq""$2}' |
-sed "s/*[a-z]/ /g" |
-sed "s/[-|=]/ /g" |
-sed "s/+/ +/g" |
-awk -v mutsite="${mutation_sites}" \
-'{len=0
-for(i=1; i<=NF;i++) {
-    if(len >= mutsite-1) {print len, $i; break}
-    else {
-        if($i !~ /+/) len=len+length($i)}
-    }
-}'
-
-
-head -n 1000 .DAJIN_temp/fasta_ont/target_simulated_aligned_reads.fasta |
-minimap2 -ax map-ont "${ref}" - --cs=long 2>/dev/null |
-awk '{print $4, $(NF-1)}' |
-cat - > tmp_test
-
-
 
