@@ -14,8 +14,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.metrics.pairwise import cosine_similarity as cos_sim
 
 from tensorflow.keras import backend as K
@@ -50,8 +49,7 @@ output_model = file_name.replace(".txt", ".h5")
 # # One-hot encording
 # # ====================================
 def X_onehot(X_data):
-    X = np.empty((len(X_data), len(X_data[0]), 5),
-        dtype="uint8")
+    X = np.empty((len(X_data), len(X_data[0]), 5), dtype="uint8")
     for i in tqdm(range(0, len(X_data))):
         sequence = X_data[i]
         seq_array = np.array(list(sequence))
@@ -139,6 +137,11 @@ history = model.fit(X_train, Y_train, epochs=100, verbose=1,
 X_all = np.concatenate([X_sim, X_real])
 print("Abnormal allele detection...")
 
+# if any(df_sim.barcodeID.str.contains("wt_del")) and any(df_sim.barcodeID.str.contains("wt_ins")):
+#     normal = X_sim[df_sim[df_sim.barcodeID=="wt_simulated"].sample(1000).index]
+# else:
+#     normal = X_train[0:1000]
+
 model_ = Model(model.get_layer(index=0).input,
                 model.get_layer(index=-2).output)  
 print("Obtain L2-normalized vectors from the simulated reads...")
@@ -174,10 +177,7 @@ df_anomaly = df_anomaly[~df_anomaly.barcodeID.str.contains("simulated")].reset_i
 # Output the results
 # ====================================
 # Save One-hot matrix
-np.savez_compressed(output_npz,
-                X_sim=X_sim,
-                X_real=X_real
-                )
+np.savez_compressed(output_npz, X_real=X_real)
 # Save the model
 model.save(output_model)
 

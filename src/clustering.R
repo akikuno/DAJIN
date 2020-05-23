@@ -31,8 +31,6 @@ df_que_rm0 <- df_que[, colSums(df_que) != 0]
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # PCA
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# print("Dimension reduction by PCA...")
-
 input_pca <- df_que_rm0
 # --------------------------------------------------
 pca_res <- prcomp(input_pca, scale. = F)
@@ -46,7 +44,6 @@ for (i in components){
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # HDBSCAN
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# print("Clustering by HDBSCAN...")
 input_hdbscan <- output_pca
 # --------------------------------------------------
 if (nrow(input_hdbscan) < 250) {
@@ -80,29 +77,6 @@ cl_num_opt <- which(cl_nums == cl_num_opt) %>% max()
 cl <- hdbscan(input_hdbscan, minPts = cl_sizes[cl_num_opt])
 output_hdbscan <- cl$cluster + 1
 
-# output_hdbscan %>% table()
-
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# pca_plot <- as_tibble(output_pca) %>%
-#     bind_cols(cluster = factor(output_hdbscan)) %>%
-#     select(PC1, PC2, cluster)
-
-# g <- ggplot(
-#     data = pca_plot,
-#     aes(
-#         x = PC1, y = PC2,
-#         color = cluster
-#     )
-# ) +
-#     geom_point(size = 3) +
-#     theme_bw(base_size = 20) # +
-
-# ggsave(
-#     plot = g,
-#     filename = sprintf(".DAJIN_temp/clustering/temp/pca_%s.png", output_suffix),
-#     width = 10, height = 8
-# )
-
 # # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # # Extract feature nucleotide position
 # # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -126,14 +100,11 @@ for (i in unique(input_cl)) {
     df_cluster <- df_cluster %>% bind_rows(tmp_df)
 }
 
-# g <- ggplot(df_cluster, aes(x=loc, y=score)) +
-#     geom_point() +
-#     facet_wrap(~ cluster)
-# ggsave(filename="test.png", g)
 
 # # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # # Cosine similarity to merge similar clusters
 # # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
 input_cossim <- df_cluster
 output_cl <- output_hdbscan
 # --------------------------------------------------
@@ -195,3 +166,26 @@ write_tsv(result,
     sprintf(".DAJIN_temp/clustering/temp/hdbscan_%s", output_suffix),
     col_names = F
 )
+
+# output_hdbscan %>% table()
+
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# pca_plot <- as_tibble(output_pca) %>%
+#     bind_cols(cluster = factor(output_hdbscan)) %>%
+#     select(PC1, PC2, cluster)
+
+# g <- ggplot(
+#     data = pca_plot,
+#     aes(
+#         x = PC1, y = PC2,
+#         color = cluster
+#     )
+# ) +
+#     geom_point(size = 3) +
+#     theme_bw(base_size = 20) # +
+
+# ggsave(
+#     plot = g,
+#     filename = sprintf(".DAJIN_temp/clustering/temp/pca_%s.png", output_suffix),
+#     width = 10, height = 8
+# )

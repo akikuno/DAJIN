@@ -44,40 +44,43 @@ USAGE
 
 usage_and_exit(){
     usage
+    exit 1
 }
 
 error_exit() {
   echo "$@" 1>&2
+  exit 1
 }
 
 # ============================================================================
 # Parse arguments
 # ============================================================================
-[ $# -eq 0 ] && usage_and_exit && return 1
+[ $# -eq 0 ] && usage_and_exit
 
 while [ $# -gt 0 ]
 do
     case "$1" in
         --help | --hel | --he | --h | '--?' | -help | -hel | -he | -h | '-?')
-            usage_and_exit && return 0
+            usage_and_exit
             ;;
         --version | --versio | --versi | --vers | --ver | --ve | --v | \
         -version | -versio | -versi | -vers | -ver | -ve | -v )
-            echo "DAJIN version: $VERSION" && return 0
+            echo "DAJIN version: $VERSION" && exit 0
             ;;
         --file | -f )
-            if [ -z "$2" ]; then
-                error_exit "Required arguments are not specified"; return 1
+            if ! [ -r "$2" ]; then
+                error_exit "$2: No such file"
             fi
             design=$(cat "$2" | grep "design" | sed -e "s/ //g" -e "s/.*=//g")
             ont_dir=$(cat "$2" | grep "input_dir" | sed -e "s/ //g" -e "s/.*=//g")
             ont_cont=$(cat "$2" | grep "control" | sed -e "s/ //g" -e "s/.*=//g")
             genome=$(cat "$2" | grep "genome" | sed -e "s/ //g" -e "s/.*=//g")
             grna=$(cat "$2" | grep "grna" | sed -e "s/ //g" -e "s/.*=//g")
+            output_dir=$(cat "$2" | grep "output" | sed -e "s/ //g" -e "s/.*=//g")
             threads=$(cat "$2" | grep "threads" | sed -e "s/ //g" -e "s/.*=//g")
             ;;
         -* )
-        error_exit "Unrecognized option : $1" && return 1
+        error_exit "Unrecognized option : $1"
             ;;
         *)
             break
@@ -86,34 +89,42 @@ do
     shift
 done
 
-
 if [ -z "$design" ] || [ -z "$ont_dir" ] || [ -z "$ont_cont" ] || [ -z "$genome" ] || [ -z "$grna" ]
 then
-    error_exit "Required arguments are not specified" && return 1
+    error_exit "Required arguments are not specified"
 fi
 
 # ----------------------------------------------------------------
 # Check fasta file
 # ----------------------------------------------------------------
-if ! [ -e "$design" ]; then
-    error_exit "$design: No such file" && return 1
+if [ $(echo "$design" | grep  -c -e '\\' -e '/' -e ':' -e '*' -e '?' -e '"' -e '<' -e '>' -e '|') -eq 1 ]; then
+    error_exit "$design: invalid file name"
 fi
 
-if [ "$(grep -c '>target' ${design})" -eq 0 ] || [ "$(grep -c '>wt' ${design})" -eq 0 ]
-then
-    error_exit "$design: design must include \">target\" and \">wt\". " && return 1
+if ! [ -e "$design" ]; then
+    error_exit "$design: No such file"
+fi
+
+if [ "$(grep -c '>target' ${design})" -eq 0 ] || [ "$(grep -c '>wt' ${design})" -eq 0 ]; then
+    error_exit "$design: design must include \">target\" and \">wt\". "
 fi
 
 # ----------------------------------------------------------------
 # Check directory
 # ----------------------------------------------------------------
-if ! [ -d "$ont_dir" ]; then
-    error_exit "$ont_dir: No such directory" && return 1
+if ! [ -d "${ont_dir}" ]; then
+    error_exit "$ont_dir: No such directory"
 fi
-
+if [ -z "$(ls $ont_dir)" ]; then
+    error_exit "$ont_dir: Empty directory"
+fi
 # ----------------------------------------------------------------
 # Check control
 # ----------------------------------------------------------------
+
+if [ -z "$(find ${ont_dir}/ -name ${control}.f*)" ]; then
+    error_exit "$control: No control file in ${ont_dir}"
+fi
 
 # ----------------------------------------------------------------
 # Check genome
@@ -125,20 +136,26 @@ genome_check=$(
     grep -c "/${genome:-XXX}/")
 
 if [ "$genome_check" -eq 0 ]; then
-    error_exit "$genome: No such reference genome" && return 1
+    error_exit "$genome: No such reference genome"
 fi
 # ----------------------------------------------------------------
 # Check grna
 # ----------------------------------------------------------------
 
+# ----------------------------------------------------------------
+# Check output directory name
+# ----------------------------------------------------------------
+if [ $(echo "$output_dir" | grep  -c -e '\\' -e '/' -e ':' -e '*' -e '?' -e '"' -e '<' -e '>' -e '|') -eq 1 ]; then
+    error_exit "$output_dir: invalid directory name"
+fi
+mkdir -p "${output_dir:=DAJIN_results}"/BAM "${output_dir}"/Consensus
 
 # ============================================================================
 # Define threads
 # ============================================================================
 
 expr "$threads" + 1 >/dev/null 2>&1
-if [ $? -lt 2 ]
-then
+if [ $? -lt 2 ]; then
     :
 else
     unset threads
@@ -185,49 +202,46 @@ alias python="python.exe"
 # ============================================================================
 
 rm -rf ".DAJIN_temp" 2>/dev/null
-dirs="fasta fasta_conv fasta_ont NanoSim data \
-    clustering/temp seqlogo/temp"
+dirs="fasta fasta_conv fasta_ont NanoSim bam igvjs data clustering/temp seqlogo/temp"
 
 echo "${dirs}" |
-sed "s:^:.DAJIN_temp/:g" |
-sed "s: : .DAJIN_temp/:g" |
+    sed "s:^:.DAJIN_temp/:g" |
+    sed "s: : .DAJIN_temp/:g" |
 xargs mkdir -p
 
 # ============================================================================
 # Format FASTA file
 # ============================================================================
 
-# CRLF to LF
 cat "${design}" |
     tr -d "\r" |
+    awk '{if($1~"^>"){print "\n"$0}
+    else {printf $0}}
+    END {print ""}' |
     grep -v "^$" |
 cat - > .DAJIN_temp/fasta/fasta.fa
-fasta_LF=".DAJIN_temp/fasta/fasta.fa"
+
+design_LF=".DAJIN_temp/fasta/fasta.fa"
 
 # Separate multiple-FASTA into FASTA files
 cat ${design_LF} |
     sed "s/^/@/g" |
     tr -d "\n" |
-    sed -e "s/@>/\n>/g" -e "s/$/\n/g" |
+    sed -e "s/@>/\n>/g" \
+        -e "s/@/ /g" \
+        -e "s/$/\n/g" |
     grep -v "^$" |
-while read -r input; do
-    output=$(echo "${input}" |
-    sed -e "s/@.*//g" \
-        -e "s#>#.DAJIN_temp/fasta/#g" \
-        -e "s/$/.fa/g")
-    #
-    echo "${input}" |
-        sed "s/@/\n/g" |
-        awk '{if($1 !~ "^>") $0=toupper($0)
-            print}' |
-    cat - > "${output}"
-done
+    awk '{id=$1
+        gsub(">","",id)
+        output=".DAJIN_temp/fasta/"id".fa"
+        print $1"\n"toupper($2) > output
+    }'
 
 # When mutation point(s) are closer to もし変異部がFASTAファイルの5'側より3'側に近い場合、
 # right flanking than left flanking,   reverse complementにする。
 # convert a sequence into its reverse-complement
 
-wt_seqlen=$(cat .DAJIN_temp/fasta/wt.fa | awk '!/[>|@]/ {print length($0)}')
+wt_seqlen=$(awk '!/[>|@]/ {print length($0)}' .DAJIN_temp/fasta/wt.fa)
 
 convert_revcomp=$(
     minimap2 -ax splice \
@@ -242,33 +256,28 @@ convert_revcomp=$(
     )
 
 if [ "$convert_revcomp" -eq 1 ] ; then
-    ./DAJIN/src/revcomp.sh "${design_LF}" \
-    > .DAJIN_temp/fasta/fasta_revcomp.fa &&
-    fasta_LF=".DAJIN_temp/fasta/fasta_revcomp.fa"
+    cat "${design_LF}" |
+    ./DAJIN/src/revcomp.sh - |
+    cat - > .DAJIN_temp/fasta/fasta_revcomp.fa
+    design_LF=".DAJIN_temp/fasta/fasta_revcomp.fa"
 fi
 
-# 別々のFASTAファイルとして保存する
-cat "${design_LF}" |
+# Separate multiple-FASTA into FASTA files
+cat ${design_LF} |
     sed "s/^/@/g" |
     tr -d "\n" |
-    sed -e "s/@>/\n>/g" -e "s/$/\n/g" |
+    sed -e "s/@>/\n>/g" \
+        -e "s/@/ /g" \
+        -e "s/$/\n/g" |
     grep -v "^$" |
-while read -r input; do
-    output=$(
-        echo "${input}" |
-        sed -e "s/@.*//g" \
-            -e "s#>#.DAJIN_temp/fasta_conv/#g" \
-            -e "s/$/.fa/g"
-        )
-    echo "${input}" |
-        sed "s/@/\n/g" |
-        awk '{if($1 !~ "^>") $0=toupper($0)
-            print}' |
-    cat - > "${output}"
-done
+    awk '{id=$1
+        gsub(">","",id)
+        output=".DAJIN_temp/fasta_conv/"id".fa"
+        print $1"\n"toupper($2) > output
+    }'
 
 # ----------------------------------------------------------------------------
-# 変異のタイプ（deletion, knock-in, or point-mutation）を判定する
+# 変異のタイプ（Deletion, knock-In, or Point-mutation）を判定する
 # ----------------------------------------------------------------------------
 mutation_type=$(
     minimap2 -ax map-ont \
@@ -294,7 +303,7 @@ if [ "$mutation_type" = "P" ]; then
     grna_len=$(awk -v grna="$grna" 'BEGIN{print length(grna)}')
     grna_firsthalf=$(awk -v grna="$grna" 'BEGIN{print substr(grna, 1, int(length(grna)/2))}')
     grna_secondhalf=$(awk -v grna="$grna" 'BEGIN{print substr(grna, int(length(grna)/2)+1, length(grna))}')
-    #
+    # ランダム配列の作成
     ins_seq=$(
         seq_length="$grna_len" &&
         od -A n  -t u4 -N $(($seq_length*100)) /dev/urandom |
@@ -308,10 +317,12 @@ if [ "$mutation_type" = "P" ]; then
     cat .DAJIN_temp/fasta_conv/wt.fa |
         sed "s/$grna/$grna_firsthalf,$grna_secondhalf/g" |
         sed "s/,/$ins_seq/g" |
+        sed "s/>wt/>wt_ins/g" |
     cat - > .DAJIN_temp/fasta_conv/wt_ins.fa
     # deletion
     cat .DAJIN_temp/fasta_conv/wt.fa |
         sed "s/$grna//g" |
+        sed "s/>wt/>wt_del/g" |
     cat - > .DAJIN_temp/fasta_conv/wt_del.fa
 fi
 
@@ -320,30 +331,21 @@ fi
 # ============================================================================
 set +e
 for input in ${ont_dir}/* ; do
-    output=$(echo "${input}" | sed -e "s#.*/#.DAJIN_temp/fasta_ont/#g" -e "s#\.f.*#.fa#g")
-    # printf "${output} is now generating...\n"
-    #
+    output=$(
+        echo "${input}" |
+        sed -e "s#.*/#.DAJIN_temp/fasta_ont/#g" \
+            -e "s#\.f.*#.fa#g")
     # Check wheather the files are binary:
-    if [ "$(file ${input} | grep -c compressed)" -eq 1 ]; then
-        gzip -dc "${input}" |
-        awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' \
-        > ".DAJIN_temp"/tmp_$$
+    if [ "$(file ${input} | grep -c compressed)" -eq 1 ]
+    then
+        gzip -dc "${input}"
     else
-        cat "${input}" |
-        awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' \
-        > ".DAJIN_temp"/tmp_$$
-    fi
-    mv ".DAJIN_temp"/tmp_$$ "${output}"
+        cat "${input}"
+    fi |
+    awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' |
+    cat - > "${output}"
 done
 set -e
-#
-#! --------------------------------------------------------
-ont_cont=barcode32
-
-# ont_cont_nanosim=$(echo "${ont_cont}" |
-#     sed -e "s#.*/#.DAJIN_temp/fasta_ont/#g" -e "s#\.f.*#.fa#g")
-# ont_cont_barcodeID=$(echo "${ont_cont}" |
-#     sed -e "s#.*/##g" -e "s#\.f.*##g")
 
 # ============================================================================
 # Setting NanoSim (v2.5.0)
@@ -361,7 +363,8 @@ printf "Read analysis...\n"
     -t ${threads:-1} \
     -o .DAJIN_temp/NanoSim/training
 
-wt_seqlen=$(cat .DAJIN_temp/fasta/wt.fa | awk '!/[>|@]/ {print length($0)}')
+wt_seqlen=$(awk '!/[>|@]/ {print length($0)}' .DAJIN_temp/fasta/wt.fa)
+
 for input in .DAJIN_temp/fasta_conv/*; do
     printf "${input} is now simulating...\n"
     output=$(
@@ -369,7 +372,6 @@ for input in .DAJIN_temp/fasta_conv/*; do
         sed -e "s#fasta_conv/#fasta_ont/#g" \
             -e "s/.fasta$//g" -e "s/.fa$//g"
         )
-    #
     ## For deletion allele
     input_seqlength=$(
         cat "${input}" |
@@ -397,6 +399,30 @@ rm -rf DAJIN/utils/NanoSim/src/__pycache__
 
 printf 'Success!!\nSimulation is finished\n'
 
+# ============================================================================
+# Mapping by minimap2 for IGV visualization
+# ============================================================================
+printf \
+"+++++++++++++++++++++
+Generate BAM files
++++++++++++++++++++++\n"
+
+if [ "$mutation_type" = "P" ]; then
+    mv .DAJIN_temp/fasta_ont/wt_ins* .DAJIN_temp/
+    mv .DAJIN_temp/fasta_ont/wt_del* .DAJIN_temp/
+fi
+
+./DAJIN/src/igvjs.sh "${genome:-mm10}" "${threads:-1}"
+
+mv .DAJIN_temp/bam/* "${output_dir}"/BAM
+
+if [ "$mutation_type" = "P" ]; then
+    mv .DAJIN_temp/wt_ins* .DAJIN_temp/fasta_ont/
+    mv .DAJIN_temp/wt_del* .DAJIN_temp/fasta_ont/
+fi
+
+printf "BAM files are saved at bam\n"
+printf "Next converting BAM to MIDS format...\n"
 
 # ============================================================================
 # MIDS conversion
@@ -419,17 +445,6 @@ cat "$reference" |
     tr -d "\~\*\-\+atgc" |
     awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
 cat - > .DAJIN_temp/data/mutation_points
-# done
-
-# if [ "$(wc -l .DAJIN_temp/data/mutation_points | cut -d ' ' -f 1)" -gt 1 ]; then
-#     cat .DAJIN_temp/data/mutation_points |
-#         awk 'NR==1 {print $1}
-#         END{print $NF}' |
-#         tr "\n" " " |
-#         sed "s/ $/\n/g" |
-#     cat - > .DAJIN_temp/data/mutation_points_$$
-#     mv .DAJIN_temp/data/mutation_points_$$ .DAJIN_temp/data/mutation_points
-# fi
 
 # MIDS conversion...
 find .DAJIN_temp/fasta_ont -type f | sort |
@@ -439,8 +454,7 @@ find .DAJIN_temp/fasta_ont -type f | sort |
         print}
         END{print "wait"}' |
 sh -
-rm .DAJIN_temp/tmp_*
-#
+
 if [ "$mutation_type" = "P" ]; then
     rm .DAJIN_temp/data/MIDS_target*
 fi
@@ -454,10 +468,120 @@ rm .DAJIN_temp/data/MIDS_*
 
 # ============================================================================
 # Prediction
+# 異常検知→アレルタイプの予測
+# 一塩基置換の場合はアレルタイプの予測はしない
 # ============================================================================
 printf "Start allele prediction...\n"
-#
+
 python DAJIN/src/ml_abnormal_detection.py ".DAJIN_temp"/data/DAJIN_MIDS.txt
+
+if [ "$mutation_type" = "P" ]; then
+    mv ".DAJIN_temp/data/DAJIN_anomaly_classification.txt" ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
+else
+    python DAJIN/src/ml_prediction.py ".DAJIN_temp/data/DAJIN_MIDS.txt"
+fi
+
+printf "Prediction was finished...\n"
+
+# ============================================================================
+# Filter low-persentage allele
+# ============================================================================
+prediction=".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
+prediction_filtered=".DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt"
+# ----------------------------------------------------------------------------
+
+# --------------------------------
+# 各サンプルに含まれるアレルの割合を出す
+# --------------------------------
+
+cat "${prediction}"  |
+    cut -f 1,3 |
+    sort |
+    uniq -c |
+    awk '{barcode[$2]+=$1
+        read_info[$2]=$1"_"$3" "read_info[$2]}
+    END{for(key in barcode) print key,barcode[key], read_info[key]}' |
+    awk '{for(i=3;i<=NF; i++) print $1,$2,$i}' |
+    sed "s/_/ /g" |
+    awk '{print $1, int($3/$2*100+0.5), $4}' |
+cat - > ".DAJIN_temp/tmp_prediction_proportion"
+
+
+# --------------------------------
+# コントロールの異常アレルの割合を出す
+# --------------------------------
+persentage_of_abnormal_in_cont=$(
+    cat ".DAJIN_temp"/tmp_prediction_proportion | 
+    grep "${ont_cont:=barcode32}" | #! define "control" by automate manner
+    grep abnormal |
+    cut -d " " -f 2)
+
+# --------------------------------
+# Filter low-percent alleles
+# --------------------------------
+
+cat .DAJIN_temp/tmp_prediction_proportion |
+    # --------------------------------
+    # If the percentage of abnormal alleles in each sample is 
+    # "within 3% of the percentage of abnormal alleles in the control", 
+    # the abnormality is considered a false positive and removed.
+    # 各サンプルの異常アレルの割合が
+    # 「コントロールの異常アレルの割合＋3%以内」の場合、
+    # その判定は偽陽性と判断し、取り除く
+    # --------------------------------
+    awk -v refab="${persentage_of_abnormal_in_cont}" \
+        '!($2<refab+3 && $3 == "abnormal")' |
+    # --------------------------------
+    # Retain more than 5% of the "non-target" sample and more than 1% of the "target"
+    # 「ターゲット以外」のサンプルは5%以上、「ターゲット」は1%以上を残す
+    # --------------------------------
+    awk '($2 > 5 && $3 != "target") || ($2 > 1 && $3 == "target")' |
+    awk '{barcode[$1]+=$2
+        read_info[$1]=$2"_"$3" "read_info[$1]}
+    END{for(key in barcode) print key,barcode[key], read_info[key]}' |
+    awk '{for(i=3;i<=NF; i++) print $1,$2,$i}' |
+    sed "s/_/ /g" |
+    # --------------------------------
+    # Interpolate the removed alleles to bring the total to 100%
+    # 除去されたアレル分を補間し、合計を100%にする
+    # --------------------------------
+    awk '{print $1, int($3*100/$2+0.5),$4}' |
+    sort |
+cat - > "${prediction_filtered}"
+
+rm .DAJIN_temp/tmp_*
+
+# ============================================================================
+# Clustering within each allele type
+# ============================================================================
+input=".DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt"
+# ----------------------------------------------------------------------------
+
+cat "${input}" |
+    cut -d " " -f 3 |
+    sort -u |
+while read -r allele; do
+    ./DAJIN/src/clustering_prerequisit.sh "${ont_cont}" "${allele}" 
+done
+
+cat "${input}" |
+    cut -d " " -f 1,3 |
+    awk '{print "./DAJIN/src/clustering.sh",$1, $2, "&"}' |
+    #! ---------------------------------
+    # grep -e barcode18 -e barcode23 -e barcode26 |
+    grep -e barcode18 |
+    #! ---------------------------------
+    awk -v th=${threads:-1} '{
+        if (NR%th==0) gsub("&","&\nwait",$0)}1
+        END{print "wait"}' |
+sh -
+
+rm .DAJIN_temp/tmp_*
+
+# ============================================================================
+# Detection of Problematic allele
+# ============================================================================
+
 
 # ----------------------------------------------------------------
 # 2-cut deletionの場合は、大丈夫そうなabnormalを検出する
@@ -471,159 +595,6 @@ python DAJIN/src/ml_abnormal_detection.py ".DAJIN_temp"/data/DAJIN_MIDS.txt
 #
 # cp .DAJIN_temp/anomaly_classification.txt .DAJIN_temp/anomaly_classification_revised.txt
 #
-if [ "$mutation_type" = "P" ]; then
-    mv ".DAJIN_temp/data/DAJIN_anomaly_classification.txt" ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
-else
-    python DAJIN/src/ml_prediction.py ".DAJIN_temp/data/DAJIN_MIDS.txt"
-fi
-#
-printf "Prediction was finished...\n"
-#
-# ============================================================================
-# Report allele percentage
-# ============================================================================
-input=".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
-output=".DAJIN_temp/data/DAJIN_MIDS_prediction_allele_percentage.txt"
-# ----------------------------------------------------------------------------
-
-# --------------------------------
-# 各サンプルに含まれるアレルの割合を出す
-# --------------------------------
-cat "${input}"  |
-    cut -f 1,3 |
-    sort |
-    uniq -c |
-    tee ".DAJIN_temp/tmp_prediction" |
-    awk '{barcode[$2]+=$1} END{for(key in barcode) print key,barcode[key]}' |
-    sort |
-    join -1 1 -2 2 - ".DAJIN_temp/tmp_prediction" |
-    awk '{print $1, int($3/$2*100+0.5), $4}' |
-cat - > ".DAJIN_temp/tmp_prediction_proportion"
-
-# --------------------------------
-# コントロールの異常アレルの割合を出す
-# --------------------------------
-per_refab=$(
-    cat ".DAJIN_temp"/tmp_prediction_proportion | 
-    grep "${ont_cont:=barcode32}" | #! define "control" by automate manner
-    grep abnormal |
-    cut -d " " -f 2)
-
-# --------------------------------
-# Filter low-percent alleles
-# --------------------------------
-
-cat .DAJIN_temp/tmp_prediction_proportion |
-    # --------------------------------
-    # 各サンプルの異常アレルの割合が
-    # 「コントロールの異常アレルの割合＋5%以内」の場合、
-    # その判定は偽陽性と判断し、取り除く
-    # --------------------------------
-    awk -v refab="${per_refab}" \
-        '!($2<refab+5 && $3 == "abnormal")' |
-    # --------------------------------
-    # Less than 5% allele type is removed except for target allele
-    # --------------------------------
-    awk '($2 > 5 && $3 != "target") || ($2 > 0 && $3 == "target")' |
-    tee -a ".DAJIN_temp/tmp_prediction_filtered" |
-    # --------------------------------
-    # Report allele percentage
-    # --------------------------------
-    awk '{array[$1]+=$2}
-        END{for(key in array) print key, array[key]}' |
-    sort |
-    join - ".DAJIN_temp/tmp_prediction_filtered" |
-    awk '{print $1, int($3*100/$2+0.5),$4}' |
-cat - > "${output}"
-
-rm .DAJIN_temp/tmp_*
-
-# ============================================================================
-# Clustering within each allele type
-# ============================================================================
-input=".DAJIN_temp/data/DAJIN_MIDS_prediction_allele_percentage.txt"
-# ----------------------------------------------------------------------------
-
-temp_dir=".DAJIN_temp/clustering/"
-mkdir -p "${temp_dir}"
-
-cat "${input}" |
-    cut -d " " -f 1,3 |
-    awk -v cont="${ont_cont}" \
-        '{print "./DAJIN/src/clustering.sh",$1, cont, $2, "&"}' |
-    #! ---------------------------------
-    # grep -e barcode18 -e barcode23 -e barcode26 |
-    grep -e barcode18 |
-    #! ---------------------------------
-    awk -v th=${threads:-1} '{
-        if (NR%th==0) gsub("&","&\nwait",$0)
-        print}
-        END{print "wait"}' |
-sh -
-
-rm .DAJIN_temp/tmp_*
-
-# ============================================================================
-# Sequence logo
-# ============================================================================
-
-
-
-# # ============================================================================
-# # Joint sequence logo in 2-cut Exon deletion
-# # ============================================================================
-
-# if [ $(echo ${mutation_type}) -eq 1 ]; then
-#     printf "Check the intactness of a joint sequence of deletion...\n"
-#     ./DAJIN/src/intact_2cutdeletion.sh ${threads:-1}
-# fi
-
-# # ============================================================================
-# # KI sequence intactness
-# # ============================================================================
-# reference=fasta/wt.fa
-# query=fasta/target.fa
-
-# set +e
-# minimap2 -a ${reference} ${query} --cs 2>/dev/null |
-# awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-# sed -e "s/cs:Z:://g" -e "s/:/\t/g" |
-# grep -q -i -e "ATAACTTCGTATAATGTATGCTATACGAAGTTAT" \
-#     -e "ATAACTTCGTATAGCATACATTATACGAAGTTAT"
-# if [ $? -eq 0 ]; then
-#     printf "Check the intactness of loxP sequence loci...\n"
-#     ./DAJIN/src/intact_preparation.sh
-#     printf "Generate sequence logo at loxP sites...\n"
-#     ./DAJIN/src/intact_seqlogo.sh
-#     printf "Search loxP exactly matched reads...\n"
-#     ./DAJIN/src/intact_fullmatch.sh
-#     python ./DAJIN/src/intact_fullmatch.py
-# fi
-# set -e
-
-# # ============================================================================
-# # SVG allele types
-# # ============================================================================
-# # wt_seqlen=$(cat .tmp_/wt.fa | awk '!/[>|@]/ {print length($0)}')
-# # cat .tmp_/mutation_points |
-# # awk -v reflen=${wt_seqlen} \
-# #     '{print int($1/reflen*100) + 10 ,int($2/reflen*100) + 10 }'
-
-# ============================================================================
-# Mapping by minimap2 for IGV visualization
-# ============================================================================
-printf \
-"+++++++++++++++++++++
-Generate BAM files
-+++++++++++++++++++++\n"
-if [ "$mutation_type" = "P" ]; then
-    rm .DAJIN_temp/fasta_ont/wt_ins* .DAJIN_temp/fasta_ont/wt_del*
-fi
-
-./DAJIN/src/igvjs.sh "${genome:-mm10}" "${threads:-1}"
-rm .DAJIN_temp/tmp_* 2>/dev/null
-printf "BAM files are saved at bam\n"
-printf "Next converting BAM to MIDS format...\n"
 
 # ============================================================================
 # Alignment viewing
@@ -631,7 +602,7 @@ printf "Next converting BAM to MIDS format...\n"
 
 printf "Visualizing alignment reads...\n"
 printf "Browser will be launched. Click 'igvjs.html'.\n"
-{ npx live-server DAJIN_Report/igvjs/ & } 1>/dev/null 2>/dev/null
+{ npx live-server DAJIN_results/BAM/igvjs/ & } 1>/dev/null 2>/dev/null
 
 # rm -rf .tmp_
 # rm .DAJIN_temp/tmp_* .DAJIN_temp/clustering/tmp_* 2>/dev/null

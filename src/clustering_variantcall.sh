@@ -25,9 +25,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # [ "$alleletype" = "abnormal" ] && alleletype="wt"
 
 barcode="${1}"
-control="${2}"
-alleletype="${3}"
-alleletype_original="${3}"
+alleletype="${2}"
+alleletype_original="${2}"
 suffix="${barcode}"_"${alleletype}"
 [ "$alleletype" = "normal" ] && alleletype="wt"
 [ "$alleletype" = "abnormal" ] && alleletype="wt"
@@ -37,12 +36,7 @@ mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
 # ----------------------------------------
 # Temporal Output
 # ----------------------------------------
-
-# Output Plot
-hdbscan_id=".DAJIN_temp/clustering/temp/hdbscan_${suffix}"
-plot_mutation=".DAJIN_temp/clustering/temp/plot_${suffix}"
-
-# allele percentage on each cluster
+consensus_mutation=".DAJIN_temp/clustering/temp/consensus_${suffix}"
 allepe_percentage=".DAJIN_temp/clustering/temp/allele_percentage_${suffix}".txt
 
 # ----------------------------------------------------------
@@ -55,51 +49,36 @@ output_result=".DAJIN_temp/clustering/result_allele_mutinfo_${suffix}".txt
 # Report allele mutation info
 # ============================================================================
 
-cat "${plot_mutation}" |
-    awk '{
-        num=1
-        cl_mut[$3]=cl_mut[$3]$2
-        if($2!="M"){
-            loc[NR] = $1
-            mut[NR] = $2
-            cl[NR] = $3
+cat "${consensus_mutation}" |
+    awk '{num=1
+        cluster[$1]=cluster[$1]$3
+        if($3!="M"){
+            cl[NR] = $1
+            loc[NR] = $2
+            mut[NR] = $3
             ins[NR] = $4
         }}
     END{
-        # ----------------------------------------------------------
         # もし変異がなければintactと表示する
-        # ----------------------------------------------------------
-        for(j in cl_mut) {
-            if (cl_mut[j] !~/[I|D|S]/) {print j, 0,"intact"}
+        for(j in cluster) {
+            if (cluster[j] !~/[I|D|S]/) {print j, 0,"intact"}
         }
-        # ----------------------------------------------------------
-        # 同じ変異が5つ飛ばし以内で続いている場合は連続した変異とみなす
-        # また、挿入塩基の場合は挿入塩基数を直接表記する
-        # ----------------------------------------------------------
-        for(i in loc){
-            if(loc[i+1] - loc[i] == 1 || \
-                loc[i+2] - loc[i] == 2 || \
-                loc[i+3] - loc[i] == 3 || \
-                loc[i+4] - loc[i] == 4 || \
-                loc[i+5] - loc[i] == 5) {num++}
-            # if( for(j=1; j<=5; j++){loc[j+1]-log[j] == 1}) num++
-            else if(ins[i]>0) {print cl[i], i, ins[i]""mut[i], loc[i]}
-            else {print cl[i], i, num""mut[i], loc[i]-num; num=1}
-    }}' |
+        for(j in loc){print cl[j], loc[j], mut[j], ins[j]}
+        }' |
     # ----------------------------------------------------------
     # 挿入塩基数が10以上の場合に数値情報に逆変換する
     # ----------------------------------------------------------
     awk '{
-        if($3 ~ /[a-z]I/) {
+        if($4 ~ /[a-z]/) {
             for (i=10; i<=36; i++) {
                 num=i+87
                 ins=sprintf("%c", num)
-                if($3==ins"I") $3=i"I"
+                if($4==ins) $4=i
             }
         }
         print $0}' |
-    sed "s/35I/>35I/g" |
-    sort -t " " -k 1,1 -k 2,2n |
+    sed "s/35/>35/g" |
+    sort -t " " -k 1,1n -k 2,2n |
 cat - > ".DAJIN_temp/clustering/temp/tmp_${suffix}"
 
 # ----------------------------------------------------------
@@ -116,56 +95,9 @@ cat - > "${output_result}"
 
 
 # ============================================================================
-# Report allele mutation info
-# 各リードとクラスターの対応付を行う
-#（次のVCF作製とSequence logo描出のために必要）
-# ============================================================================
-
-# true > .DAJIN_temp/clustering/temp/tmp_id_"${suffix}"
-# cat "${allepe_percentage}" |
-# while read -r input
-# do
-#     before=$(echo "$input" | cut -d " " -f 1)
-#     after=$(echo "$input" | cut -d " " -f 2)
-#     #
-#     cat "${hdbscan_id}" |
-#     awk -v bf="${before}" -v af="${after}" \
-#     '$2==bf {$2=af; print}' \
-#     >> .DAJIN_temp/clustering/temp/tmp_id_"${suffix}"
-# done
-
-# cat .DAJIN_temp/clustering/temp/tmp_id_"${suffix}" |
-#     sed "s/ /\t/g" |
-#     sort |
-# cat - > "${output_id}"
-
-
-before=$(cat "${allepe_percentage}" | cut -d " " -f 1 | xargs echo)
-after=$(cat "${allepe_percentage}" | cut -d " " -f 2 | xargs echo)
-
-cat "${hdbscan_id}" |
-    awk -v bf="${before}" -v af="${after}" \
-    'BEGIN{
-        split(bf,bf_," ")
-        split(af,af_," ")}
-    {for(i in bf_){
-        if($2==bf_[i]) $2=af_[i]
-        }
-    }1' |
-    sed "s/ /\t/g" |
-    sort |
-cat - > "${output_id}"
-
-# ============================================================================
 # 変異情報の同定
 # Variant call
 # ============================================================================
-ref=".DAJIN_temp/fasta/wt.fa"
-cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
-    minimap2 -ax map-ont "${ref}" - --cs=long 2>/dev/null |
-    sort |
-cat - > tmp_sam
-
 set $(cat $output_result |
     awk -v cl="${cluster}" \
     '$3==cl {
@@ -177,6 +109,12 @@ mutation_type=$(echo "$1" | sed "s/_/ /g")
 mutation_site=$(echo "$2" | sed "s/_/ /g")
 echo $mutation_type
 echo $mutation_site
+
+ref=".DAJIN_temp/fasta/wt.fa"
+cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
+    minimap2 -ax map-ont "${ref}" - --cs=long 2>/dev/null |
+    sort |
+cat - > tmp_sam
 
 cat "${output_id}" |
     grep "${cluster}$" |
