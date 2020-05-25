@@ -554,22 +554,19 @@ rm .DAJIN_temp/tmp_*
 # ============================================================================
 # Clustering within each allele type
 # ============================================================================
-input=".DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt"
-# ----------------------------------------------------------------------------
-
-cat "${input}" |
+cat "${prediction_filtered}" |
     cut -d " " -f 3 |
+    grep -e "^normal" -e "^wt" |
     sort -u |
-while read -r allele; do
-    ./DAJIN/src/clustering_prerequisit.sh "${ont_cont}" "${allele}" 
+while read -r alleletype; do
+    ./DAJIN/src/clustering_prerequisit.sh "${ont_cont}" "${alleletype}" 
 done
 
-cat "${input}" |
-    cut -d " " -f 1,3 |
-    awk '{print "./DAJIN/src/clustering.sh",$1, $2, "&"}' |
+cat "${prediction_filtered}" |
+    awk '{print "./DAJIN/src/clustering.sh",$1, $3, $2, "&"}' |
     #! ---------------------------------
     # grep -e barcode18 -e barcode23 -e barcode26 |
-    grep -e barcode18 |
+    grep -e barcode08 |
     #! ---------------------------------
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
