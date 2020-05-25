@@ -34,8 +34,8 @@ set -u
 label=$(echo "${input}" | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
 suffix="${label}_${genotype}"
 output_MIDS=".DAJIN_temp/data/MIDS_${suffix}"
-tmp_mapping=".DAJIN_temp/tmp_mapping_${suffix}"
-tmp_seqID=".DAJIN_temp/tmp_seqID_${suffix}"
+tmp_mapping=".DAJIN_temp/tmp_mapping_${suffix}"_$$
+tmp_seqID=".DAJIN_temp/tmp_seqID_${suffix}"_$$
 
 # ======================================
 # Mapping

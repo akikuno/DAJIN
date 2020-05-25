@@ -16,10 +16,10 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # ----------------------------------------
 # Input
 # ----------------------------------------
-# barcode="barcode08"
+# barcode="barcode12"
 # alleletype="wt"
-# alleletype_original="abnormal"
-# cluster=1
+# alleletype_original="normal"
+# cluster=2
 # suffix="${barcode}"_"${alleletype}"
 # echo $suffix
 # [ "$alleletype" = "normal" ] && alleletype="wt"
@@ -30,8 +30,7 @@ alleletype="${2}"
 alleletype_original="${3}"
 cluster="${4}"
 
-suffix="${barcode}"_"${alleletype}"
-echo $suffix
+suffix="${barcode}"_"${alleletype_original}"
 # [ "$alleletype" = "normal" ] && alleletype="wt"
 # [ "$alleletype" = "abnormal" ] && alleletype="wt"
 
@@ -49,7 +48,7 @@ tmp_mutation=".DAJIN_temp/clustering/temp/tmp_mutation_${suffix}"
 # ----------------------------------------------------------
 output_id=".DAJIN_temp/clustering/result_allele_id_${suffix}".txt
 # output_result=".DAJIN_temp/clustering/result_allele_mutinfo_${suffix}".txt
-suffix="${barcode}"_"${alleletype}"_"${cluster}"
+suffix="${barcode}"_"${alleletype_original}"_"${cluster}"
 
 
 
@@ -77,7 +76,7 @@ cat "${output_id}" |
             for(i=2; i<=NR; i++){ str=str""a[i,j] }
             print str }
     }' |
-    # head -n 740 | #! -----------------------------
+    # head -n 740 | tail -n 5 #! -----------------------------
     # ------------------------------------------
     # 各塩基部位において最多の変異をレポートする
     # ------------------------------------------
@@ -102,7 +101,7 @@ cat "${output_id}" |
         }' |
     #
     paste - "${control_score}" |
-    #head -n 740 | tail -n 5 | #! -----------------------------
+    # head -n 740 | tail -n 5 | #! -----------------------------
     # ------------------------------------------
     # 各塩基部位にたいして「Mの頻度、Iの頻度、Dの頻度、Sの頻度、Iの個数」を表示する
     # ------------------------------------------
@@ -205,10 +204,6 @@ cat - > "${consensus_mutation}"
 # 変異情報の同定
 # Variant call
 # ============================================================================
-# if [ "$(grep -c intact ${consensus_mutation})" -eq 0 ]; then
-
-# fi
-
 set $(cat "${consensus_mutation}" |
     awk -v cl="${cluster}" \
     '$1==cl {
@@ -274,13 +269,25 @@ cat - > "${tmp_mutation}"
 
 # cat tmp_mutation_
 # minimap2 -ax map-ont .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/target.fa --cs |
+# ============================================================================
+# FASTAファイルの作製
+# Output FASTA file
+# ============================================================================
+
 
 # ============================================================================
 # HTMLの作製
 # Output HTML file
 # ============================================================================
+mkdir -p .DAJIN_temp/clustering/html
 
-html_filename=$(echo "${barcode}_allele${cluster}_indel")
+if [ "$(grep -c intact $tmp_mutation)" -eq 1 ]; then
+    html_filename=$(echo "${barcode}_allele${cluster}_intact_${alleletype}" |
+        sed "s:^:.DAJIN_temp/clustering/html/:g")
+else
+    html_filename=$(echo "${barcode}_allele${cluster}_indel_${alleletype_original}" |
+        sed "s:^:.DAJIN_temp/clustering/html/:g")
+fi
 mutation_type=$(cut -d " " -f 1 "${tmp_mutation}" | xargs echo)
 mutation_site=$(cut -d " " -f 2 "${tmp_mutation}" | xargs echo)
 mutation_nuc=$(cut -d " " -f 3 "${tmp_mutation}" | xargs echo)
@@ -357,3 +364,5 @@ cat << EOF >> "${html_filename}".html
 </body>
 </html>
 EOF
+
+echo "$html_filename"

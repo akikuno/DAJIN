@@ -566,7 +566,7 @@ cat "${prediction_filtered}" |
     awk '{print "./DAJIN/src/clustering.sh",$1, $3, $2, "&"}' |
     #! ---------------------------------
     # grep -e barcode18 -e barcode23 -e barcode26 |
-    grep -e barcode08 |
+    grep -e barcode08 -e barcode12 |
     #! ---------------------------------
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1

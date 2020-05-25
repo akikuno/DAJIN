@@ -17,8 +17,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # ----------------------------------------
 # Input
 # ----------------------------------------
-# barcode="barcode08"
-# alleletype="abnormal"
+# barcode="barcode12"
+# alleletype="normal"
 
 # alleletype_original=${alleletype}
 # suffix="${barcode}"_"${alleletype}"
@@ -30,7 +30,7 @@ barcode="${1}"
 alleletype="${2}"
 alleletype_original="${2}"
 percentage="${3}"
-suffix="${barcode}"_"${alleletype}"
+suffix="${barcode}"_"${alleletype_original}"
 [ "$alleletype" = "normal" ] && alleletype="wt"
 [ "$alleletype" = "abnormal" ] && alleletype="wt"
 
@@ -51,6 +51,7 @@ control_score=".DAJIN_temp/clustering/temp/control_score_${alleletype}"
 hdbscan_id=".DAJIN_temp/clustering/temp/hdbscan_${suffix}"
 # consensus_mutation=".DAJIN_temp/clustering/temp/consensus_${suffix}"
 # plot_mutsites=.DAJIN_temp/clustering/temp/tmp_mutation_"${suffix}"
+tmp_allele_percentage=".DAJIN_temp/clustering/temp/tmp_allele_percentage_${suffix}".txt
 allele_percentage=".DAJIN_temp/clustering/temp/allele_percentage_${suffix}".txt
 
 # ----------------------------------------------------------
@@ -79,7 +80,7 @@ seq_maxnum=$(
 
 find .DAJIN_temp/fasta_ont/ -type f | grep "${barcode}" |
 xargs -I @ ./DAJIN/src/mids_convertion.sh @ "${alleletype}" &&
-mv ".DAJIN_temp/data/MIDS_${barcode}_${alleletype}" "${MIDS_que}"
+cp ".DAJIN_temp/data/MIDS_${barcode}_${alleletype}" "${MIDS_que}"
 
 # ----------------------------------------------------------
 # Mutation scoring of samples
@@ -214,7 +215,7 @@ cat "${hdbscan_id}" |
         allele[NR]=$2" "allele_per}}
     END{for(key in allele) print allele[key],total, per}' |
     awk '{print NR, $1, $2/$3*$4}' |
-cat - > "${allele_percentage}"
+cat - > "${tmp_allele_percentage}"
 # cat - > .DAJIN_temp/clustering/temp/tmp_"${suffix}"
 
 # # ----------------------------------------------------------------
@@ -232,8 +233,8 @@ cat - > "${allele_percentage}"
 #（次のVCF作製とSequence logo描出のために必要）
 # ============================================================================
 
-before=$(cat "${allele_percentage}" | cut -d " " -f 2 | xargs echo)
-after=$(cat "${allele_percentage}" | cut -d " " -f 1 | xargs echo)
+before=$(cat "${tmp_allele_percentage}" | cut -d " " -f 2 | xargs echo)
+after=$(cat "${tmp_allele_percentage}" | cut -d " " -f 1 | xargs echo)
 
 paste "${hdbscan_id}" "${query_seq}" |
     awk -v bf="${before}" -v af="${after}" \
@@ -246,10 +247,19 @@ paste "${hdbscan_id}" "${query_seq}" |
     sort |
 cat - > "${output_id}"
 
-cat "${allele_percentage}" |
+
+cat "${tmp_allele_percentage}" |
     awk -v barcode="${barcode}" -v al="${alleletype}" -v al_o="${alleletype_original}" \
     '{print "./DAJIN/src/clustering_variantcall.sh",barcode,al, al_o, $1}' |
     sh -
+
+cat "${tmp_allele_percentage}" |
+    sed "s/^/${barcode} ${alleletype_original} /g" |
+    awk '{print $1,$2,$3,$5}' |
+cat - > "${allele_percentage}"
+
+cat "${allele_percentage}"
+
 # # ============================================================================
 # # 変異情報のコンセンサスを得る
 # # ============================================================================
@@ -343,12 +353,9 @@ cat "${allele_percentage}" |
 
 output_bamdir=".DAJIN_temp/clustering/bam_clustering"
 mkdir -p "${output_bamdir}"
-set +e
-rm ${output_bamdir}/${barcode}_${alleletype_original}* 2>/dev/null
-set -e
 
 cat "${allele_percentage}" |
-cut -d " " -f 1 |
+cut -d " " -f 3 |
 sort -u |
 while read -r cluster
 do
@@ -361,7 +368,7 @@ do
     samtools view -H DAJIN_Report/bam/"${barcode}".bam |
     cat - > ".DAJIN_temp/clustering/temp/tmp_header_${suffix}" 
     #
-    samtools view DAJIN_Report/bam/"${barcode}".bam |
+    samtools view DAJIN_results/BAM/"${barcode}".bam |
         sort |
         join - ".DAJIN_temp/clustering/temp/tmp_id_${suffix}" 2>/dev/null |
         sed "s/ /\t/g" 2>/dev/null |
