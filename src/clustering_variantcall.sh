@@ -19,8 +19,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # barcode="barcode12"
 # alleletype="wt"
 # alleletype_original="normal"
-# cluster=2
-# suffix="${barcode}"_"${alleletype}"
+# cluster=1
+# suffix="${barcode}"_"${alleletype_original}"
 # echo $suffix
 # [ "$alleletype" = "normal" ] && alleletype="wt"
 # [ "$alleletype" = "abnormal" ] && alleletype="wt"
@@ -41,8 +41,7 @@ mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
 # ----------------------------------------
 control_score=".DAJIN_temp/clustering/temp/control_score_${alleletype}"
 consensus_mutation=".DAJIN_temp/clustering/temp/consensus_${suffix}"
-
-tmp_mutation=".DAJIN_temp/clustering/temp/tmp_mutation_${suffix}"
+mutation_info=".DAJIN_temp/clustering/temp/mutation_info_${suffix}"
 # ----------------------------------------------------------
 # Output results
 # ----------------------------------------------------------
@@ -55,13 +54,7 @@ suffix="${barcode}"_"${alleletype_original}"_"${cluster}"
 # ============================================================================
 # 変異情報のコンセンサスを得る
 # ============================================================================
-# true > "${consensus_mutation}"
-# #
-# cat "${allele_percentage}" |
-# cut -d " " -f 1 |
-# sort -u |
-# while read -r cluster
-# do
+
 cat "${output_id}" |
     awk -v cl="${cluster}" '$2==cl' |
     cut -f 3 |
@@ -152,54 +145,6 @@ cat "${output_id}" |
 cat - > "${consensus_mutation}"
 # done
 
-# # ============================================================================
-# # Report allele mutation info
-# # ============================================================================
-
-# cat "${consensus_mutation}" |
-#     awk '{num=1
-#         cluster[$1]=cluster[$1]$3
-#         if($3!="M"){
-#             cl[NR] = $1
-#             loc[NR] = $2
-#             mut[NR] = $3
-#             ins[NR] = $4
-#         }}
-#     END{
-#         # もし変異がなければintactと表示する
-#         for(j in cluster) {
-#             if (cluster[j] !~/[I|D|S]/) {print j, 0,"intact"}
-#         }
-#         for(j in loc){print cl[j], loc[j], mut[j], ins[j]}
-#         }' |
-#     # ----------------------------------------------------------
-#     # 挿入塩基数が10以上の場合に数値情報に逆変換する
-#     # ----------------------------------------------------------
-#     awk '{
-#         if($4 ~ /[a-z]/) {
-#             for (i=10; i<=36; i++) {
-#                 num=i+87
-#                 ins=sprintf("%c", num)
-#                 if($4==ins) $4=i
-#             }
-#         }
-#         print $0}' |
-#     sed "s/35/>35/g" |
-#     sort -t " " -k 1,1n -k 2,2n |
-# cat - > ".DAJIN_temp/clustering/temp/tmp_${suffix}"
-
-# # ----------------------------------------------------------
-# # barcode, alleletype, クラスター番号, アレル頻度、変異、変異部位、ソート番号を出力する
-# # ----------------------------------------------------------
-# cat "$allele_percentage" |
-#     sort |
-#     join - ".DAJIN_temp/clustering/temp/tmp_${suffix}" |
-#     sort -t " " -k 1,1n  -k 3,3n |
-#     awk '{print $1,$2,$4,$5, NR}' |
-#     sed "s/^/${barcode} ${alleletype_original} /g" |
-# cat - > "${output_result}"
-
-
 # ============================================================================
 # 変異情報の同定
 # Variant call
@@ -265,32 +210,21 @@ cat "${output_id}" |
     sed "s/+//g" |
     awk '{if(max[$2] < $1) {max[$2] = $1; out[$2]=$3" "$4}}
         END{for(key in out) print key, out[key]}' |
-cat - > "${tmp_mutation}"
-
-# cat tmp_mutation_
-# minimap2 -ax map-ont .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/target.fa --cs |
-# ============================================================================
-# FASTAファイルの作製
-# Output FASTA file
-# ============================================================================
+cat - > "${mutation_info}"
 
 
 # ============================================================================
-# HTMLの作製
-# Output HTML file
+# コンセンサス配列の作製
 # ============================================================================
-mkdir -p .DAJIN_temp/clustering/html
+mkdir -p .DAJIN_temp/clustering/consensus
 
-if [ "$(grep -c intact $tmp_mutation)" -eq 1 ]; then
-    html_filename=$(echo "${barcode}_allele${cluster}_intact_${alleletype}" |
-        sed "s:^:.DAJIN_temp/clustering/html/:g")
-else
-    html_filename=$(echo "${barcode}_allele${cluster}_indel_${alleletype_original}" |
-        sed "s:^:.DAJIN_temp/clustering/html/:g")
-fi
-mutation_type=$(cut -d " " -f 1 "${tmp_mutation}" | xargs echo)
-mutation_site=$(cut -d " " -f 2 "${tmp_mutation}" | xargs echo)
-mutation_nuc=$(cut -d " " -f 3 "${tmp_mutation}" | xargs echo)
+mutation_type=$(cut -d " " -f 1 "${mutation_info}" | xargs echo)
+mutation_site=$(cut -d " " -f 2 "${mutation_info}" | xargs echo)
+mutation_nuc=$(cut -d " " -f 3 "${mutation_info}" | xargs echo)
+
+# -------------------------------
+# FASTA file
+# -------------------------------
 
 cat .DAJIN_temp/fasta/wt.fa |
     sed 1d |
@@ -301,21 +235,65 @@ cat .DAJIN_temp/fasta/wt.fa |
             split(nuc, nuc_, " ")
         }
         {for(i in type_){
+            nuc_[i] = toupper(nuc_[i])
             if(type_[i] == "S"){
-                $(site_[i]+1) = "<span_class=\"Sub\">" nuc_[i] "</span>"
+                $(site_[i]) = nuc_[i]
                 }
             else if(type_[i] == "I"){
-                $(site_[i]+1) = $site_[i] "<span_class=\"Ins\">" nuc_[i] "</span>"
+                $(site_[i]) = $site_[i]""nuc_[i]
                 }
             else if(type_[i] == "D"){
-                $(site_[i]+1) = "<span_class=\"Del\">" tolower(nuc_[i]) "</span>"
+                $(site_[i]) = nuc_[i]
                 }
         }}1' |
     sed -e "s/ //g" -e "s/_/ /g"|
-    sed -e "1i >${html_filename}" |
+    # sed -e "1i >${output_filename}" |
+cat - > .DAJIN_temp/clustering/temp/"${suffix}".fa
+
+
+if [ "$(grep -c intact $mutation_info)" -eq 1 ]; then
+    output_filename=$(echo "${barcode}_allele${cluster}_intact_${alleletype}")
+else
+    output_filename=$(echo "${barcode}_allele${cluster}_mutation")
+fi
+
+[ "$(cat .DAJIN_temp/fasta/target.fa | sed 1d |
+diff - .DAJIN_temp/clustering/temp/"${suffix}".fa |
+wc -l)" -eq 0 ] && output_filename="${barcode}_allele${cluster}_intact_target"
+
+[ "$(cat .DAJIN_temp/fasta/wt.fa | sed 1d |
+diff - .DAJIN_temp/clustering/temp/"${suffix}".fa |
+wc -l)" -eq 0 ] && output_filename="${barcode}_allele${cluster}_intact_wt"
+
+# -------------------------------
+# HTML file
+# -------------------------------
+
+cat .DAJIN_temp/fasta/wt.fa |
+    sed 1d |
+    awk -F "" -v type="${mutation_type}" -v site="${mutation_site}" -v nuc="${mutation_nuc}" \
+        'BEGIN{
+            split(type, type_, " ")
+            split(site, site_, " ")
+            split(nuc, nuc_, " ")
+        }
+        {for(i in type_){
+            nuc_[i] = toupper(nuc_[i])
+            if(type_[i] == "S"){
+                $(site_[i]) = "<span_class=\"Sub\">" nuc_[i] "</span>"
+                }
+            else if(type_[i] == "I"){
+                $(site_[i]) = $site_[i] "<span_class=\"Ins\">" nuc_[i] "</span>"
+                }
+            else if(type_[i] == "D"){
+                $(site_[i]) = "<span_class=\"Del\">" tolower(nuc_[i]) "</span>"
+                }
+        }}1' |
+    sed -e "s/ //g" -e "s/_/ /g"|
+    sed -e "1i >${output_filename}" |
 cat - > .DAJIN_temp/clustering/temp/tmp_html_"${suffix}".html
 
-cat << EOF > "${html_filename}".html
+cat << EOF > .DAJIN_temp/clustering/consensus/"${output_filename}".html
 <!DOCTYPE html>
 <html>
 <head>
@@ -351,9 +329,10 @@ p {
 <p>
 EOF
 
-cat .DAJIN_temp/clustering/temp/tmp_html_"${suffix}".html >> "${html_filename}".html
+cat .DAJIN_temp/clustering/temp/tmp_html_"${suffix}".html |
+cat - >> .DAJIN_temp/clustering/consensus/"${output_filename}".html
 
-cat << EOF >> "${html_filename}".html
+cat << EOF >> .DAJIN_temp/clustering/consensus/"${output_filename}".html
 </p>
 <hr>
 <p>
@@ -365,4 +344,4 @@ cat << EOF >> "${html_filename}".html
 </html>
 EOF
 
-echo "$html_filename"
+echo .DAJIN_temp/clustering/consensus/"${output_filename}"

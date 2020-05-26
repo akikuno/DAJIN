@@ -29,7 +29,7 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 barcode="${1}"
 alleletype="${2}"
 alleletype_original="${2}"
-percentage="${3}"
+original_percentage="${3}"
 suffix="${barcode}"_"${alleletype_original}"
 [ "$alleletype" = "normal" ] && alleletype="wt"
 [ "$alleletype" = "abnormal" ] && alleletype="wt"
@@ -208,13 +208,13 @@ cat "${hdbscan_id}" |
     awk '{print $NF}' |
     sort |
     uniq -c |
-    awk -v per="${percentage}" -v nr="$(cat "${hdbscan_id}" | wc -l))" \
+    awk -v per="${original_percentage}" -v nr="$(cat "${hdbscan_id}" | wc -l))" \
     '{allele_per=$1/nr*per
     if(allele_per>10) {
         total+=allele_per
         allele[NR]=$2" "allele_per}}
     END{for(key in allele) print allele[key],total, per}' |
-    awk '{print NR, $1, $2/$3*$4}' |
+    awk '{print NR, $1, int($2/$3*$4+0.5)}' |
 cat - > "${tmp_allele_percentage}"
 # cat - > .DAJIN_temp/clustering/temp/tmp_"${suffix}"
 
@@ -253,96 +253,12 @@ cat "${tmp_allele_percentage}" |
     '{print "./DAJIN/src/clustering_variantcall.sh",barcode,al, al_o, $1}' |
     sh -
 
-cat "${tmp_allele_percentage}" |
-    sed "s/^/${barcode} ${alleletype_original} /g" |
-    awk '{print $1,$2,$3,$5}' |
-cat - > "${allele_percentage}"
+# cat "${tmp_allele_percentage}" |
+#     sed "s/^/${barcode} ${alleletype_original} /g" |
+#     awk '{print $1,$2,$3,$5}' |
+# cat - > "${allele_percentage}"
 
-cat "${allele_percentage}"
-
-# # ============================================================================
-# # 変異情報のコンセンサスを得る
-# # ============================================================================
-# true > "${consensus_mutation}"
-# #
-# cat "${allele_percentage}" |
-# cut -d " " -f 1 |
-# sort -u |
-# while read -r cluster
-# do
-#     paste "${query_seq}" "${output_id}" |
-#     awk -v cl="${cluster}" '$NF==cl' |
-#     cut -f 1 |
-#     # ----------------------------------------
-#     # 行を「リード指向」から「塩基部位指向」に変換する
-#     # ----------------------------------------
-#     awk -F "" \
-#     '{ for (i=1; i<=NF; i++)  { a[NR,i] = $i } }
-#     END {    
-#         for(j=1; j<=NF; j++) {
-#             str=a[1,j]
-#             for(i=2; i<=NR; i++){ str=str""a[i,j] }
-#             print str }
-#     }' |
-#     # head -n 740 | #! -----------------------------
-#     # ------------------------------------------
-#     # 各塩基部位において最多の変異をレポートする
-#     # ------------------------------------------
-#     awk -F "" '{sequence=$0
-#         sum[1]=gsub("=","=",sequence)
-#         sum[2]=gsub("M","M",sequence)
-#         sum[3]=gsub(/[1-9]|[a-z]/,"@", sequence)
-#         sum[4]=gsub("D","D",sequence)
-#         sum[5]=gsub("S","S",sequence)
-#         max=sum[1]; num=1
-#         for(i=2; i<=5;i++){if(max<sum[i]){max=sum[i]; num=i}}
-
-#         # print max, num
-
-#         # ------------------------------------------
-#         # Insertion数をレポートする
-#         # ------------------------------------------
-#         max=0; ins_num=0
-#         if(num==3) {
-#             for(i=1; i<=NF; i++) { if($i ~ /[0-9]|[a-z]/) array[$i]++ }
-#             for(key in array){if(max<array[key]) {max=array[key]; ins_num=key}} 
-#         }
-        
-#         print num, NR, ins_num, "@", (sum[1]+sum[2])/NF,sum[3]/NF,sum[4]/NF,sum[5]/NF
-#         }' |
-#     #
-#     paste - "${control_score}" |
-#     #head -n 740 | tail -n 5 | #! -----------------------------
-#     # ------------------------------------------
-#     # 各塩基部位にたいして「Mの頻度、Iの頻度、Dの頻度、Sの頻度、Iの個数」を表示する
-#     # ------------------------------------------
-#     # head test |
-#     awk 'function abs(v) {return v < 0 ? -v : v}
-#         $NF==1 {
-#             I=abs($6-$(NF-3))
-#             D=abs($7-$(NF-2))
-#             S=abs($8-$(NF-1))
-#             M=abs(1-I-D-S)
-#             print $2, M, I, D, S, $3
-#         }
-#         # Sequence error annontated as Match
-#         $NF==2 {
-#             print $2, 1, 0, 0, 0, 0
-#         }' |
-#     # ------------------------------------------
-#     # 各塩基部位にたいして「最大頻度の変異と挿入塩基数」を表示する
-#     # ------------------------------------------
-#     awk '{max=0; num=0
-#         for(i=2; i<=5;i++){if(max<$i){max=$i; num=i}}
-#         print num, $1, $NF}' |
-#     awk -v cl="${cluster}" \
-#     '{if($1==1) print cl, $2, "M", $NF
-#     else if($1==2) print cl, $2, "M", $NF
-#     else if($1==3) print cl, $2, "I", $NF
-#     else if($1==4) print cl, $2, "D", $NF
-#     else if($1==5) print cl, $2, "S", $NF}' |
-#     cat - >> "${consensus_mutation}"
-# done
+# cat "${allele_percentage}"
 
 #! >>>>>>>>>>>>>>>>>>>>>>>> clustering_variantcall.sh
 
