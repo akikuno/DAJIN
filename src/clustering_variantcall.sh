@@ -14,48 +14,51 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # I/O naming
 # ==============================================================================
 # ----------------------------------------
-# Input
+# Input arguments
 # ----------------------------------------
 # barcode="barcode12"
-# alleletype="wt"
-# alleletype_original="normal"
-# cluster=1
-# suffix="${barcode}"_"${alleletype_original}"
-# echo $suffix
-# [ "$alleletype" = "normal" ] && alleletype="wt"
-# [ "$alleletype" = "abnormal" ] && alleletype="wt"
+# alleletype="normal"
+# cluster=2
+# percentage=27
+# alleleid=2
+# in_suffix="${barcode}"_"${alleletype}"
+# out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
+
+# mapping_alleletype="${alleletype}"
+# [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
+# [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
 
 barcode="${1}"
 alleletype="${2}"
-alleletype_original="${3}"
-cluster="${4}"
+cluster="${3}"
+percentage="${4}"
+alleleid="${5}"
 
-suffix="${barcode}"_"${alleletype_original}"
-# [ "$alleletype" = "normal" ] && alleletype="wt"
-# [ "$alleletype" = "abnormal" ] && alleletype="wt"
+in_suffix="${barcode}"_"${alleletype}"
+out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
 
-mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
+mapping_alleletype="${alleletype}"
+[ "$alleletype" = "normal" ] && mapping_alleletype="wt"
+[ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
 
-# ----------------------------------------
-# Temporal Output
-# ----------------------------------------
-control_score=".DAJIN_temp/clustering/temp/control_score_${alleletype}"
-consensus_mutation=".DAJIN_temp/clustering/temp/consensus_${suffix}"
-mutation_info=".DAJIN_temp/clustering/temp/mutation_info_${suffix}"
+
 # ----------------------------------------------------------
-# Output results
+# Input files
 # ----------------------------------------------------------
-output_id=".DAJIN_temp/clustering/result_allele_id_${suffix}".txt
-# output_result=".DAJIN_temp/clustering/result_allele_mutinfo_${suffix}".txt
-suffix="${barcode}"_"${alleletype_original}"_"${cluster}"
+control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
+allele_id=".DAJIN_temp/clustering/result_allele_id_${in_suffix}".txt
 
-
+# ----------------------------------------------------------
+# Output files
+# ----------------------------------------------------------
+mutation_info=".DAJIN_temp/clustering/temp/mutation_info_${out_suffix}"
+consensus_mutation=".DAJIN_temp/clustering/temp/consensus_${out_suffix}"
 
 # ============================================================================
 # 変異情報のコンセンサスを得る
 # ============================================================================
 
-cat "${output_id}" |
+cat "${allele_id}" |
     awk -v cl="${cluster}" '$2==cl' |
     cut -f 3 |
     # ----------------------------------------
@@ -164,13 +167,13 @@ ref=".DAJIN_temp/fasta/wt.fa"
 cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
     minimap2 -ax map-ont "${ref}" - --cs=long 2>/dev/null |
     sort |
-cat - > .DAJIN_temp/clustering/temp/tmp_sam_"${suffix}"
+cat - > .DAJIN_temp/clustering/temp/tmp_sam_"${out_suffix}"
 
-cat "${output_id}" |
+cat "${allele_id}" |
     awk -v cl="${cluster}" '$2==cl' |
     cut -f 1 |
     sort -u |
-    join .DAJIN_temp/clustering/temp/tmp_sam_"${suffix}" - |
+    join .DAJIN_temp/clustering/temp/tmp_sam_"${out_suffix}" - |
     awk '{print $4, $(NF-1)}' |
     sed "s/cs:Z://g" |
     awk '{seq=""
@@ -247,23 +250,53 @@ cat .DAJIN_temp/fasta/wt.fa |
                 }
         }}1' |
     sed -e "s/ //g" -e "s/_/ /g"|
-    # sed -e "1i >${output_filename}" |
-cat - > .DAJIN_temp/clustering/temp/"${suffix}".fa
+cat - > .DAJIN_temp/clustering/temp/"${out_suffix}".fa
 
+# -------------------------------
+# 出力ファイル名をフォーマット
+# -------------------------------
+output_filename="${barcode}_allele${alleleid}"
 
-if [ "$(grep -c intact $mutation_info)" -eq 1 ]; then
-    output_filename=$(echo "${barcode}_allele${cluster}_intact_${alleletype}")
+diff_wt=$(cat .DAJIN_temp/fasta/wt.fa |
+    sed 1d |
+    diff - .DAJIN_temp/clustering/temp/${out_suffix}.fa |
+    wc -l)
+diff_target=$(cat .DAJIN_temp/fasta/target.fa |
+    sed 1d |
+    diff - .DAJIN_temp/clustering/temp/${out_suffix}.fa |
+    wc -l)
+
+cat $mutation_info
+
+[ "$(awk '$1=="intact"' ${mutation_info} | wc -l)" -eq 0 ] &&
+include_target=$(
+    cat .DAJIN_temp/data/mutation_points |
+    awk '{print "S",$1+1}' |
+    grep -c - "${mutation_info}")
+
+if [ "${diff_wt}" -eq 0 ]; then
+    output_filename="${output_filename}_intact_wt"
+elif [ "${diff_target}" -eq 0 ]; then
+    output_filename="${output_filename}_intact_target"
+elif [ "${include_target}" -gt 0 ]; then
+    output_filename="${output_filename}_mutation_target"
+elif [ "$(grep -c intact $mutation_info)" -eq 1 ]; then
+    output_filename="${output_filename}_intact_${alleletype}"
 else
-    output_filename=$(echo "${barcode}_allele${cluster}_mutation")
+    output_filename="${output_filename}_mutation"
 fi
 
-[ "$(cat .DAJIN_temp/fasta/target.fa | sed 1d |
-diff - .DAJIN_temp/clustering/temp/"${suffix}".fa |
-wc -l)" -eq 0 ] && output_filename="${barcode}_allele${cluster}_intact_target"
+# [ "$(cat .DAJIN_temp/fasta/target.fa | sed 1d |
+# diff - .DAJIN_temp/clustering/temp/${out_suffix}.fa |
+# wc -l)" -eq 0 ] && output_filename="${output_filename}_intact_target"
 
-[ "$(cat .DAJIN_temp/fasta/wt.fa | sed 1d |
-diff - .DAJIN_temp/clustering/temp/"${suffix}".fa |
-wc -l)" -eq 0 ] && output_filename="${barcode}_allele${cluster}_intact_wt"
+# [ "$(cat .DAJIN_temp/fasta/wt.fa | sed 1d |
+# diff - .DAJIN_temp/clustering/temp/${out_suffix}.fa |
+# wc -l)" -eq 0 ] && output_filename="${output_filename}_intact_wt"
+
+cat .DAJIN_temp/clustering/temp/"${out_suffix}".fa |
+    sed -e "1i >${output_filename}_${percentage}%" |
+cat - > .DAJIN_temp/clustering/consensus/"${output_filename}".fa
 
 # -------------------------------
 # HTML file
@@ -290,8 +323,8 @@ cat .DAJIN_temp/fasta/wt.fa |
                 }
         }}1' |
     sed -e "s/ //g" -e "s/_/ /g"|
-    sed -e "1i >${output_filename}" |
-cat - > .DAJIN_temp/clustering/temp/tmp_html_"${suffix}".html
+    sed -e "1i >${output_filename}_${percentage}%" |
+cat - > .DAJIN_temp/clustering/temp/tmp_html_"${out_suffix}".html
 
 cat << EOF > .DAJIN_temp/clustering/consensus/"${output_filename}".html
 <!DOCTYPE html>
@@ -329,7 +362,7 @@ p {
 <p>
 EOF
 
-cat .DAJIN_temp/clustering/temp/tmp_html_"${suffix}".html |
+cat .DAJIN_temp/clustering/temp/tmp_html_"${out_suffix}".html |
 cat - >> .DAJIN_temp/clustering/consensus/"${output_filename}".html
 
 cat << EOF >> .DAJIN_temp/clustering/consensus/"${output_filename}".html

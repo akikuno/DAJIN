@@ -17,48 +17,45 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # ----------------------------------------
 # Input
 # ----------------------------------------
-# barcode="barcode12"
+# barcode="barcode32"
 # alleletype="normal"
-
-# alleletype_original=${alleletype}
+# original_percentage=100
 # suffix="${barcode}"_"${alleletype}"
-# echo $suffix
-# [ "$alleletype" = "normal" ] && alleletype="wt"
-# [ "$alleletype" = "abnormal" ] && alleletype="wt"
+
+# mapping_alleletype="${alleletype}"
+# [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
+# [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
 
 barcode="${1}"
 alleletype="${2}"
-alleletype_original="${2}"
 original_percentage="${3}"
-suffix="${barcode}"_"${alleletype_original}"
-[ "$alleletype" = "normal" ] && alleletype="wt"
-[ "$alleletype" = "abnormal" ] && alleletype="wt"
+suffix="${barcode}"_"${alleletype}"
 
+mapping_alleletype="${alleletype}"
+[ "$alleletype" = "normal" ] && mapping_alleletype="wt"
+[ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
+
+
+# ----------------------------------------
+# Input files
+# ----------------------------------------
+control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
+
+# ----------------------------------------------------------
+# Output files
+# ----------------------------------------------------------
 mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
-
-# ----------------------------------------
-# Temporal Output
-# ----------------------------------------
-# MIDS conversion
-MIDS_que=".DAJIN_temp/clustering/temp/tmp_MIDS_${suffix}"
+# temporal -----------
+MIDS_que=".DAJIN_temp/clustering/temp/MIDS_${suffix}"
 query_label=".DAJIN_temp/clustering/temp/query_labels_${suffix}"
 query_seq=".DAJIN_temp/clustering/temp/query_seq_${suffix}"
 query_score=".DAJIN_temp/clustering/temp/query_score_${suffix}"
-
-control_score=".DAJIN_temp/clustering/temp/control_score_${alleletype}"
-
-# Output Plot
 hdbscan_id=".DAJIN_temp/clustering/temp/hdbscan_${suffix}"
-# consensus_mutation=".DAJIN_temp/clustering/temp/consensus_${suffix}"
-# plot_mutsites=.DAJIN_temp/clustering/temp/tmp_mutation_"${suffix}"
-tmp_allele_percentage=".DAJIN_temp/clustering/temp/tmp_allele_percentage_${suffix}".txt
-allele_percentage=".DAJIN_temp/clustering/temp/allele_percentage_${suffix}".txt
+tmp_allele_percentage=".DAJIN_temp/clustering/temp/allele_percentage_${suffix}".txt
 
-# ----------------------------------------------------------
-# Output results
-# ----------------------------------------------------------
-output_id=".DAJIN_temp/clustering/result_allele_id_${suffix}".txt
-# output_result=".DAJIN_temp/clustering/result_allele_mutinfo_${suffix}".txt
+# resuts -----------
+allele_id=".DAJIN_temp/clustering/result_allele_id_${suffix}".txt
+allele_percentage=".DAJIN_temp/clustering/result_allele_percentage_${suffix}".txt
 
 # ----------------------------------------------------------
 # Get max sequence length
@@ -78,9 +75,10 @@ seq_maxnum=$(
 # # MIDS conversion
 # # ----------------------------------------------------------
 
-find .DAJIN_temp/fasta_ont/ -type f | grep "${barcode}" |
-xargs -I @ ./DAJIN/src/mids_convertion.sh @ "${alleletype}" &&
-cp ".DAJIN_temp/data/MIDS_${barcode}_${alleletype}" "${MIDS_que}"
+find .DAJIN_temp/fasta_ont/ -type f |
+    grep "${barcode}" |
+    xargs -I @ ./DAJIN/src/mids_convertion.sh @ "${mapping_alleletype}"
+cp ".DAJIN_temp/data/MIDS_${barcode}_${mapping_alleletype}" "${MIDS_que}"
 
 # ----------------------------------------------------------
 # Mutation scoring of samples
@@ -93,7 +91,7 @@ cat "${MIDS_que}" |
     grep "${barcode}" |
     sort -k 1,1 |
     join -1 1 -2 2 - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    awk -v atype="${alleletype_original}" \
+    awk -v atype="${alleletype}" \
     '$NF==atype' |
     cut -d " " -f 1,3 |
     sed "s/ /\t/g" |
@@ -106,7 +104,7 @@ cat "${MIDS_que}" |
     grep "${barcode}" |
     sort -k 1,1 |
     join -1 1 -2 2 - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    awk -v atype="${alleletype_original}" \
+    awk -v atype="${alleletype}" \
     '$NF==atype' |
     cut -d " " -f 2 |
     awk -F "" '{
@@ -195,7 +193,6 @@ if [ "$?" -eq 1 ]; then
 	exit 1
 fi
 
-
 # ==============================================================================
 # Summarize and plot mutation loci
 # ==============================================================================
@@ -214,7 +211,7 @@ cat "${hdbscan_id}" |
         total+=allele_per
         allele[NR]=$2" "allele_per}}
     END{for(key in allele) print allele[key],total, per}' |
-    awk '{print NR, $1, int($2/$3*$4+0.5)}' |
+    awk '{print $1, NR, int($2/$3*$4+0.5)}' |
 cat - > "${tmp_allele_percentage}"
 # cat - > .DAJIN_temp/clustering/temp/tmp_"${suffix}"
 
@@ -233,8 +230,8 @@ cat - > "${tmp_allele_percentage}"
 #（次のVCF作製とSequence logo描出のために必要）
 # ============================================================================
 
-before=$(cat "${tmp_allele_percentage}" | cut -d " " -f 2 | xargs echo)
-after=$(cat "${tmp_allele_percentage}" | cut -d " " -f 1 | xargs echo)
+before=$(cat "${tmp_allele_percentage}" | cut -d " " -f 1 | xargs echo)
+after=$(cat "${tmp_allele_percentage}" | cut -d " " -f 2 | xargs echo)
 
 paste "${hdbscan_id}" "${query_seq}" |
     awk -v bf="${before}" -v af="${after}" \
@@ -245,16 +242,20 @@ paste "${hdbscan_id}" "${query_seq}" |
     }' |
     sed "s/ /\t/g" |
     sort |
-cat - > "${output_id}"
-
+cat - > "${allele_id}"
 
 cat "${tmp_allele_percentage}" |
-    awk -v barcode="${barcode}" -v al="${alleletype}" -v al_o="${alleletype_original}" \
-    '{print "./DAJIN/src/clustering_variantcall.sh",barcode,al, al_o, $1}' |
-    sh -
+    cut -d " " -f 2- |
+    sed "s/^/${suffix} /g" |
+cat - > "${allele_percentage}"
 
-# cat "${tmp_allele_percentage}" |
-#     sed "s/^/${barcode} ${alleletype_original} /g" |
+# cat "${allele_percentage}" |
+#     awk -v barcode="${barcode}" -v allele="${alleletype}" \
+#     '{print "./DAJIN/src/clustering_variantcall.sh", barcode, allele, $1}' |
+#     sh -
+
+# cat "${allele_percentage}" |
+#     sed "s/^/${barcode} ${alleletype} /g" |
 #     awk '{print $1,$2,$3,$5}' |
 # cat - > "${allele_percentage}"
 
@@ -266,35 +267,29 @@ cat "${tmp_allele_percentage}" |
 # # ============================================================================
 # # Generate BAM files on each cluster
 # # ============================================================================
+# output_bam="" #!----------------------------------------------------------
+# output_bamdir=".DAJIN_temp/clustering/bam_clustering"
+# mkdir -p "${output_bamdir}"
 
-output_bamdir=".DAJIN_temp/clustering/bam_clustering"
-mkdir -p "${output_bamdir}"
-
-cat "${allele_percentage}" |
-cut -d " " -f 3 |
-sort -u |
-while read -r cluster
-do
-    cat "${output_id}" |
-        awk -v cl="${cluster}" '$2==cl' |
-        cut -f 1 |
-        sort |
-    cat - > ".DAJIN_temp/clustering/temp/tmp_id_${suffix}"
-    #
-    samtools view -H DAJIN_Report/bam/"${barcode}".bam |
-    cat - > ".DAJIN_temp/clustering/temp/tmp_header_${suffix}" 
-    #
-    samtools view DAJIN_results/BAM/"${barcode}".bam |
-        sort |
-        join - ".DAJIN_temp/clustering/temp/tmp_id_${suffix}" 2>/dev/null |
-        sed "s/ /\t/g" 2>/dev/null |
-        head -n 100 |
-    cat - >> ".DAJIN_temp/clustering/temp/tmp_header_${suffix}"
-    #
-    samtools sort ".DAJIN_temp/clustering/temp/tmp_header_${suffix}" |
-    cat - > "${output_bamdir}/${barcode}_${alleletype_original}_${cluster}.bam"
-    samtools index "${output_bamdir}/${barcode}_${alleletype_original}_${cluster}.bam"
-done
+# cat "${allele_percentage}" |
+# cut -d " " -f 3 |
+# sort -u |
+# while read -r cluster
+# do
+#     cat "${allele_id}" |
+#         awk -v cl="${cluster}" '$2==cl' |
+#         cut -f 1 |
+#         sort |
+#     cat - > ".DAJIN_temp/clustering/temp/tmp_id_${suffix}"
+#     #
+#     samtools view -h DAJIN_results/BAM/"${barcode}".bam |
+#         awk '/^@/{print}
+#             NR==FNR{a[$1];next}
+#             $1 in a' \
+#             ".DAJIN_temp/clustering/temp/tmp_id_${suffix}" - |
+#     samtools sort > DAJIN_results/BAM/"${output_bam}".bam
+#     samtools index "${output_bam}".bam
+# done
 
 
 # # ----------------------------------------------------------
@@ -428,7 +423,7 @@ done
 #     # 変異箇所の行番号に変異サイズを追加して、
 #     # seq_maxより長い配列をトリミングします。
 #     # ------------------------------------------
-#     if [ "${mutation_type}" = "D" ] && [ "${alleletype_original}" = "target" ] ; then    
+#     if [ "${mutation_type}" = "D" ] && [ "${alleletype}" = "target" ] ; then    
 #         cat - |
 #         awk -v cut="${cut_start}" -v del="${del_size}" \
 #         '{if($1>cut) $1=$1+del
@@ -441,7 +436,7 @@ done
 #     # 「knock-inかつアレルタイプがTarget」かつ「KI箇所がM」のとき、
 #     # KI箇所の配列情報を”T”に置換します
 #     # ------------------------------------------
-#     if [ "${mutation_type}" = "I" ] && [ "${alleletype_original}" = "target" ] ; then    
+#     if [ "${mutation_type}" = "I" ] && [ "${alleletype}" = "target" ] ; then    
 #         cat - |
 #         awk -v mut=$(cat "$plot_mutsites") \
 #         '{split(mut, array, ",")
@@ -498,7 +493,7 @@ done
 # cat .DAJIN_temp/clustering/temp/tmp_id_"${suffix}" |
 #     sed "s/ /\t/g" |
 #     sort |
-# cat - > "${output_id}"
+# cat - > "${allele_id}"
 
 # # ============================================================================
 # # Report allele mutation info
@@ -560,7 +555,7 @@ done
 #     join - ".DAJIN_temp/clustering/temp/tmp_${suffix}" |
 #     sort -t " " -k 1,1n  -k 3,3n |
 #     awk '{print $1,$2,$4,$5, NR}' |
-#     sed "s/^/${barcode} ${alleletype_original} /g" |
+#     sed "s/^/${barcode} ${alleletype} /g" |
 # cat - > "${output_result}"
 
 

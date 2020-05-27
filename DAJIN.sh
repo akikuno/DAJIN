@@ -552,8 +552,10 @@ cat - > "${prediction_filtered}"
 rm .DAJIN_temp/tmp_*
 
 # ============================================================================
-# Clustering within each allele type
+# Allele clustering
 # ============================================================================
+# rm -rf .DAJIN_temp/clustering/
+
 cat "${prediction_filtered}" |
     cut -d " " -f 3 |
     grep -e "^normal" -e "^wt" |
@@ -566,7 +568,7 @@ cat "${prediction_filtered}" |
     awk '{print "./DAJIN/src/clustering.sh",$1, $3, $2, "&"}' |
     #! ---------------------------------
     # grep -e barcode18 -e barcode23 -e barcode26 |
-    grep -e barcode08 -e barcode12 |
+    # grep -e barcode08 -e barcode12 |
     #! ---------------------------------
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
@@ -575,6 +577,51 @@ sh -
 
 rm .DAJIN_temp/tmp_*
 
+
+# ============================================================================
+# Variant call in each cluster
+# ============================================================================
+
+cat .DAJIN_temp/clustering/result_allele_percentage* |
+    sed "s/_/ /g" |
+    awk '{nr[$1]++; print $0, nr[$1]}' |
+    # grep -e barcode12 | grep -e 2$ |
+    awk '{print "./DAJIN/src/clustering_variantcall.sh", $0, "&"}' |
+    awk -v th=${threads:-1} '{
+        if (NR%th==0) gsub("&","&\nwait",$0)}1
+        END{print "wait"}' |
+sh -
+
+# ============================================================================
+# Variant call in each cluster
+# ============================================================================
+
+find .DAJIN_temp/clustering/consensus* -type f |
+    grep html |
+    sed "s:.*/::g" |
+    sed "s/.html//g" |
+    sed "s/_/ /g" |
+    awk '{print $1"_"$2,$3,$4}' |
+    sort |
+cat - > tmp
+
+cat .DAJIN_temp/clustering/result_allele_percentage* |
+    sed "s/_/ /g" |
+    awk '{nr[$1]++; print $0, nr[$1]}' |
+    awk '{print $1"_allele"$5, $4, $2}' |
+    sort |
+    join -a 1 - tmp |
+    sed "s/_/ /g" |
+    awk '$4=="abnormal" {$5="mutation"}1' |
+    awk 'BEGIN{OFS=","}
+        {gsub("allele","",$2)
+        gsub(/^normal/,"-", $4)
+        gsub(/^abnormal/,"+", $4)
+        gsub("intact","-", $5)
+        gsub("mutation","+", $5)
+        print $1,$2,$3,$6,$5,$4}' |
+    sed -e "1i Sample, Allele ID, % of reads, Allele type, indel, large indel" |
+cat > test.csv
 # ============================================================================
 # Detection of Problematic allele
 # ============================================================================

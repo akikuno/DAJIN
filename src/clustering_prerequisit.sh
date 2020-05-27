@@ -21,20 +21,23 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # Input
 # ----------------------------------------
 
-control="${1}"
+barcode="${1}"
 alleletype="${2}"
-alleletype_original=${2}
-[ "$alleletype" = "normal" ] && alleletype="wt"
-[ "$alleletype" = "abnormal" ] && alleletype="wt"
+
+mapping_alleletype="${alleletype}"
+[ "$alleletype" = "normal" ] && mapping_alleletype="wt"
+[ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
 
 # ----------------------------------------
 # Output
 # ----------------------------------------
 mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
-# MIDS conversion
-MIDS_ref=".DAJIN_temp/clustering/temp/tmp_MIDS_${control}_${alleletype}"
-# Output Genomic coodinates (Control)
-output_ref_score=".DAJIN_temp/clustering/temp/control_score_${alleletype}"
+
+# temporal --------------------------------
+MIDS_ref=".DAJIN_temp/clustering/temp/MIDS_${barcode}_${alleletype}"
+
+# result --------------------------------
+output_ref_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
 
 # ----------------------------------------------------------
 # Get max sequence length
@@ -54,12 +57,13 @@ seq_maxnum=$(
 # # MIDS conversion
 # # ----------------------------------------------------------
 
-find .DAJIN_temp/fasta_ont/ -type f | grep "${control}" |
-xargs -I @ ./DAJIN/src/mids_convertion.sh @ "${alleletype}" "control" &&
-mv ".DAJIN_temp/data/MIDS_${control}_${alleletype}" "${MIDS_ref}"
+find .DAJIN_temp/fasta_ont/ -type f |
+    grep "${barcode}" |
+    xargs -I @ ./DAJIN/src/mids_convertion.sh @ "${mapping_alleletype}" "control"
+cp ".DAJIN_temp/data/MIDS_${barcode}_${mapping_alleletype}" "${MIDS_ref}"
 
 # rm .DAJIN_temp/tmp_${barcode}*${alleletype}
-# rm .DAJIN_temp/tmp_${control}*${alleletype}
+# rm .DAJIN_temp/tmp_${barcode}*${alleletype}
 
 # ----------------------------------------------------------
 # Mutation scoring of control samples
@@ -68,10 +72,10 @@ mv ".DAJIN_temp/data/MIDS_${control}_${alleletype}" "${MIDS_ref}"
 # 挿入塩基を1つの挿入塩基数にまとめて配列のズレを無くす
 # ----------------------------------------
 cat "${MIDS_ref}" |
-    grep "${control}" |
+    grep "${barcode}" |
     sort -k 1,1 |
     join -1 1 -2 2 - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    awk -v alelle="$alleletype_original" '$NF==alelle' |
+    awk -v alelle="$alleletype" '$NF==alelle' |
     cut -d " " -f 2 |
     # Insertion annotation
     awk -F "" '{
@@ -148,3 +152,4 @@ cat "${MIDS_ref}" |
             (sum[1]+sum[2])/NF, sum[3]/NF,sum[4]/NF,sum[5]/NF, num
     }' |
 cat - > "${output_ref_score}"
+
