@@ -37,7 +37,7 @@ mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
 MIDS_ref=".DAJIN_temp/clustering/temp/MIDS_${barcode}_${alleletype}"
 
 # result --------------------------------
-output_ref_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
+control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
 
 # ----------------------------------------------------------
 # Get max sequence length
@@ -50,7 +50,7 @@ seq_maxnum=$(
 )
 
 # ==============================================================================
-# Generate  "${output_ref_score}"
+# Generate  "${control_score}"
 # ==============================================================================
 
 # # ----------------------------------------------------------
@@ -148,8 +148,9 @@ cat "${MIDS_ref}" |
         else if(sum[5] > NF*per/100) num = 2
         else num=1
         #
-        print NR, "@", sum[1], sum[2], sum[3], sum[4], sum[5], "@", \
-            (sum[1]+sum[2])/NF, sum[3]/NF,sum[4]/NF,sum[5]/NF, num
+        # print NR, "@", sum[1], sum[2], sum[3], sum[4], sum[5], "@", \
+        #     (sum[1]+sum[2])/NF, sum[3]/NF,sum[4]/NF,sum[5]/NF, num
+        print num
     }' |
-cat - > "${output_ref_score}"
+cat - > "${control_score}"
 

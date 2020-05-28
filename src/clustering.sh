@@ -17,9 +17,9 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # ----------------------------------------
 # Input
 # ----------------------------------------
-# barcode="barcode32"
+# barcode="barcode08"
 # alleletype="normal"
-# original_percentage=100
+# original_percentage=56
 # suffix="${barcode}"_"${alleletype}"
 
 # mapping_alleletype="${alleletype}"
@@ -28,7 +28,7 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 barcode="${1}"
 alleletype="${2}"
-original_percentage="${3}"
+# original_percentage="${3}"
 suffix="${barcode}"_"${alleletype}"
 
 mapping_alleletype="${alleletype}"
@@ -47,15 +47,15 @@ control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
 mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
 # temporal -----------
 MIDS_que=".DAJIN_temp/clustering/temp/MIDS_${suffix}"
-query_label=".DAJIN_temp/clustering/temp/query_labels_${suffix}"
 query_seq=".DAJIN_temp/clustering/temp/query_seq_${suffix}"
-query_score=".DAJIN_temp/clustering/temp/query_score_${suffix}"
 hdbscan_id=".DAJIN_temp/clustering/temp/hdbscan_${suffix}"
-tmp_allele_percentage=".DAJIN_temp/clustering/temp/allele_percentage_${suffix}".txt
+# tmp_allele_percentage=".DAJIN_temp/clustering/temp/allele_percentage_${suffix}".txt
 
 # resuts -----------
-allele_id=".DAJIN_temp/clustering/result_allele_id_${suffix}".txt
-allele_percentage=".DAJIN_temp/clustering/result_allele_percentage_${suffix}".txt
+query_score=".DAJIN_temp/clustering/temp/query_score_${suffix}"
+query_label=".DAJIN_temp/clustering/temp/query_labels_${suffix}"
+# allele_id=".DAJIN_temp/clustering/result_allele_id_${suffix}".txt
+# allele_percentage=".DAJIN_temp/clustering/result_allele_percentage_${suffix}".txt
 
 # ----------------------------------------------------------
 # Get max sequence length
@@ -94,7 +94,7 @@ cat "${MIDS_que}" |
     awk -v atype="${alleletype}" \
     '$NF==atype' |
     cut -d " " -f 1,3 |
-    sed "s/ /\t/g" |
+    sed "s/ /,/g" |
 cat - > "${query_label}"
 
 # ----------------------------------------
@@ -144,122 +144,174 @@ cat - > "${query_seq}"
 # ----------------------------------------------------------
 # Output Genomic coodinates (Query)
 # ----------------------------------------------------------
-
 cat "${query_seq}" |
-    # ----------------------------------------
-    # 行を「リード指向」から「塩基部位指向」に変換する
-    # ----------------------------------------
-    awk -F "" \
-    '{ for (i=1; i<=NF; i++)  { a[NR,i] = $i } }
-    END {    
-        for(j=1; j<=NF; j++) {
-            str=a[1,j]
-            for(i=2; i<=NR; i++){ str=str""a[i,j] }
-            print str }
-    }'|
-    # ----------------------------------------
-    # 変異部の数を数える
-    # ----------------------------------------
-    awk -F "" 'BEGIN{OFS=","}{
-        totalI=gsub(/[1-9]|[a-z]/,"@",$0)
-        totalD=gsub("D","D",$0)
-        totalS=gsub("S","S",$0)
-        for(i=1; i<=NF; i++){
-            if($i=="=") $i=0
-            else if($i=="M") $i=0
-            else if($i=="@") $i=totalI
-            else if($i=="D") $i=totalD*(-1)
-            else if($i=="S") $i=totalS
-        }
-        print $0
-        }' |
-    # ----------------------------------------
-    # シークエンスエラーはMatchとしてあつかつ
-    # ----------------------------------------
-    paste - "${control_score}" |
-    awk '{if($NF==2) $1=0
-        print $1}' |
-cat - > "${query_score}"
+    awk -F '' 'BEGIN{OFS=","} {$1=$1;print $0}' |
+    sed "s/=/M/g" |
+    sed "s/[0-9]/I/g" |
+    sed "s/[a-z]/I/g" |
+cat > "${query_score}"
 
-# ----------------------------------------------------------
-# Clustering by HDBSCAN
-# ----------------------------------------------------------
+ls -lh "${query_score}" #! =============================
+# cp "${control_score}" test_control
+# echo "${query_score}" "${query_label}" "${control_score}"
+# time Rscript DAJIN/src/test_clustering.R "${query_score}" "${query_label}" "${control_score}"
+# ls -lh "${hdbscan_id}" #! =============================
 
-Rscript DAJIN/src/clustering.R \
-    "${query_score}" "${query_label}" \
-    2>/dev/null
-if [ "$?" -eq 1 ]; then
-    echo "Clustering error..." 1>&2
-	exit 1
-fi
 
-# ==============================================================================
-# Summarize and plot mutation loci
-# ==============================================================================
-# ----------------------------------------------------------
-# Remove minor allele (< 10%) 
-# 全体の10%以下のアレルは削除する
-# ----------------------------------------------------------
+#? --------------------------------------------------------
 
-cat "${hdbscan_id}" |
-    awk '{print $NF}' |
-    sort |
-    uniq -c |
-    awk -v per="${original_percentage}" -v nr="$(cat "${hdbscan_id}" | wc -l))" \
-    '{allele_per=$1/nr*per
-    if(allele_per>10) {
-        total+=allele_per
-        allele[NR]=$2" "allele_per}}
-    END{for(key in allele) print allele[key],total, per}' |
-    awk '{print $1, NR, int($2/$3*$4+0.5)}' |
-cat - > "${tmp_allele_percentage}"
-# cat - > .DAJIN_temp/clustering/temp/tmp_"${suffix}"
 
-# # ----------------------------------------------------------------
-# # 取り除かれたぶんの割合を調整して、合計の割合を100％とする
-# # ----------------------------------------------------------------
+# cat "${query_seq}" | head -n 5 > test_seq
 
-# cat .DAJIN_temp/clustering/temp/tmp_"${suffix}" |
-#     awk -v per="$(awk '{sum+=$2} END{print sum}' .DAJIN_temp/clustering/temp/tmp_"${suffix}")" \
-#     '{print $1, NR, int($2*100/per+0.5)}' |
+# cat test_seq |
+#     sed "s/[M=]/0 /g" |
+#     sed "s/[1-9]/1 /g" |
+#     sed "s/[a-z]/1 /g" |
+#     sed "s/D/-1 /g" |
+#     sed "s/S/1 /g" |
+#     sed "s/ $//g" |
+# cat > tmp_test
+
+
+# cat "${control_score}" |
+#     awk -F "" \
+#     '{ for (i=1; i<=NF; i++)  { a[NR,i] = $i } }
+#     END {    
+#         for(j=1; j<=NF; j++) {
+#             str=a[1,j]
+#             for(i=2; i<=NR; i++){ str=str" "a[i,j] }
+#             print str }
+#     }' |
+# cat - tmp_test |
+# awk '{for(i=1; i<=NF; i++){if(NR==1 && $i==2) array[i] = i}
+#         {for(key in array) $array[key] = 0; print $0}
+#     }' |
+# sed 1d |
+# sed "s/ /,/g" |
+# cat > tmp_score
+
+# cat tmp_score |
+#     awk -F "," '{for(i=1; i<=NF; i++) sum[i]+=$i}
+#         END{for(key in sum) printf sum[key]","}' |
+#     sed "s/,$/\n/g" |
+# cat > tmp_weight
+
+# cp "${query_label}" tmp_label
+# #? --------------------------------------------------------
+
+# cat "${query_seq}" |
+# # cat test_seq |
+# awk -F '' 'BEGIN{OFS=","} {$1=$1;print $0}' |
+# sed "s/=/M/g" |
+# sed "s/[0-9]/I/g" |
+# sed "s/[a-z]/I/g" |
+# cat > test_MIDS.csv
+# cp "${control_score}" test_control
+
+#     # ----------------------------------------
+#     # 行を「リード指向」から「塩基部位指向」に変換する
+#     # ----------------------------------------
+#     awk -F "" \
+#     '{ for (i=1; i<=NF; i++)  { a[NR,i] = $i } }
+#     END {    
+#         for(j=1; j<=NF; j++) {
+#             str=a[1,j]
+#             for(i=2; i<=NR; i++){ str=str""a[i,j] }
+#             print str }
+#     }' |
+#     # ----------------------------------------
+#     # 変異部の数を数える
+#     # ----------------------------------------
+#     awk -F "" 'BEGIN{OFS=","}{
+#         totalI=gsub(/[1-9]|[a-z]/,"@",$0)
+#         totalD=gsub("D","D",$0)
+#         totalS=gsub("S","S",$0)
+#         for(i=1; i<=NF; i++){
+#             if($i=="=") $i=0
+#             else if($i=="M") $i=0
+#             else if($i=="@") $i=totalI
+#             else if($i=="D") $i=totalD*(-1)
+#             else if($i=="S") $i=totalS
+#             }
+#         }1' |
+#     # ----------------------------------------
+#     # シークエンスエラーはMatchとしてあつかつ
+#     # ----------------------------------------
+#     paste - "${control_score}" |
+#     awk '{if($NF==2) $1=0
+#         print $1}' |
+# cat - > "${query_score}"
+
+# ls -lh "${query_score}" #!-----------------------------------
+# # ----------------------------------------------------------
+# # Clustering by HDBSCAN
+# # ----------------------------------------------------------
+
+# Rscript DAJIN/src/clustering.R \
+#     "${query_score}" "${query_label}" \
+#     2>/dev/null
+# if [ "$?" -eq 1 ]; then
+#     echo "Clustering error..." 1>&2
+# 	exit 1
+# fi
+#
+# ls -lh ".DAJIN_temp/clustering/temp/hdbscan_${suffix}" #!-----------------------------------
+
+# # ==============================================================================
+# # Summarize and plot mutation loci
+# # ==============================================================================
+# # ----------------------------------------------------------
+# # Remove minor allele (< 10%) 
+# # 全体の10%以下のアレルは削除する
+# # ----------------------------------------------------------
+
+# cat "${hdbscan_id}" |
+#     awk '{print $NF}' |
+#     sort |
+#     uniq -c |
+#     awk -v per="${original_percentage}" -v nr="$(cat "${hdbscan_id}" | wc -l))" \
+#     '{allele_per=$1/nr*per
+#     if(allele_per>10) {
+#         total+=allele_per
+#         allele[NR]=$2" "allele_per}}
+#     END{for(key in allele) print allele[key],total, per}' |
+#     awk '{print $1, NR, int($2/$3*$4+0.5)}' |
+# cat - > "${tmp_allele_percentage}"
+# # cat - > .DAJIN_temp/clustering/temp/tmp_"${suffix}"
+
+# # # ----------------------------------------------------------------
+# # # 取り除かれたぶんの割合を調整して、合計の割合を100％とする
+# # # ----------------------------------------------------------------
+
+# # cat .DAJIN_temp/clustering/temp/tmp_"${suffix}" |
+# #     awk -v per="$(awk '{sum+=$2} END{print sum}' .DAJIN_temp/clustering/temp/tmp_"${suffix}")" \
+# #     '{print $1, NR, int($2*100/per+0.5)}' |
+# # cat - > "${allele_percentage}"
+
+# # ============================================================================
+# # Report allele mutation info
+# # 各リードとクラスターの対応付を行う
+# #（次のVCF作製とSequence logo描出のために必要）
+# # ============================================================================
+
+# before=$(cat "${tmp_allele_percentage}" | cut -d " " -f 1 | xargs echo)
+# after=$(cat "${tmp_allele_percentage}" | cut -d " " -f 2 | xargs echo)
+
+# paste "${hdbscan_id}" "${query_seq}" |
+#     awk -v bf="${before}" -v af="${after}" \
+#     'BEGIN{OFS="\t"
+#         split(bf,bf_," ")
+#         split(af,af_," ")}
+#     {for(i in bf_){if($2==bf_[i]){$2=af_[i]; print}}
+#     }' |
+#     sed "s/ /\t/g" |
+#     sort |
+# cat - > "${allele_id}"
+
+# cat "${tmp_allele_percentage}" |
+#     cut -d " " -f 2- |
+#     sed "s/^/${suffix} /g" |
 # cat - > "${allele_percentage}"
-
-# ============================================================================
-# Report allele mutation info
-# 各リードとクラスターの対応付を行う
-#（次のVCF作製とSequence logo描出のために必要）
-# ============================================================================
-
-before=$(cat "${tmp_allele_percentage}" | cut -d " " -f 1 | xargs echo)
-after=$(cat "${tmp_allele_percentage}" | cut -d " " -f 2 | xargs echo)
-
-paste "${hdbscan_id}" "${query_seq}" |
-    awk -v bf="${before}" -v af="${after}" \
-    'BEGIN{OFS="\t"
-        split(bf,bf_," ")
-        split(af,af_," ")}
-    {for(i in bf_){if($2==bf_[i]){$2=af_[i]; print}}
-    }' |
-    sed "s/ /\t/g" |
-    sort |
-cat - > "${allele_id}"
-
-cat "${tmp_allele_percentage}" |
-    cut -d " " -f 2- |
-    sed "s/^/${suffix} /g" |
-cat - > "${allele_percentage}"
-
-# cat "${allele_percentage}" |
-#     awk -v barcode="${barcode}" -v allele="${alleletype}" \
-#     '{print "./DAJIN/src/clustering_variantcall.sh", barcode, allele, $1}' |
-#     sh -
-
-# cat "${allele_percentage}" |
-#     sed "s/^/${barcode} ${alleletype} /g" |
-#     awk '{print $1,$2,$3,$5}' |
-# cat - > "${allele_percentage}"
-
-# cat "${allele_percentage}"
 
 #! >>>>>>>>>>>>>>>>>>>>>>>> clustering_variantcall.sh
 

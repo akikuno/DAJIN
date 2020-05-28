@@ -561,21 +561,66 @@ cat "${prediction_filtered}" |
     grep -e "^normal" -e "^wt" |
     sort -u |
 while read -r alleletype; do
+    # echo "${ont_cont}" "${alleletype}" 
     ./DAJIN/src/clustering_prerequisit.sh "${ont_cont}" "${alleletype}" 
 done
 
 cat "${prediction_filtered}" |
-    awk '{print "./DAJIN/src/clustering.sh",$1, $3, $2, "&"}' |
+    awk '{print "./DAJIN/src/clustering.sh",$1, $3, "&"}' |
     #! ---------------------------------
     # grep -e barcode18 -e barcode23 -e barcode26 |
-    # grep -e barcode08 -e barcode12 |
+    # grep -e barcode0 |
     #! ---------------------------------
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
 sh -
 
-rm .DAJIN_temp/tmp_*
+# # ----------------------------------------------------------
+# # Clustering by HDBSCAN
+# # ----------------------------------------------------------
+
+cat "${prediction_filtered}" |
+    awk '{print "./DAJIN/src/clustering_hdbscan.sh",$1, $3}' |
+sh -
+
+# find .DAJIN_temp/clustering/temp/query_score* -type f |
+#     sort
+# find .DAJIN_temp/clustering/temp/query_label* -type f |
+#     sort
+#  "${control_score}"
+# Rscript DAJIN/src/test_clustering.R "${query_score}" "${query_label}" "${control_score}"
+
+# find .DAJIN_temp/clustering/temp/query_score* -type f |
+#     sort |
+# cat > .DAJIN_temp/tmp_$$
+
+# find .DAJIN_temp/clustering/temp/query_labels* -type f |
+#     sort |
+#     paste .DAJIN_temp/tmp_$$ - |
+#     awk '{print "Rscript DAJIN/src/clustering.R",$1,$2}' |
+# sh -
+# if [ "$?" -eq 1 ]; then
+#     echo "Clustering error..." 1>&2
+# 	exit 1
+# fi
+
+# rm .DAJIN_temp/tmp_*
+
+# ============================================================================
+# Allele percentage
+# ============================================================================
+
+cat "${prediction_filtered}" |
+    awk '{print "./DAJIN/src/clustering_allele_percentage.sh",$1, $3, $2}' |
+    #! ---------------------------------
+    # grep -e barcode18 -e barcode23 -e barcode26 |
+    # grep -e barcode01 |
+    #! ---------------------------------
+    awk -v th=${threads:-1} '{
+        if (NR%th==0) gsub("&","&\nwait",$0)}1
+        END{print "wait"}' |
+sh -
 
 
 # ============================================================================

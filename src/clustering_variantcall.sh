@@ -266,7 +266,7 @@ diff_target=$(cat .DAJIN_temp/fasta/target.fa |
     diff - .DAJIN_temp/clustering/temp/${out_suffix}.fa |
     wc -l)
 
-cat $mutation_info
+cat $mutation_info #! =======================================================================
 
 [ "$(awk '$1=="intact"' ${mutation_info} | wc -l)" -eq 0 ] &&
 include_target=$(
