@@ -103,13 +103,13 @@ output_pca_importance <- summary(pca_res)$importance[2, components]
 for (i in components){
     output_pca[, i] <- output_pca[, i] * output_pca_importance[i]
 }
+rm(pca_res)
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # HDBSCAN
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-input_hdbscan <- output_pca
-# --------------------------------------------------
-if (nrow(input_hdbscan) < 250) {
-    cl_sizes <- seq(10, nrow(input_hdbscan), length = 10)
+
+if (nrow(output_pca) < 250) {
+    cl_sizes <- seq(10, nrow(output_pca), length = 10)
 } else {
     cl_sizes <- seq(25, 250, length = 10)
 }
@@ -117,7 +117,7 @@ if (nrow(input_hdbscan) < 250) {
 cl_nums <- c()
 i <- 1
 for (i in seq_along(cl_sizes)) {
-    cl <- hdbscan(input_hdbscan, minPts = cl_sizes[i])
+    cl <- hdbscan(output_pca, minPts = cl_sizes[i])
     cl_nums[i] <- cl$cluster %>%
         table() %>%
         length()
@@ -136,7 +136,7 @@ if (length(cl_num_opt[names(cl_num_opt) != 1]) > 0) {
 }
 cl_num_opt <- which(cl_nums == cl_num_opt) %>% max()
 
-cl <- hdbscan(input_hdbscan, minPts = cl_sizes[cl_num_opt])
+cl <- hdbscan(output_pca, minPts = cl_sizes[cl_num_opt])
 hdbscan_cl <- cl$cluster + 1
 
 # # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -160,7 +160,7 @@ for (i in unique(hdbscan_cl)) {
     )
     df_cluster <- df_cluster %>% bind_rows(tmp_df)
 }
-
+rm(df_que)
 
 # # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # # Cosine similarity to merge similar clusters

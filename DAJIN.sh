@@ -414,7 +414,7 @@ fi
 
 ./DAJIN/src/igvjs.sh "${genome:-mm10}" "${threads:-1}"
 
-mv .DAJIN_temp/bam/* "${output_dir}"/BAM
+cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM
 
 if [ "$mutation_type" = "P" ]; then
     mv .DAJIN_temp/wt_ins* .DAJIN_temp/fasta_ont/
@@ -584,27 +584,6 @@ cat "${prediction_filtered}" |
     awk '{print "./DAJIN/src/clustering_hdbscan.sh",$1, $3}' |
 sh -
 
-# find .DAJIN_temp/clustering/temp/query_score* -type f |
-#     sort
-# find .DAJIN_temp/clustering/temp/query_label* -type f |
-#     sort
-#  "${control_score}"
-# Rscript DAJIN/src/test_clustering.R "${query_score}" "${query_label}" "${control_score}"
-
-# find .DAJIN_temp/clustering/temp/query_score* -type f |
-#     sort |
-# cat > .DAJIN_temp/tmp_$$
-
-# find .DAJIN_temp/clustering/temp/query_labels* -type f |
-#     sort |
-#     paste .DAJIN_temp/tmp_$$ - |
-#     awk '{print "Rscript DAJIN/src/clustering.R",$1,$2}' |
-# sh -
-# if [ "$?" -eq 1 ]; then
-#     echo "Clustering error..." 1>&2
-# 	exit 1
-# fi
-
 # rm .DAJIN_temp/tmp_*
 
 # ============================================================================
@@ -630,7 +609,7 @@ sh -
 cat .DAJIN_temp/clustering/result_allele_percentage* |
     sed "s/_/ /g" |
     awk '{nr[$1]++; print $0, nr[$1]}' |
-    # grep -e barcode12 | grep -e 2$ |
+    # grep -e barcode08  -e barcode12 | #!============== -e barcode12
     awk '{print "./DAJIN/src/clustering_variantcall.sh", $0, "&"}' |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
@@ -638,10 +617,10 @@ cat .DAJIN_temp/clustering/result_allele_percentage* |
 sh -
 
 # ============================================================================
-# Variant call in each cluster
+# Summarize to Details.csv
 # ============================================================================
 
-find .DAJIN_temp/clustering/consensus* -type f |
+find .DAJIN_temp/clustering/consensus/* -type f |
     grep html |
     sed "s:.*/::g" |
     sed "s/.html//g" |
@@ -666,11 +645,48 @@ cat .DAJIN_temp/clustering/result_allele_percentage* |
         gsub("mutation","+", $5)
         print $1,$2,$3,$6,$5,$4}' |
     sed -e "1i Sample, Allele ID, % of reads, Allele type, indel, large indel" |
-cat > test.csv
+cat > "${output_dir:-DAJIN_results}"/Details.csv
+
+cp -r .DAJIN_temp/clustering/consensus/* "${output_dir:-DAJIN_results}"/Consensus/
+
 # ============================================================================
-# Detection of Problematic allele
+# Generate BAM files on each cluster
 # ============================================================================
 
+# output_bamdir=".DAJIN_temp/clustering/bam_clustering"
+# mkdir -p "${output_bamdir}"
+rm DAJIN_results/BAM/*allele*
+
+cat .DAJIN_temp/clustering/result_allele_percentage* |
+     sed "s/_/ /g" |
+    awk '{nr[$1]++; print $0, nr[$1]}' |
+while read -r allele
+do
+    barcode=$(echo ${allele} | cut -d " " -f 1)
+    alleletype=$(echo ${allele} | cut -d " " -f 2)
+    cluster=$(echo ${allele} | cut -d " " -f 3)
+    alleleid=$(echo ${allele} | cut -d " " -f 5)
+    #
+    input_bam="${barcode}_${alleletype}"
+    output_bam="${barcode}_allele${alleleid}"
+    #
+    find .DAJIN_temp/clustering/result_allele_id* |
+        grep "${input_bam}" |
+        xargs cat |
+        awk -v cl="${cluster}" '$2==cl' |
+        cut -f 1 |
+        sort |
+    cat - > ".DAJIN_temp/clustering/temp/tmp_id_$$"
+    #
+    samtools view -h DAJIN_results/BAM/"${barcode}".bam |
+        awk '/^@/{print}
+            NR==FNR{a[$1];next}
+            $1 in a' \
+            ".DAJIN_temp/clustering/temp/tmp_id_$$" - |
+        samtools sort -@ "${threads:-1}" 2>/dev/null |
+    cat > DAJIN_results/BAM/"${output_bam}".bam
+    samtools index DAJIN_results/BAM/"${output_bam}".bam
+done
 
 # ----------------------------------------------------------------
 # 2-cut deletionの場合は、大丈夫そうなabnormalを検出する

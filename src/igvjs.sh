@@ -71,8 +71,8 @@ strand=$(cat "${tmp_gggenome}" | head -n 1 | cut -f 2)
 rm ${tmp_gggenome}
 
 
-printf "${chromosome}\t${start}\t${end}\t${strand}\n" \
-> "${output_gggenome_location}" # this file will be used at "knockin search"
+printf "${chromosome}\t${start}\t${end}\t${strand}\n" |
+cat > "${output_gggenome_location}" # this file will be used at "knockin search"
 
 # ============================================================================
 # ターゲットのゲノム座標を入手する
@@ -104,7 +104,7 @@ wget -qO - "${url_ucsc}" |
     grep -v "^<" |
     awk '{print toupper($0)}' |
     sed -e "1i >${genome}:${chromosome}:${start}-${end}" |
-cat - >> "${output_reference}"
+cat - > "${output_reference}"
 
 [ $(cat "${output_reference}" | wc -l) -eq 0 ] &&
 error_exit 1 'Invalid reference genome.'
@@ -131,11 +131,12 @@ for input in .DAJIN_temp/fasta_ont/*; do
     # echo "${output} is now generating..."
     ####
     minimap2 -t ${threads:-1} -ax map-ont --cs=long ${reference} ${input} 2>/dev/null |
-    awk -v chrom="${chromosome}" -v chrom_len="${chrom_len}" -v start="${start}" \
-    'BEGIN{OFS="\t"}
-    $1=="@SQ" {$0="@SQ\tSN:"chrom"\tLN:"chrom_len; print}
-    $1!~/^@/ {$3=chrom; $4=start+$4-1; print}' |
-    samtools sort -@ ${threads:-1} - 2>/dev/null > "${output}"
+        awk -v chrom="${chromosome}" -v chrom_len="${chrom_len}" -v start="${start}" \
+        'BEGIN{OFS="\t"}
+        $1~/@SQ/ {$0="@SQ\tSN:"chrom"\tLN:"chrom_len; print}
+        $1!~/^@/ {$3=chrom; $4=start+$4-1; print}' |
+        samtools sort -@ ${threads:-1} - 2>/dev/null |
+    cat > "${output}"
     samtools index -@ ${threads:-1} "${output}"
 done
 

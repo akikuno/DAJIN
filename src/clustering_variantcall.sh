@@ -16,9 +16,9 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # ----------------------------------------
 # Input arguments
 # ----------------------------------------
-# barcode="barcode12"
+# barcode="barcode16"
 # alleletype="normal"
-# cluster=2
+# cluster=1
 # percentage=27
 # alleleid=2
 # in_suffix="${barcode}"_"${alleletype}"
@@ -51,102 +51,140 @@ allele_id=".DAJIN_temp/clustering/result_allele_id_${in_suffix}".txt
 # ----------------------------------------------------------
 # Output files
 # ----------------------------------------------------------
-mutation_info=".DAJIN_temp/clustering/temp/mutation_info_${out_suffix}"
+# temporal --------------------------------
+tmp_allele_id=".DAJIN_temp/clustering/temp/allele_id_${out_suffix}"
+
+# results --------------------------------
 consensus_mutation=".DAJIN_temp/clustering/temp/consensus_${out_suffix}"
+mutation_info=".DAJIN_temp/clustering/temp/mutation_info_${out_suffix}"
 
 # ============================================================================
 # 変異情報のコンセンサスを得る
 # ============================================================================
+#?====================================================================================
 
 cat "${allele_id}" |
     awk -v cl="${cluster}" '$2==cl' |
     cut -f 3 |
-    # ----------------------------------------
-    # 行を「リード指向」から「塩基部位指向」に変換する
-    # ----------------------------------------
-    awk -F "" \
-    '{ for (i=1; i<=NF; i++)  { a[NR,i] = $i } }
-    END {    
-        for(j=1; j<=NF; j++) {
-            str=a[1,j]
-            for(i=2; i<=NR; i++){ str=str""a[i,j] }
-            print str }
-    }' |
-    # head -n 740 | tail -n 5 #! -----------------------------
-    # ------------------------------------------
-    # 各塩基部位において最多の変異をレポートする
-    # ------------------------------------------
-    awk -F "" '{sequence=$0
-        sum[1]=gsub("=","=",sequence)
-        sum[2]=gsub("M","M",sequence)
-        sum[3]=gsub(/[1-9]|[a-z]/,"@", sequence)
-        sum[4]=gsub("D","D",sequence)
-        sum[5]=gsub("S","S",sequence)
-        max=sum[1]; num=1
-        for(i=2; i<=5;i++){if(max<sum[i]){max=sum[i]; num=i}}
-        # ------------------------------------------
-        # Insertion数をレポートする
-        # ------------------------------------------
-        max=0; ins_num=0
-        if(num==3) {
-            for(i=1; i<=NF; i++) { if($i ~ /[0-9]|[a-z]/) array[$i]++ }
-            for(key in array){if(max<array[key]) {max=array[key]; ins_num=key}} 
-        }
-        
-        print num, NR, ins_num, "@", (sum[1]+sum[2])/NF,sum[3]/NF,sum[4]/NF,sum[5]/NF
-        }' |
-    #
-    paste - "${control_score}" |
-    # head -n 740 | tail -n 5 | #! -----------------------------
-    # ------------------------------------------
-    # 各塩基部位にたいして「Mの頻度、Iの頻度、Dの頻度、Sの頻度、Iの個数」を表示する
-    # ------------------------------------------
-    # head test |
-    awk 'function abs(v) {return v < 0 ? -v : v}
-        $NF==1 {
-            I=abs($6-$(NF-3))
-            D=abs($7-$(NF-2))
-            S=abs($8-$(NF-1))
-            M=abs(1-I-D-S)
-            print $2, M, I, D, S, $3
-        }
-        # Sequence errors are annontated as Match
-        $NF==2 {
-            print $2, 1, 0, 0, 0, 0
-        }' |
-    # ------------------------------------------
-    # 各塩基部位にたいして「最大頻度の変異と挿入塩基数」を表示する
-    # ------------------------------------------
-    awk '{max=0; num=0
-        for(i=2; i<=5;i++){if(max<$i){max=$i; num=i}}
-        print num, $1, $NF}' |
-    awk -v cl="${cluster}" \
-        '{if($1==3) print cl, $2, "I", $NF
-        else if($1==4) print cl, $2, "D", $NF
-        else if($1==5) print cl, $2, "S", $NF}
-        END{print "EOF"}' |
-    # ----------------------------------------------------------
-    # 挿入塩基数が10以上の場合に数値情報に逆変換する
-    # ----------------------------------------------------------
-    awk '{
-        if($4 ~ /[a-z]/) {
-            for (i=10; i<=36; i++) {
-                num=i+87
-                ins=sprintf("%c", num)
-                if($4==ins) $4=i
+    sed "s/=/M/g" |
+    awk -F "" 'BEGIN{OFS=","}{$1=$1}1' |
+cat - > "${tmp_allele_id}"
+
+Rscript DAJIN/src/clustering_variantcall.R "${tmp_allele_id}" "${control_score}" "${cluster}"
+
+if [ -s ".DAJIN_temp/clustering/temp/mutation_${out_suffix}" ]; then
+    cat ".DAJIN_temp/clustering/temp/mutation_${out_suffix}" |
+        sed "s/^/${cluster} /g" |
+        # ----------------------------------------------------------
+        # 挿入塩基数が10以上の場合に数値情報に逆変換する
+        # ----------------------------------------------------------
+        awk '{
+            if($4 ~ /[a-z]/) {
+                for (i=10; i<=36; i++) {
+                    num=i+87
+                    ins=sprintf("%c", num)
+                    if($4==ins) $4=i
+                }
             }
-        }
-        print $0}' |
-    sed "s/35/>35/g" |    
-    # ------------------------------------------
-    # 変異がないアリルにはintacと表示する
-    # ------------------------------------------
-    awk -v cl="${cluster}" \
-        '{if(NR==1 && $0=="EOF") print cl, 0, "intact",0
-        else print $0}' |
-    grep -v "EOF" |
-cat - > "${consensus_mutation}"
+            print $0}' |
+        sed "s/35$/>35/g" |    
+    cat - > "${consensus_mutation}"
+else
+    echo "${cluster} 0 intact 0" > "${consensus_mutation}"
+fi
+
 # done
+#?====================================================================================
+
+# cat "${allele_id}" |
+#     awk -v cl="${cluster}" '$2==cl' |
+#     cut -f 3 |
+#     # ----------------------------------------
+#     # 行を「リード指向」から「塩基部位指向」に変換する
+#     # ----------------------------------------
+#     awk -F "" \
+#     '{ for (i=1; i<=NF; i++)  { a[NR,i] = $i } }
+#     END {    
+#         for(j=1; j<=NF; j++) {
+#             str=a[1,j]
+#             for(i=2; i<=NR; i++){ str=str""a[i,j] }
+#             print str }
+#     }' |
+#     # head -n 740 | tail -n 5 #! -----------------------------
+#     # ------------------------------------------
+#     # 各塩基部位において最多の変異をレポートする
+#     # ------------------------------------------
+#     awk -F "" '{sequence=$0
+#         sum[1]=gsub("=","=",sequence)
+#         sum[2]=gsub("M","M",sequence)
+#         sum[3]=gsub(/[1-9]|[a-z]/,"@", sequence)
+#         sum[4]=gsub("D","D",sequence)
+#         sum[5]=gsub("S","S",sequence)
+#         max=sum[1]; num=1
+#         for(i=2; i<=5;i++){if(max<sum[i]){max=sum[i]; num=i}}
+#         # ------------------------------------------
+#         # Insertion数をレポートする
+#         # ------------------------------------------
+#         max=0; ins_num=0
+#         if(num==3) {
+#             for(i=1; i<=NF; i++) { if($i ~ /[0-9]|[a-z]/) array[$i]++ }
+#             for(key in array){if(max<array[key]) {max=array[key]; ins_num=key}} 
+#         }
+        
+#         print num, NR, ins_num, "@", (sum[1]+sum[2])/NF,sum[3]/NF,sum[4]/NF,sum[5]/NF
+#         }' |
+#     #
+#     paste - "${control_score}" |
+#     # head -n 740 | tail -n 5 | #! -----------------------------
+#     # ------------------------------------------
+#     # 各塩基部位にたいして「Mの頻度、Iの頻度、Dの頻度、Sの頻度、Iの個数」を表示する
+#     # ------------------------------------------
+#     # head test |
+#     awk 'function abs(v) {return v < 0 ? -v : v}
+#         $NF==1 {
+#             I=abs($6-$(NF-3))
+#             D=abs($7-$(NF-2))
+#             S=abs($8-$(NF-1))
+#             M=abs(1-I-D-S)
+#             print $2, M, I, D, S, $3
+#         }
+#         # Sequence errors are annontated as Match
+#         $NF==2 {
+#             print $2, 1, 0, 0, 0, 0
+#         }' |
+#     # ------------------------------------------
+#     # 各塩基部位にたいして「最大頻度の変異と挿入塩基数」を表示する
+#     # ------------------------------------------
+#     awk '{max=0; num=0
+#         for(i=2; i<=5;i++){if(max<$i){max=$i; num=i}}
+#         print num, $1, $NF}' |
+#     awk -v cl="${cluster}" \
+#         '{if($1==3) print cl, $2, "I", $NF
+#         else if($1==4) print cl, $2, "D", $NF
+#         else if($1==5) print cl, $2, "S", $NF}
+#         END{print "EOF"}' |
+#     # ----------------------------------------------------------
+#     # 挿入塩基数が10以上の場合に数値情報に逆変換する
+#     # ----------------------------------------------------------
+#     awk '{
+#         if($4 ~ /[a-z]/) {
+#             for (i=10; i<=36; i++) {
+#                 num=i+87
+#                 ins=sprintf("%c", num)
+#                 if($4==ins) $4=i
+#             }
+#         }
+#         print $0}' |
+#     sed "s/35/>35/g" |    
+#     # ------------------------------------------
+#     # 変異がないアリルにはintacと表示する
+#     # ------------------------------------------
+#     awk -v cl="${cluster}" \
+#         '{if(NR==1 && $0=="EOF") print cl, 0, "intact",0
+#         else print $0}' |
+#     grep -v "EOF" |
+# cat - > "${consensus_mutation}"
+# # done
 
 # ============================================================================
 # 変異情報の同定
@@ -174,6 +212,7 @@ cat "${allele_id}" |
     cut -f 1 |
     sort -u |
     join .DAJIN_temp/clustering/temp/tmp_sam_"${out_suffix}" - |
+    awk '$2==0 || $2==16' |
     awk '{print $4, $(NF-1)}' |
     sed "s/cs:Z://g" |
     awk '{seq=""
@@ -214,7 +253,6 @@ cat "${allele_id}" |
     awk '{if(max[$2] < $1) {max[$2] = $1; out[$2]=$3" "$4}}
         END{for(key in out) print key, out[key]}' |
 cat - > "${mutation_info}"
-
 
 # ============================================================================
 # コンセンサス配列の作製
@@ -266,13 +304,16 @@ diff_target=$(cat .DAJIN_temp/fasta/target.fa |
     diff - .DAJIN_temp/clustering/temp/${out_suffix}.fa |
     wc -l)
 
-cat $mutation_info #! =======================================================================
+# if [ "$(awk '$1=="intact"' ${mutation_info} | wc -l)" -eq 0 ]; then
+#     include_target=$(
+#         cat .DAJIN_temp/data/mutation_points |
+#         awk '{print "S",$1+1}' |
+#         grep -c - "${mutation_info}")
+# else
+#     include_target=0
+# fi
+include_target=1
 
-[ "$(awk '$1=="intact"' ${mutation_info} | wc -l)" -eq 0 ] &&
-include_target=$(
-    cat .DAJIN_temp/data/mutation_points |
-    awk '{print "S",$1+1}' |
-    grep -c - "${mutation_info}")
 
 if [ "${diff_wt}" -eq 0 ]; then
     output_filename="${output_filename}_intact_wt"
@@ -377,4 +418,4 @@ cat << EOF >> .DAJIN_temp/clustering/consensus/"${output_filename}".html
 </html>
 EOF
 
-echo .DAJIN_temp/clustering/consensus/"${output_filename}"
+ls -l .DAJIN_temp/clustering/consensus/"${output_filename}".fa
