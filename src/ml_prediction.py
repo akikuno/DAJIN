@@ -81,7 +81,7 @@ del df_result["anomaly"]
 # ## Output result
 # ====================================
 
-df_result.to_csv('.DAJIN_temp/data/DAJIN_prediction_result.txt',
+df_result.to_csv('.DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt',
                  sep='\t', index=False, header=False)
                  
 # ====================================

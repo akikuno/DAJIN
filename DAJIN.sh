@@ -17,9 +17,9 @@ VERSION=1.0
 
 usage(){
 cat <<- USAGE
-Usage     : ./DAJIN.sh -f [text file](described at "Input")
+Usage     : DAJIN.sh -f [text file] (described at "Input")
 
-Example   : ./DAJIN.sh -f DAJIN/example/example.txt
+Example   : DAJIN.sh -f DAJIN/example/example.txt
 
 Input     : Input file should be formatted as below:
             # Example
@@ -27,17 +27,17 @@ Input     : Input file should be formatted as below:
             design=DAJIN/example/design.txt
             input_dir=DAJIN/example/demultiplex
             control=barcode03
+            output_dir=Cables2
             genome=mm10
             grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
-            output=Cables2
             threads=10
             ------
             - desing: a multi-FASTA file contains sequences of each genotype. ">wt" and ">target" must be included. 
             - input_dir: a directory contains FASTA or FASTQ files of long-read sequencing
             - control: control barcode ID
+            - output_dir: output directory name. optional. default is DAJIN_results
             - genome: reference genome. e.g. mm10, hg38
             - grna: gRNA sequence(s). multiple gRNA sequences must be deliminated by comma.
-            - output: output directory name. optional. default is DAJIN_results
             - threads: optional. default is two-thirds of available CPU threads.
 USAGE
 }
@@ -76,7 +76,7 @@ do
             ont_cont=$(cat "$2" | grep "control" | sed -e "s/ //g" -e "s/.*=//g")
             genome=$(cat "$2" | grep "genome" | sed -e "s/ //g" -e "s/.*=//g")
             grna=$(cat "$2" | grep "grna" | sed -e "s/ //g" -e "s/.*=//g")
-            output_dir=$(cat "$2" | grep "output" | sed -e "s/ //g" -e "s/.*=//g")
+            output_dir=$(cat "$2" | grep "output_dir" | sed -e "s/ //g" -e "s/.*=//g")
             threads=$(cat "$2" | grep "threads" | sed -e "s/ //g" -e "s/.*=//g")
             ;;
         -* )
@@ -97,9 +97,9 @@ fi
 # ----------------------------------------------------------------
 # Check fasta file
 # ----------------------------------------------------------------
-if [ $(echo "$design" | grep  -c -e '\\' -e '/' -e ':' -e '*' -e '?' -e '"' -e '<' -e '>' -e '|') -eq 1 ]; then
-    error_exit "$design: invalid file name"
-fi
+# if [ $(echo "$design" | grep  -c -e '\\' -e '/' -e ':' -e '*' -e '?' -e '"' -e '<' -e '>' -e '|') -eq 1 ]; then
+#     error_exit "$design: invalid file name"
+# fi
 
 if ! [ -e "$design" ]; then
     error_exit "$design: No such file"
@@ -122,8 +122,8 @@ fi
 # Check control
 # ----------------------------------------------------------------
 
-if [ -z "$(find ${ont_dir}/ -name ${control}.f*)" ]; then
-    error_exit "$control: No control file in ${ont_dir}"
+if [ -z "$(find ${ont_dir}/ -name ${ont_cont}.f*)" ]; then
+    error_exit "$ont_cont: No control file in ${ont_dir}"
 fi
 
 # ----------------------------------------------------------------
@@ -200,8 +200,7 @@ alias python="python.exe"
 # ============================================================================
 # Make temporal directory
 # ============================================================================
-
-rm -rf ".DAJIN_temp" 2>/dev/null
+rm -rf ".DAJIN_temp" 2>/dev/null || true
 dirs="fasta fasta_conv fasta_ont NanoSim bam igvjs data clustering/temp seqlogo/temp"
 
 echo "${dirs}" |
@@ -329,7 +328,7 @@ fi
 # ============================================================================
 # Format ONT reads into FASTA file
 # ============================================================================
-set +e
+
 for input in ${ont_dir}/* ; do
     output=$(
         echo "${input}" |
@@ -345,7 +344,6 @@ for input in ${ont_dir}/* ; do
     awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' |
     cat - > "${output}"
 done
-set -e
 
 # ============================================================================
 # Setting NanoSim (v2.5.0)
@@ -392,7 +390,7 @@ for input in .DAJIN_temp/fasta_conv/*; do
         -min "${len}" \
         -o "${output}_simulated"
     ##
-    rm .DAJIN_temp/fasta_ont/*_error_* .DAJIN_temp/fasta_ont/*_unaligned_* 2>/dev/null
+    rm .DAJIN_temp/fasta_ont/*_error_* .DAJIN_temp/fasta_ont/*_unaligned_* 2>/dev/null || true
 done
 
 rm -rf DAJIN/utils/NanoSim/src/__pycache__
@@ -414,6 +412,7 @@ fi
 
 ./DAJIN/src/igvjs.sh "${genome:-mm10}" "${threads:-1}"
 
+mkdir -p "${output_dir:-DAJIN_results}"/BAM
 cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM
 
 if [ "$mutation_type" = "P" ]; then
@@ -465,12 +464,6 @@ cat .DAJIN_temp/data/MIDS_* |
 cat - > ".DAJIN_temp/data/DAJIN_MIDS.txt"
 
 rm .DAJIN_temp/data/MIDS_*
-
-# #! ================================================
-# cat ".DAJIN_temp/data/DAJIN_MIDS.txt" |
-#     grep -e sim -e barcode02 -e barcode32 |
-# cat > test_MIDS.txt
-# #! ================================================
 
 # ============================================================================
 # Prediction
@@ -564,7 +557,7 @@ rm .DAJIN_temp/tmp_*
 
 cat "${prediction_filtered}" |
     cut -d " " -f 3 |
-    grep -e "^normal" -e "^wt" |
+    grep -e "^normal" -e "^wt"  -e "^target" |
     sort -u |
 while read -r alleletype; do
     # echo "${ont_cont}" "${alleletype}" 
@@ -600,7 +593,7 @@ cat "${prediction_filtered}" |
     awk '{print "./DAJIN/src/clustering_allele_percentage.sh",$1, $3, $2}' |
     #! ---------------------------------
     # grep -e barcode18 -e barcode23 -e barcode26 |
-    grep -e barcode02 |
+    # grep -e barcode02 |
     #! ---------------------------------
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
@@ -615,7 +608,7 @@ sh -
 cat .DAJIN_temp/clustering/result_allele_percentage* |
     sed "s/_/ /g" |
     awk '{nr[$1]++; print $0, nr[$1]}' |
-    grep -e barcode02  | #!============== -e barcode12
+    # grep -e barcode02  | #!============== -e barcode12
     awk '{print "./DAJIN/src/clustering_variantcall.sh", $0, "&"}' |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
