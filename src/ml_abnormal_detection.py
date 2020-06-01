@@ -30,13 +30,21 @@ from tensorflow.keras.callbacks import EarlyStopping
 
 args = sys.argv
 file_name = args[1]
+control = args[2]
+if control == "" :
+    raise ValueError("control is empty")
 # file_name = ".DAJIN_temp/data/DAJIN_MIDS.txt"
-
+# file_name = "test_MIDS.txt"
+# control = "barcode32"
 df = pd.read_csv(file_name, header=None, sep='\t')
 df.columns = ["seqID", "seq", "barcodeID"]
 df.seq = "MIDS=" + df.seq
 
 df_sim = df[df.barcodeID.str.contains("simulated")].reset_index(drop=True)
+df_cont = df[df.barcodeID.str.contains(control)].reset_index(drop=True)
+df_cont.barcodeID = "wt_simulated"
+df_sim = df_sim.append(df_cont).reset_index(drop=True)
+del df_cont
 df_real = df[~df.barcodeID.str.contains("simulated")].reset_index(drop=True)
 
 # Output names
@@ -123,7 +131,7 @@ model.compile(optimizer='adam', loss='categorical_crossentropy',
 early_stopping = EarlyStopping(monitor='val_loss', patience=10) 
 
 history = model.fit(X_train, Y_train, epochs=100, verbose=1,
-                    batch_size = 64,
+                    batch_size = 32,
                     validation_split=0.2, shuffle=True,
                     callbacks = [early_stopping])
 
@@ -137,6 +145,7 @@ history = model.fit(X_train, Y_train, epochs=100, verbose=1,
 X_all = np.concatenate([X_sim, X_real])
 print("Abnormal allele detection...")
 
+normal = X_train[0:1000]
 # if any(df_sim.barcodeID.str.contains("wt_del")) and any(df_sim.barcodeID.str.contains("wt_ins")):
 #     normal = X_sim[df_sim[df_sim.barcodeID=="wt_simulated"].sample(1000).index]
 # else:
@@ -145,7 +154,7 @@ print("Abnormal allele detection...")
 model_ = Model(model.get_layer(index=0).input,
                 model.get_layer(index=-2).output)  
 print("Obtain L2-normalized vectors from the simulated reads...")
-normal_vector = model_.predict(X_train[0:1000], verbose=1, batch_size=32)
+normal_vector = model_.predict(normal, verbose=1, batch_size=32)
 print("Obtain L2-normalized vectors of the all reads...")
 predict_vector = model_.predict(X_all, verbose=1, batch_size=32)
 cos_score = cos_sim(normal_vector, predict_vector).max(axis=0)
@@ -163,7 +172,7 @@ df_anomaly["cos_sim"] = cos_score
 df_anomaly["label"] = df_anomaly.barcodeID.apply(
     lambda x: 1 if "simulated" in x else -1)
 
-optimal_threshold = df_anomaly[df_anomaly.label == 1].cos_sim.quantile(0.01)
+optimal_threshold = df_anomaly[df_anomaly.label == 1].cos_sim.quantile(0.1)
 
 df_anomaly["abnormal_prediction"] = (
     df_anomaly[df_anomaly.label == -1].reset_index().
@@ -172,6 +181,7 @@ df_anomaly["abnormal_prediction"] = (
 df_anomaly.drop(["cos_sim", "label"], axis=1, inplace=True)
 df_anomaly = df_anomaly[~df_anomaly.barcodeID.str.contains("simulated")].reset_index(drop=True)
 
+# df_anomaly.groupby("barcodeID").abnormal_prediction.value_counts()
 
 # ====================================
 # Output the results

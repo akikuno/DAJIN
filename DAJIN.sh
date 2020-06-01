@@ -444,7 +444,7 @@ cat "$reference" |
     sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
     tr -d "\~\*\-\+atgc" |
     awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
-cat - > .DAJIN_temp/data/mutation_points
+cat > .DAJIN_temp/data/mutation_points
 
 # MIDS conversion...
 find .DAJIN_temp/fasta_ont -type f | sort |
@@ -466,6 +466,12 @@ cat - > ".DAJIN_temp/data/DAJIN_MIDS.txt"
 
 rm .DAJIN_temp/data/MIDS_*
 
+# #! ================================================
+# cat ".DAJIN_temp/data/DAJIN_MIDS.txt" |
+#     grep -e sim -e barcode02 -e barcode32 |
+# cat > test_MIDS.txt
+# #! ================================================
+
 # ============================================================================
 # Prediction
 # 異常検知→アレルタイプの予測
@@ -473,7 +479,7 @@ rm .DAJIN_temp/data/MIDS_*
 # ============================================================================
 printf "Start allele prediction...\n"
 
-python DAJIN/src/ml_abnormal_detection.py ".DAJIN_temp"/data/DAJIN_MIDS.txt
+python DAJIN/src/ml_abnormal_detection.py ".DAJIN_temp"/data/DAJIN_MIDS.txt "${ont_cont}"
 
 if [ "$mutation_type" = "P" ]; then
     mv ".DAJIN_temp/data/DAJIN_anomaly_classification.txt" ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
@@ -594,7 +600,7 @@ cat "${prediction_filtered}" |
     awk '{print "./DAJIN/src/clustering_allele_percentage.sh",$1, $3, $2}' |
     #! ---------------------------------
     # grep -e barcode18 -e barcode23 -e barcode26 |
-    # grep -e barcode01 |
+    grep -e barcode02 |
     #! ---------------------------------
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
@@ -609,7 +615,7 @@ sh -
 cat .DAJIN_temp/clustering/result_allele_percentage* |
     sed "s/_/ /g" |
     awk '{nr[$1]++; print $0, nr[$1]}' |
-    # grep -e barcode08  -e barcode12 | #!============== -e barcode12
+    grep -e barcode02  | #!============== -e barcode12
     awk '{print "./DAJIN/src/clustering_variantcall.sh", $0, "&"}' |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
