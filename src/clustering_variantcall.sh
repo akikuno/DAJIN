@@ -16,11 +16,11 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # ----------------------------------------
 # Input arguments
 # ----------------------------------------
-# barcode="barcode16"
+# barcode="barcode02"
 # alleletype="normal"
 # cluster=1
-# percentage=27
-# alleleid=2
+# percentage=59
+# alleleid=3
 # in_suffix="${barcode}"_"${alleletype}"
 # out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
 
@@ -70,6 +70,15 @@ cat "${allele_id}" |
     awk -F "" 'BEGIN{OFS=","}{$1=$1}1' |
 cat - > "${tmp_allele_id}"
 
+cat "${allele_id}" |
+    awk -v cl="${cluster}" '$2==cl' |
+    cut -f 3 |
+    # sed "s/z.*/ /g" |
+    # awk '{print length($1)}' |
+    # sort | uniq -c
+    awk '{print substr($0,738,1)}' |
+    sort | uniq -c
+
 Rscript DAJIN/src/clustering_variantcall.R "${tmp_allele_id}" "${control_score}" "${cluster}"
 
 if [ -s ".DAJIN_temp/clustering/temp/mutation_${out_suffix}" ]; then
@@ -95,6 +104,69 @@ fi
 
 # done
 #?====================================================================================
+
+start=$(cut -f 2 .DAJIN_temp/data/gggenome_location)
+
+len=$(samtools view DAJIN_results/BAM/${barcode}_allele${alleleid}.bam |
+    awk '$2==0 || $2==16' |
+    awk '{print length($10)}' |
+    sort | uniq -c |
+    awk '{if(max < $1) {max=$1; len=$2}} END{print len}')
+
+samtools view DAJIN_results/BAM/${barcode}_allele${alleleid}.bam |
+    awk '$2==0 || $2==16' |
+    awk -v start="${start}" -v len="${len}" '$4==start && length($10) == len' |
+    head -n 1 |
+    awk '{print ">"$1"\n"$10}' |
+cat > test_ref.fa
+
+
+cat "${allele_id}" |
+    awk -v cl="${cluster}" '$2==cl' |
+    cut -f 1 |
+    sort |
+cat > tmp_allele_id
+
+cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
+    awk '$1~/[>@]/ {gsub("@","",$1); printf $1"\t"; next}1' |
+    sort |
+    join - tmp_allele_id |
+    awk '{print ">"$1"\n"$2}' |
+cat > test_que.fa 
+minimap2 -ax map-ont test_ref.fa test_que.fa --cs=long 2>/dev/null |
+cat > test.sam
+
+
+
+samtools view DAJIN_results/BAM/${barcode}_allele${alleleid}.bam |
+    awk '$2==0 || $2==16' |
+    awk -v start="${start}" -v len="${len}" '$4==start && length($10) == len' |
+    awk '{print ">"$1"\n"$10}' |
+
+minimap2 -ax map-ont .DAJIN_temp/fasta/wt.fa - --cs=long 2>/dev/null |
+awk '{print $(NF-1)}' |
+grep "cs" |
+awk '{cstag=$0
+    gsub("cs:Z:=","",$0)
+    gsub("=", " ", $0)
+    gsub(/[ACGT]/, "M", $0)
+    gsub(/\*[acgt][acgt]/, " S", $0)
+    gsub(/\+[acgt]*/,  " I ", $0)
+    gsub("-",  " ", $0)
+    for(i=1; i<=NF; i++) if($i !~ /[MSI+]/ ){
+        len="%" length($i) "s"
+        D=sprintf(len,""); gsub(/ /," D ",D)
+        $i=D
+        }
+    gsub(" ","", $0)
+    }1' |
+
+cat > test_MIDS
+
+cat test_MIDS |
+    awk '{print substr($0,721,1)}' |
+    sort | uniq -c
+
 
 # cat "${allele_id}" |
 #     awk -v cl="${cluster}" '$2==cl' |
