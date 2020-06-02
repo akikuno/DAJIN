@@ -498,10 +498,10 @@ cat "${prediction}"  |
     sort |
     uniq -c |
     awk '{barcode[$2]+=$1
-        read_info[$2]=$1"_"$3" "read_info[$2]}
+        read_info[$2]=$1"____"$3" "read_info[$2]}
     END{for(key in barcode) print key,barcode[key], read_info[key]}' |
     awk '{for(i=3;i<=NF; i++) print $1,$2,$i}' |
-    sed "s/_/ /g" |
+    sed "s/____/ /g" |
     awk '{print $1, int($3/$2*100+0.5), $4}' |
 cat - > ".DAJIN_temp/tmp_prediction_proportion"
 
@@ -536,10 +536,10 @@ cat .DAJIN_temp/tmp_prediction_proportion |
     # --------------------------------
     awk '($2 > 5 && $3 != "target") || ($2 > 1 && $3 == "target")' |
     awk '{barcode[$1]+=$2
-        read_info[$1]=$2"_"$3" "read_info[$1]}
+        read_info[$1]=$2"____"$3" "read_info[$1]}
     END{for(key in barcode) print key,barcode[key], read_info[key]}' |
     awk '{for(i=3;i<=NF; i++) print $1,$2,$i}' |
-    sed "s/_/ /g" |
+    sed "s/____/ /g" |
     # --------------------------------
     # Interpolate the removed alleles to bring the total to 100%
     # 除去されたアレル分を補間し、合計を100%にする
@@ -557,12 +557,13 @@ rm .DAJIN_temp/tmp_*
 
 cat "${prediction_filtered}" |
     cut -d " " -f 3 |
-    grep -e "^normal" -e "^wt"  -e "^target" |
+    grep -e "^normal" -e "^wt" |
     sort -u |
 while read -r alleletype; do
     # echo "${ont_cont}" "${alleletype}" 
     ./DAJIN/src/clustering_prerequisit.sh "${ont_cont}" "${alleletype}" 
 done
+# >>> ls -l .DAJIN_temp/clustering/temp/control_score_*
 
 cat "${prediction_filtered}" |
     awk '{print "./DAJIN/src/clustering.sh",$1, $3, "&"}' |
@@ -654,7 +655,7 @@ cp -r .DAJIN_temp/clustering/consensus/* "${output_dir:-DAJIN_results}"/Consensu
 
 # output_bamdir=".DAJIN_temp/clustering/bam_clustering"
 # mkdir -p "${output_bamdir}"
-rm DAJIN_results/BAM/*allele*
+# rm "${output_dir:-DAJIN_results}"/BAM/*allele*
 
 cat .DAJIN_temp/clustering/result_allele_percentage* |
      sed "s/_/ /g" |
@@ -677,14 +678,14 @@ do
         sort |
     cat - > ".DAJIN_temp/clustering/temp/tmp_id_$$"
     #
-    samtools view -h DAJIN_results/BAM/"${barcode}".bam |
+    samtools view -h "${output_dir:-DAJIN_results}"/BAM/"${barcode}".bam |
         awk '/^@/{print}
             NR==FNR{a[$1];next}
             $1 in a' \
             ".DAJIN_temp/clustering/temp/tmp_id_$$" - |
         samtools sort -@ "${threads:-1}" 2>/dev/null |
-    cat > DAJIN_results/BAM/"${output_bam}".bam
-    samtools index DAJIN_results/BAM/"${output_bam}".bam
+    cat > "${output_dir:-DAJIN_results}"/BAM/"${output_bam}".bam
+    samtools index "${output_dir:-DAJIN_results}"/BAM/"${output_bam}".bam
 done
 
 # ----------------------------------------------------------------
@@ -706,7 +707,7 @@ done
 
 printf "Visualizing alignment reads...\n"
 printf "Browser will be launched. Click 'igvjs.html'.\n"
-{ npx live-server DAJIN_results/BAM/igvjs/ & } 1>/dev/null 2>/dev/null
+{ npx live-server "${output_dir:-DAJIN_results}"/BAM/igvjs/ & } 1>/dev/null 2>/dev/null
 
 # rm -rf .tmp_
 # rm .DAJIN_temp/tmp_* .DAJIN_temp/clustering/tmp_* 2>/dev/null

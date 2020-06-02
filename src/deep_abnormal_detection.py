@@ -1,21 +1,28 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
 import warnings
 warnings.filterwarnings("ignore")
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import sys
 import re
+from functools import partial
+from tqdm import tqdm
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn.metrics.pairwise import cosine_similarity as cos_sim
 
-from sklearn.neighbors import LocalOutlierFactor
-from sklearn.ensemble import IsolationForest
-
-import lightgbm as lgb
+from tensorflow.keras import backend as K
+from tensorflow.keras import regularizers, utils
+from tensorflow.keras.layers import (Activation, Conv1D, Dense, Flatten,
+                                    MaxPooling1D)
+from tensorflow.keras.models import Model, Sequential, load_model
+from tensorflow.keras.callbacks import EarlyStopping
 
 # ====================================
 # Input and format data
@@ -45,116 +52,6 @@ output_model = file_name.replace(".txt", ".h5")
 # fig_dirs = ["results/figures/png", "results/figures/svg"]
 # output_figure = file_name.replace(".txt", "").replace("data_for_ml/", "")
 
-# # ====================================
-# # # Preporcessing...
-# # ====================================
-# test_seq = test_seq[0:4]
-
-def label_encorde_seq(seq):
-    label_encoder = LabelEncoder()
-    label_seq = seq.apply(lambda x: list(x)).\
-        apply(lambda x: label_encoder.fit_transform(x)).\
-        apply(lambda x: pd.Series(x)).\
-        to_numpy()
-    return(label_seq)
-
-X_sim = label_encorde_seq(df_sim.seq)
-X_real = label_encorde_seq(df_real.seq)
-# X_all = np.concatenate([X_sim, X_real])
-
-X_sim
-
-# # ====================================
-# # # Train test split...
-# # ====================================
-
-print("Model training...")
-
-labels, labels_index = pd.factorize(df_sim.barcodeID)
-X_train, X_test, Y_train, Y_test = train_test_split(
-    X_sim, labels,
-    test_size=0.2, shuffle=True)
-
-
-# # ====================================
-# # # LOF
-# # ====================================
-
-# # fit the model for novelty detection (novelty=True)
-# clf = LocalOutlierFactor(n_neighbors=20, leaf_size = 400, novelty=True, n_jobs = 10)
-
-# train = X_train[:1000]
-# start = time.time()
-# clf.fit(train)
-# # clf.fit(train.reshape(train.shape[0],-1))
-# time.time() - start
-
-
-# # DO NOT use predict, decision_function and score_samples on X_train as this
-# # would give wrong results but only on new unseen data (not used in X_train),
-# # e.g. X_test, X_outliers or the meshgrid
-# # test = X_test[:1000]
-# test = X_test[:10000]
-# test = X_all
-# start = time.time()
-# y_pred_outliers = clf.predict(test)
-# # y_pred_outliers = clf.predict(test.reshape(test.shape[0],-1))
-# time.time() - start
-
-
-# df_anomaly = pd.concat([df_sim[["barcodeID", "seqID"]].reset_index(drop=True),
-#                     df_real[["barcodeID", "seqID"]].reset_index(drop=True)])
-
-# df_anomaly["outliers"] = y_pred_outliers
-
-# df_anomaly.groupby("barcodeID").outliers.value_counts()
-
-# # ====================================
-# # # IsolationForest
-# # ====================================
-clf = IsolationForest(n_jobs=10) 
-
-train = X_train[0:10000]
-clf.fit(train)
-
-y_pred_outliers = clf.predict(X_real)
-
-df_real["outliers"] = y_pred_outliers
-
-df_real.groupby("barcodeID").outliers.value_counts()
-
-
-# # ====================================
-# # # lightGBM
-# # ====================================
-
-
-model = lgb.LGBMClassifier(n_jobs=10)
-model.fit(X_train, Y_train)
-
-y_pred = model.predict_proba(X_test)
-y_pred_max = np.argmax(y_pred, axis=1)
-
-accuracy = sum(Y_test == y_pred_max) / len(Y_test)
-print(accuracy)
-
-y_pred = model.predict_proba(X_real)
-y_pred_max = np.argmax(y_pred, axis=1)
-
-df_real["prediction"].mask(df_real["outliers"] == -1, "abnormal", inplace=True)
-# df_real["prediction"].mask(df_real["outliers"] == 1, "normal", inplace=True)
-
-for index,label in enumerate(labels_index):
-    print(index)
-    label=label.replace("_simulated","")
-    df_real["prediction"].mask(df_real["prediction"] == index, label, inplace=True)
-
-df_real.groupby("barcodeID").prediction.value_counts()
-
-
-
-
-#! ====================================================
 # # ====================================
 # # One-hot encording
 # # ====================================
@@ -393,3 +290,157 @@ pd.Series(labels_index).to_csv(
 # n_error_outliers = y_pred_outliers[y_pred_outliers == 1].size
 
 # TEST CODE
+# # ====================================
+# # # Preporcessing...
+# # ====================================
+# test_seq = test_seq[0:4]
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+
+def label_encorde_seq(seq):
+    label_encoder = LabelEncoder()
+    label_seq = seq.apply(lambda x: list(x)).\
+        apply(lambda x: label_encoder.fit_transform(x)).\
+        apply(lambda x: pd.Series(x)).\
+        to_numpy()
+    return(label_seq)
+
+test = pd.Series(["ACGT","AACC", "TCGT"])
+label_encorde_seq(test)
+# array([[0, 1, 2, 3],
+#        [0, 0, 1, 1],
+#        [2, 0, 1, 2]])
+X_sim_1 = label_encorde_seq(df_sim.seq[0:10])
+
+X_sim_2 = label_encorde_seq(df_sim.seq)
+
+X_real = encode_int(df_real.seq)
+X_all = np.concatenate([X_sim, X_real])
+
+X_sim
+
+# # ====================================
+# # # Train test split...
+# # ====================================
+
+# test = pd.Series([np.array([1,2,3]), np.array([2,3,4])])
+# test.apply(lambda x: pd.Series(x)).\
+#         to_numpy()
+
+# test.values
+# test.to_numpy()
+# test.to_numpy().shape
+
+
+print("Model training...")
+
+labels, labels_index = pd.factorize(df_sim.barcodeID)
+# labels_categorical = utils.to_categorical(labels)
+
+X_train, X_test, Y_train, Y_test = train_test_split(
+    X_sim, labels,
+    test_size=0.2, shuffle=True)
+
+
+# # ====================================
+# # # LOF
+# # ====================================
+from sklearn.neighbors import LocalOutlierFactor
+import time
+
+
+# fit the model for novelty detection (novelty=True)
+clf = LocalOutlierFactor(n_neighbors=20, leaf_size = 400, novelty=True, n_jobs = 10)
+
+train = X_train[:1000]
+start = time.time()
+clf.fit(train)
+# clf.fit(train.reshape(train.shape[0],-1))
+time.time() - start
+
+
+# DO NOT use predict, decision_function and score_samples on X_train as this
+# would give wrong results but only on new unseen data (not used in X_train),
+# e.g. X_test, X_outliers or the meshgrid
+# test = X_test[:1000]
+test = X_test[:10000]
+test = X_all
+start = time.time()
+y_pred_outliers = clf.predict(test)
+# y_pred_outliers = clf.predict(test.reshape(test.shape[0],-1))
+time.time() - start
+
+
+df_anomaly = pd.concat([df_sim[["barcodeID", "seqID"]].reset_index(drop=True),
+                    df_real[["barcodeID", "seqID"]].reset_index(drop=True)])
+
+df_anomaly["outliers"] = y_pred_outliers
+
+df_anomaly.groupby("barcodeID").outliers.value_counts()
+
+# # ====================================
+# # # IsolationForest
+# # ====================================
+from sklearn.ensemble import IsolationForest
+clf = IsolationForest(n_jobs=10) 
+
+start = time.time()
+train = X_train[0:1000]
+clf.fit(train)
+# clf.fit(train.reshape(train.shape[0],-1))
+time.time() - start
+
+
+start = time.time() #*>>>>>>>>>>>>>>>>>>>>>>>>>
+test = X_real[df_real.barcodeID=="barcode03"]
+test = X_real[df_real.seqID=="a8a02190-e42d-45e4-b558-ae485e555817"]
+test = X_real
+y_pred_outliers = clf.predict(test)
+# y_pred_outliers = clf.predict(test.reshape(test.shape[0],-1))
+time.time() - start
+
+pd.Series(y_pred_outliers).value_counts()
+
+df_anomaly = pd.concat([df_sim[["barcodeID", "seqID"]].reset_index(drop=True),
+                    df_real[["barcodeID", "seqID"]].reset_index(drop=True)])
+
+df_anomaly["outliers"] = y_pred_outliers
+
+df_anomaly.groupby("barcodeID").outliers.value_counts()
+
+
+if_anomalies=clf.predict(df)
+if_anomalies=pd.Series(if_anomalies).replace([-1,1],[1,0])
+if_anomalies=num[if_anomalies==1];
+
+# # ====================================
+# # # lightGBM
+# # ====================================
+
+import lightgbm as lgb
+import time
+
+model = lgb.LGBMClassifier(n_jobs=10)
+start = time.time()
+model.fit(X_train, Y_train)
+# model.fit(X_train.reshape(X_train.shape[0],-1), Y_train, verbose=1)
+time.time() - start
+
+y_pred = model.predict_proba(X_test)
+# y_pred = model.predict_proba(X_test.reshape(X_test.shape[0],-1))
+y_pred_max = np.argmax(y_pred, axis=1)
+
+accuracy = sum(Y_test == y_pred_max) / len(Y_test)
+print(accuracy)
+
+start = time.time()
+y_pred = model.predict_proba(X_all)
+time.time() - start
+y_pred_max = np.argmax(y_pred, axis=1)
+
+df_anomaly["prediction"] = y_pred_max
+df_anomaly.groupby("barcodeID").prediction.value_counts()
+y_pred_max.shape
+X_real.shape
+

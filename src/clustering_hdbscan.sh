@@ -52,5 +52,5 @@ hdbscan_id=".DAJIN_temp/clustering/temp/hdbscan_${suffix}"
 # HDBSCAN
 # ==============================================================================
 
-time Rscript DAJIN/src/test_clustering.R "${query_score}" "${query_label}" "${control_score}"
+Rscript DAJIN/src/test_clustering.R "${query_score}" "${query_label}" "${control_score}"
 ls -lh "${hdbscan_id}" #! =============================
