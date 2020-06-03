@@ -74,7 +74,7 @@ cp ".DAJIN_temp/data/MIDS_${barcode}_${mapping_alleletype}" "${MIDS_ref}"
 cat "${MIDS_ref}" |
     grep "${barcode}" |
     sort -k 1,1 |
-    join -1 1 -2 2 - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
+    join - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk -v alelle="$alleletype" '$NF==alelle' |
     cut -d " " -f 2 |
     # Insertion annotation

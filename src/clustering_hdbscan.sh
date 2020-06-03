@@ -30,9 +30,10 @@ barcode="${1}"
 alleletype="${2}"
 suffix="${barcode}"_"${alleletype}"
 
-mapping_alleletype="${alleletype}"
-[ "$alleletype" = "normal" ] && mapping_alleletype="wt"
-[ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
+mapping_alleletype="wt"
+# mapping_alleletype="${alleletype}"
+# [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
+# [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
 
 # ----------------------------------------
 # Input files

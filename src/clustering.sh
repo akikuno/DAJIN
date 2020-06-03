@@ -17,8 +17,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # ----------------------------------------
 # Input
 # ----------------------------------------
-# barcode="barcode08"
-# alleletype="normal"
+# barcode="barcode03"
+# alleletype="flox_deletion"
 # original_percentage=56
 # suffix="${barcode}"_"${alleletype}"
 
@@ -39,7 +39,7 @@ mapping_alleletype="${alleletype}"
 # ----------------------------------------
 # Input files
 # ----------------------------------------
-control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
+# control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
 
 # ----------------------------------------------------------
 # Output files
@@ -48,7 +48,7 @@ mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
 # temporal -----------
 MIDS_que=".DAJIN_temp/clustering/temp/MIDS_${suffix}"
 query_seq=".DAJIN_temp/clustering/temp/query_seq_${suffix}"
-hdbscan_id=".DAJIN_temp/clustering/temp/hdbscan_${suffix}"
+# hdbscan_id=".DAJIN_temp/clustering/temp/hdbscan_${suffix}"
 # tmp_allele_percentage=".DAJIN_temp/clustering/temp/allele_percentage_${suffix}".txt
 
 # resuts -----------
@@ -90,9 +90,8 @@ cp ".DAJIN_temp/data/MIDS_${barcode}_${mapping_alleletype}" "${MIDS_que}"
 cat "${MIDS_que}" |
     grep "${barcode}" |
     sort -k 1,1 |
-    join -1 1 -2 2 - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    awk -v atype="${alleletype}" \
-    '$NF==atype' |
+    join - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
+    awk -v atype="${alleletype}" '$NF==atype' |
     cut -d " " -f 1,3 |
     sed "s/ /,/g" |
 cat - > "${query_label}"
@@ -103,9 +102,8 @@ cat - > "${query_label}"
 cat "${MIDS_que}" |
     grep "${barcode}" |
     sort -k 1,1 |
-    join -1 1 -2 2 - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    awk -v atype="${alleletype}" \
-    '$NF==atype' |
+    join - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
+    awk -v atype="${alleletype}" '$NF==atype' |
     cut -d " " -f 2 |
     awk -F "" '{
         for(i=1; i<=NF; i++){
@@ -151,7 +149,6 @@ cat "${query_seq}" |
     sed "s/[a-z]/I/g" |
 cat > "${query_score}"
 
-ls -lh "${query_score}" #! =============================
 # cp "${control_score}" test_control
 # echo "${query_score}" "${query_label}" "${control_score}"
 # time Rscript DAJIN/src/test_clustering.R "${query_score}" "${query_label}" "${control_score}"

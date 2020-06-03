@@ -14,9 +14,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # Parse arguments
 # ======================================
 
-# input=".DAJIN_temp/fasta_ont/barcode30.fa"
-# input="barcode30.fa"
-# genotype="target"
+# input=".DAJIN_temp/fasta_ont/barcode03.fa"
+# genotype="flox_deletion"
 
 # insertion_skip="control"
 

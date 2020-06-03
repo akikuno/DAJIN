@@ -51,17 +51,16 @@ allele_percentage=".DAJIN_temp/clustering/result_allele_percentage_${suffix}".tx
 # Summarize and plot mutation loci
 # ==============================================================================
 # ----------------------------------------------------------
-# Remove minor allele (< 10%) 
-# 全体の10%以下のアレルは削除する
+# Remove minor allele (< 5%) 
+# 全体の5%以下のアレルは削除する
 # ----------------------------------------------------------
-
 cat "${hdbscan_id}" |
     awk '{print $NF}' |
     sort |
     uniq -c |
     awk -v per="${original_percentage}" -v nr="$(cat "${hdbscan_id}" | wc -l))" \
     '{allele_per=$1/nr*per
-    if(allele_per>10) {
+    if(allele_per>5) {
         total+=allele_per
         allele[NR]=$2" "allele_per}}
     END{for(key in allele) print allele[key],total, per}' |
@@ -93,4 +92,4 @@ cat "${tmp_allele_percentage}" |
     sed "s/^/${suffix} /g" |
 cat - > "${allele_percentage}"
 
-echo $allele_percentage #! =============================================
+exit 0

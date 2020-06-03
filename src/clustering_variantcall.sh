@@ -37,9 +37,10 @@ alleleid="${5}"
 in_suffix="${barcode}"_"${alleletype}"
 out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
 
-mapping_alleletype="${alleletype}"
-[ "$alleletype" = "normal" ] && mapping_alleletype="wt"
-[ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
+mapping_alleletype="wt"
+# mapping_alleletype="${alleletype}"
+# [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
+# [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
 
 
 # ----------------------------------------------------------
@@ -105,158 +106,69 @@ fi
 # done
 #?====================================================================================
 
-start=$(cut -f 2 .DAJIN_temp/data/gggenome_location)
+# start=$(cut -f 2 .DAJIN_temp/data/gggenome_location)
 
-len=$(samtools view DAJIN_results/BAM/${barcode}_allele${alleleid}.bam |
-    awk '$2==0 || $2==16' |
-    awk '{print length($10)}' |
-    sort | uniq -c |
-    awk '{if(max < $1) {max=$1; len=$2}} END{print len}')
+# len=$(samtools view DAJIN_results/BAM/${barcode}_allele${alleleid}.bam |
+#     awk '$2==0 || $2==16' |
+#     awk '{print length($10)}' |
+#     sort | uniq -c |
+#     awk '{if(max < $1) {max=$1; len=$2}} END{print len}')
 
-samtools view DAJIN_results/BAM/${barcode}_allele${alleleid}.bam |
-    awk '$2==0 || $2==16' |
-    awk -v start="${start}" -v len="${len}" '$4==start && length($10) == len' |
-    head -n 1 |
-    awk '{print ">"$1"\n"$10}' |
-cat > test_ref.fa
-
-
-cat "${allele_id}" |
-    awk -v cl="${cluster}" '$2==cl' |
-    cut -f 1 |
-    sort |
-cat > tmp_allele_id
-
-cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
-    awk '$1~/[>@]/ {gsub("@","",$1); printf $1"\t"; next}1' |
-    sort |
-    join - tmp_allele_id |
-    awk '{print ">"$1"\n"$2}' |
-cat > test_que.fa 
-minimap2 -ax map-ont test_ref.fa test_que.fa --cs=long 2>/dev/null |
-cat > test.sam
-
-
-
-samtools view DAJIN_results/BAM/${barcode}_allele${alleleid}.bam |
-    awk '$2==0 || $2==16' |
-    awk -v start="${start}" -v len="${len}" '$4==start && length($10) == len' |
-    awk '{print ">"$1"\n"$10}' |
-
-minimap2 -ax map-ont .DAJIN_temp/fasta/wt.fa - --cs=long 2>/dev/null |
-awk '{print $(NF-1)}' |
-grep "cs" |
-awk '{cstag=$0
-    gsub("cs:Z:=","",$0)
-    gsub("=", " ", $0)
-    gsub(/[ACGT]/, "M", $0)
-    gsub(/\*[acgt][acgt]/, " S", $0)
-    gsub(/\+[acgt]*/,  " I ", $0)
-    gsub("-",  " ", $0)
-    for(i=1; i<=NF; i++) if($i !~ /[MSI+]/ ){
-        len="%" length($i) "s"
-        D=sprintf(len,""); gsub(/ /," D ",D)
-        $i=D
-        }
-    gsub(" ","", $0)
-    }1' |
-
-cat > test_MIDS
-
-cat test_MIDS |
-    awk '{print substr($0,721,1)}' |
-    sort | uniq -c
+# samtools view DAJIN_results/BAM/${barcode}_allele${alleleid}.bam |
+#     awk '$2==0 || $2==16' |
+#     awk -v start="${start}" -v len="${len}" '$4==start && length($10) == len' |
+#     head -n 1 |
+#     awk '{print ">"$1"\n"$10}' |
+# cat > test_ref.fa
 
 
 # cat "${allele_id}" |
 #     awk -v cl="${cluster}" '$2==cl' |
-#     cut -f 3 |
-#     # ----------------------------------------
-#     # 行を「リード指向」から「塩基部位指向」に変換する
-#     # ----------------------------------------
-#     awk -F "" \
-#     '{ for (i=1; i<=NF; i++)  { a[NR,i] = $i } }
-#     END {    
-#         for(j=1; j<=NF; j++) {
-#             str=a[1,j]
-#             for(i=2; i<=NR; i++){ str=str""a[i,j] }
-#             print str }
-#     }' |
-#     # head -n 740 | tail -n 5 #! -----------------------------
-#     # ------------------------------------------
-#     # 各塩基部位において最多の変異をレポートする
-#     # ------------------------------------------
-#     awk -F "" '{sequence=$0
-#         sum[1]=gsub("=","=",sequence)
-#         sum[2]=gsub("M","M",sequence)
-#         sum[3]=gsub(/[1-9]|[a-z]/,"@", sequence)
-#         sum[4]=gsub("D","D",sequence)
-#         sum[5]=gsub("S","S",sequence)
-#         max=sum[1]; num=1
-#         for(i=2; i<=5;i++){if(max<sum[i]){max=sum[i]; num=i}}
-#         # ------------------------------------------
-#         # Insertion数をレポートする
-#         # ------------------------------------------
-#         max=0; ins_num=0
-#         if(num==3) {
-#             for(i=1; i<=NF; i++) { if($i ~ /[0-9]|[a-z]/) array[$i]++ }
-#             for(key in array){if(max<array[key]) {max=array[key]; ins_num=key}} 
+#     cut -f 1 |
+#     sort |
+# cat > tmp_allele_id
+
+# cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
+#     awk '$1~/[>@]/ {gsub("@","",$1); printf $1"\t"; next}1' |
+#     sort |
+#     join - tmp_allele_id |
+#     awk '{print ">"$1"\n"$2}' |
+# cat > test_que.fa 
+# minimap2 -ax map-ont test_ref.fa test_que.fa --cs=long 2>/dev/null |
+# cat > test.sam
+
+
+
+# samtools view DAJIN_results/BAM/${barcode}_allele${alleleid}.bam |
+#     awk '$2==0 || $2==16' |
+#     awk -v start="${start}" -v len="${len}" '$4==start && length($10) == len' |
+#     awk '{print ">"$1"\n"$10}' |
+
+# minimap2 -ax map-ont .DAJIN_temp/fasta/wt.fa - --cs=long 2>/dev/null |
+# awk '{print $(NF-1)}' |
+# grep "cs" |
+# awk '{cstag=$0
+#     gsub("cs:Z:=","",$0)
+#     gsub("=", " ", $0)
+#     gsub(/[ACGT]/, "M", $0)
+#     gsub(/\*[acgt][acgt]/, " S", $0)
+#     gsub(/\+[acgt]*/,  " I ", $0)
+#     gsub("-",  " ", $0)
+#     for(i=1; i<=NF; i++) if($i !~ /[MSI+]/ ){
+#         len="%" length($i) "s"
+#         D=sprintf(len,""); gsub(/ /," D ",D)
+#         $i=D
 #         }
-        
-#         print num, NR, ins_num, "@", (sum[1]+sum[2])/NF,sum[3]/NF,sum[4]/NF,sum[5]/NF
-#         }' |
-#     #
-#     paste - "${control_score}" |
-#     # head -n 740 | tail -n 5 | #! -----------------------------
-#     # ------------------------------------------
-#     # 各塩基部位にたいして「Mの頻度、Iの頻度、Dの頻度、Sの頻度、Iの個数」を表示する
-#     # ------------------------------------------
-#     # head test |
-#     awk 'function abs(v) {return v < 0 ? -v : v}
-#         $NF==1 {
-#             I=abs($6-$(NF-3))
-#             D=abs($7-$(NF-2))
-#             S=abs($8-$(NF-1))
-#             M=abs(1-I-D-S)
-#             print $2, M, I, D, S, $3
-#         }
-#         # Sequence errors are annontated as Match
-#         $NF==2 {
-#             print $2, 1, 0, 0, 0, 0
-#         }' |
-#     # ------------------------------------------
-#     # 各塩基部位にたいして「最大頻度の変異と挿入塩基数」を表示する
-#     # ------------------------------------------
-#     awk '{max=0; num=0
-#         for(i=2; i<=5;i++){if(max<$i){max=$i; num=i}}
-#         print num, $1, $NF}' |
-#     awk -v cl="${cluster}" \
-#         '{if($1==3) print cl, $2, "I", $NF
-#         else if($1==4) print cl, $2, "D", $NF
-#         else if($1==5) print cl, $2, "S", $NF}
-#         END{print "EOF"}' |
-#     # ----------------------------------------------------------
-#     # 挿入塩基数が10以上の場合に数値情報に逆変換する
-#     # ----------------------------------------------------------
-#     awk '{
-#         if($4 ~ /[a-z]/) {
-#             for (i=10; i<=36; i++) {
-#                 num=i+87
-#                 ins=sprintf("%c", num)
-#                 if($4==ins) $4=i
-#             }
-#         }
-#         print $0}' |
-#     sed "s/35/>35/g" |    
-#     # ------------------------------------------
-#     # 変異がないアリルにはintacと表示する
-#     # ------------------------------------------
-#     awk -v cl="${cluster}" \
-#         '{if(NR==1 && $0=="EOF") print cl, 0, "intact",0
-#         else print $0}' |
-#     grep -v "EOF" |
-# cat - > "${consensus_mutation}"
-# # done
+#     gsub(" ","", $0)
+#     }1' |
+
+# cat > test_MIDS
+
+# cat test_MIDS |
+#     awk '{print substr($0,721,1)}' |
+#     sort | uniq -c
+
+
 
 # ============================================================================
 # 変異情報の同定
@@ -491,3 +403,96 @@ cat << EOF >> .DAJIN_temp/clustering/consensus/"${output_filename}".html
 EOF
 
 ls -l .DAJIN_temp/clustering/consensus/"${output_filename}".fa
+
+
+
+
+# cat "${allele_id}" |
+#     awk -v cl="${cluster}" '$2==cl' |
+#     cut -f 3 |
+#     # ----------------------------------------
+#     # 行を「リード指向」から「塩基部位指向」に変換する
+#     # ----------------------------------------
+#     awk -F "" \
+#     '{ for (i=1; i<=NF; i++)  { a[NR,i] = $i } }
+#     END {    
+#         for(j=1; j<=NF; j++) {
+#             str=a[1,j]
+#             for(i=2; i<=NR; i++){ str=str""a[i,j] }
+#             print str }
+#     }' |
+#     # head -n 740 | tail -n 5 #! -----------------------------
+#     # ------------------------------------------
+#     # 各塩基部位において最多の変異をレポートする
+#     # ------------------------------------------
+#     awk -F "" '{sequence=$0
+#         sum[1]=gsub("=","=",sequence)
+#         sum[2]=gsub("M","M",sequence)
+#         sum[3]=gsub(/[1-9]|[a-z]/,"@", sequence)
+#         sum[4]=gsub("D","D",sequence)
+#         sum[5]=gsub("S","S",sequence)
+#         max=sum[1]; num=1
+#         for(i=2; i<=5;i++){if(max<sum[i]){max=sum[i]; num=i}}
+#         # ------------------------------------------
+#         # Insertion数をレポートする
+#         # ------------------------------------------
+#         max=0; ins_num=0
+#         if(num==3) {
+#             for(i=1; i<=NF; i++) { if($i ~ /[0-9]|[a-z]/) array[$i]++ }
+#             for(key in array){if(max<array[key]) {max=array[key]; ins_num=key}} 
+#         }
+        
+#         print num, NR, ins_num, "@", (sum[1]+sum[2])/NF,sum[3]/NF,sum[4]/NF,sum[5]/NF
+#         }' |
+#     #
+#     paste - "${control_score}" |
+#     # head -n 740 | tail -n 5 | #! -----------------------------
+#     # ------------------------------------------
+#     # 各塩基部位にたいして「Mの頻度、Iの頻度、Dの頻度、Sの頻度、Iの個数」を表示する
+#     # ------------------------------------------
+#     # head test |
+#     awk 'function abs(v) {return v < 0 ? -v : v}
+#         $NF==1 {
+#             I=abs($6-$(NF-3))
+#             D=abs($7-$(NF-2))
+#             S=abs($8-$(NF-1))
+#             M=abs(1-I-D-S)
+#             print $2, M, I, D, S, $3
+#         }
+#         # Sequence errors are annontated as Match
+#         $NF==2 {
+#             print $2, 1, 0, 0, 0, 0
+#         }' |
+#     # ------------------------------------------
+#     # 各塩基部位にたいして「最大頻度の変異と挿入塩基数」を表示する
+#     # ------------------------------------------
+#     awk '{max=0; num=0
+#         for(i=2; i<=5;i++){if(max<$i){max=$i; num=i}}
+#         print num, $1, $NF}' |
+#     awk -v cl="${cluster}" \
+#         '{if($1==3) print cl, $2, "I", $NF
+#         else if($1==4) print cl, $2, "D", $NF
+#         else if($1==5) print cl, $2, "S", $NF}
+#         END{print "EOF"}' |
+#     # ----------------------------------------------------------
+#     # 挿入塩基数が10以上の場合に数値情報に逆変換する
+#     # ----------------------------------------------------------
+#     awk '{
+#         if($4 ~ /[a-z]/) {
+#             for (i=10; i<=36; i++) {
+#                 num=i+87
+#                 ins=sprintf("%c", num)
+#                 if($4==ins) $4=i
+#             }
+#         }
+#         print $0}' |
+#     sed "s/35/>35/g" |    
+#     # ------------------------------------------
+#     # 変異がないアリルにはintacと表示する
+#     # ------------------------------------------
+#     awk -v cl="${cluster}" \
+#         '{if(NR==1 && $0=="EOF") print cl, 0, "intact",0
+#         else print $0}' |
+#     grep -v "EOF" |
+# cat - > "${consensus_mutation}"
+# # done
