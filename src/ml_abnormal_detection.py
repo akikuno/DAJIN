@@ -1,11 +1,3 @@
-# import warnings
-# warnings.filterwarnings("ignore")
-# warnings.simplefilter(action='ignore', category=FutureWarning)
-
-# import re
-
-# import matplotlib.pyplot as plt
-# import seaborn as sns
 import sys
 import numpy as np
 import pandas as pd
@@ -23,105 +15,110 @@ import lightgbm as lgb
 
 args = sys.argv
 file_name = args[1]
-control = args[2]
-if control == "" :
-    raise ValueError("control is empty")
+ont_cont = args[2]
+mutation_type = args[3]
+threads = int(args[4])
+
+if ont_cont == "" :
+    raise ValueError("ont_cont is empty")
+
+if mutation_type == "" :
+    raise ValueError("mutation_type is empty")
+
+if threads == "" :
+    threads = 1
+
 # file_name = ".DAJIN_temp/data/DAJIN_MIDS.txt"
-# control = "barcode01"
+# ont_cont = "barcode01"
+# threads = 10
+
 df = pd.read_csv(file_name, header=None, sep='\t')
 df.columns = ["seqID", "seq", "barcodeID"]
 df.seq = "MIDS=" + df.seq
 
-df_sim = df[df.barcodeID.str.contains("simulated")].reset_index(drop=True)
-df_cont = df[df.barcodeID.str.contains(control)].reset_index(drop=True)
+df_cont = df[df.barcodeID.str.contains(ont_cont)].reset_index(drop=True)
 df_cont.barcodeID = "wt_simulated"
+
+df_sim = df[df.barcodeID.str.contains("simulated")].reset_index(drop=True)
 df_sim = df_sim.append(df_cont).reset_index(drop=True)
 df_real = df[~df.barcodeID.str.contains("simulated")].reset_index(drop=True)
 
 del df
 del df_cont
 
-# ====================================
-# Preporcessing...
-# ====================================
+# =============================================================
+# Novelity detection
+# =============================================================
 
 def label_encorde_seq(seq):
-    label_encoder = LabelEncoder()
-    label_seq = seq.apply(lambda x: list(x)).\
-        apply(lambda x: label_encoder.fit_transform(x)).\
-        apply(lambda x: pd.Series(x)).\
+    label_seq = seq.apply(list).\
+        apply(LabelEncoder().fit_transform).\
+        apply(pd.Series).\
         to_numpy()
     return(label_seq)
 
-X_sim = label_encorde_seq(df_sim.seq)
 
-# # ====================================
-# # # Train test split...
-# # ====================================
-
-# print("Model training...")
+# =============================================================
+# Train test split
+# =============================================================
 
 labels, labels_index = pd.factorize(df_sim.barcodeID)
+
+# X_sim = label_encorde_seq(df_sim.seq)
+
 X_train, X_test, Y_train, Y_test = train_test_split(
-    X_sim, labels,
+    label_encorde_seq(df_sim.seq), labels,
     test_size=0.2, shuffle=True)
 
+del df_sim
 
-# ====================================
-# LOF
-# ====================================
+# =============================================================
+# Novelity detection
+# =============================================================
 
-clf = LocalOutlierFactor(n_neighbors=20, leaf_size = 400, novelty=True, n_jobs = 10)
 
-train = X_train[:10000]
-clf.fit(train)
+clf = LocalOutlierFactor(n_neighbors=20, leaf_size = 400, novelty=True, n_jobs = threads)
 
-del X_sim
+clf.fit(X_train[:10000])
+
 X_real = label_encorde_seq(df_real.seq)
+del df_real["seq"]
 
-y_pred_outliers = clf.predict(X_real)
-df_real["outliers"] = y_pred_outliers
+outliers = clf.predict(X_real)
+outliers = np.where(outliers==1, "normal", "abnormal") 
+df_real["outliers"] = outliers
 
-df_real.groupby("barcodeID").outliers.value_counts()
+# df_real.groupby("barcodeID").outliers.value_counts()
+df_real.to_csv(
+    ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt",
+    header=False, index=False, sep="\t")
 
+if mutation_type == "P" :
+    sys.exit()
 
-# # ====================================
-# # # lightGBM
-# # ====================================
+# =============================================================
+# Classification
+# =============================================================
 
-model = lgb.LGBMClassifier(n_jobs=10)
+model = lgb.LGBMClassifier(n_jobs=threads)
 model.fit(X_train, Y_train)
 
-y_pred = model.predict_proba(X_test)
-y_pred_max = np.argmax(y_pred, axis=1)
+prediction = model.predict_proba(X_real)
+prediction = np.argmax(prediction, axis=1)
 
-accuracy = sum(Y_test == y_pred_max) / len(Y_test)
-print(accuracy)
+df_real["prediction"] = prediction
+df_real["prediction"].mask(df_real["outliers"] == "abnormal", "abnormal", inplace=True)
+del df_real["outliers"]
 
-y_pred = model.predict_proba(X_real)
-y_pred_max = np.argmax(y_pred, axis=1)
-
-df_real["prediction"].mask(df_real["outliers"] == -1, "abnormal", inplace=True)
 # df_real["prediction"].mask(df_real["outliers"] == 1, "normal", inplace=True)
 
 for index,label in enumerate(labels_index):
-    print(index)
     label=label.replace("_simulated","")
     df_real["prediction"].mask(df_real["prediction"] == index, label, inplace=True)
 
-df_real.groupby("barcodeID").prediction.value_counts()
 
-
-
-#! ====================================================
-
-df_anomaly.to_csv(
-    '.DAJIN_temp/data/DAJIN_anomaly_classification.txt',
-    header=False, index=False, sep="\t")
-
-# Save labels
-pd.Series(labels_index).to_csv(
-    '.DAJIN_temp/data/DAJIN_anomaly_classification_labels.txt',
+df_real.to_csv(
+    ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt",
     header=False, index=False, sep="\t")
 
 # # # ====================================
@@ -138,3 +135,8 @@ pd.Series(labels_index).to_csv(
 
 # df_real.groupby("barcodeID").outliers.value_counts()
 
+
+# # Save labels
+# pd.Series(labels_index).to_csv(
+#     '.DAJIN_temp/data/DAJIN_anomaly_classification_labels.txt',
+#     header=False, index=False, sep="\t")

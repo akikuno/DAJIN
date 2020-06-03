@@ -218,7 +218,7 @@ cat "${design}" |
     else {printf $0}}
     END {print ""}' |
     grep -v "^$" |
-cat - > .DAJIN_temp/fasta/fasta.fa
+cat > .DAJIN_temp/fasta/fasta.fa
 
 design_LF=".DAJIN_temp/fasta/fasta.fa"
 
@@ -257,7 +257,7 @@ convert_revcomp=$(
 if [ "$convert_revcomp" -eq 1 ] ; then
     cat "${design_LF}" |
     ./DAJIN/src/revcomp.sh - |
-    cat - > .DAJIN_temp/fasta/fasta_revcomp.fa
+    cat > .DAJIN_temp/fasta/fasta_revcomp.fa
     design_LF=".DAJIN_temp/fasta/fasta_revcomp.fa"
 fi
 
@@ -317,12 +317,12 @@ if [ "$mutation_type" = "P" ]; then
         sed "s/$grna/$grna_firsthalf,$grna_secondhalf/g" |
         sed "s/,/$ins_seq/g" |
         sed "s/>wt/>wt_ins/g" |
-    cat - > .DAJIN_temp/fasta_conv/wt_ins.fa
+    cat > .DAJIN_temp/fasta_conv/wt_ins.fa
     # deletion
     cat .DAJIN_temp/fasta_conv/wt.fa |
         sed "s/$grna//g" |
         sed "s/>wt/>wt_del/g" |
-    cat - > .DAJIN_temp/fasta_conv/wt_del.fa
+    cat > .DAJIN_temp/fasta_conv/wt_del.fa
 fi
 
 # ============================================================================
@@ -342,7 +342,7 @@ for input in ${ont_dir}/* ; do
         cat "${input}"
     fi |
     awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' |
-    cat - > "${output}"
+    cat > "${output}"
 done
 
 # ============================================================================
@@ -454,14 +454,12 @@ find .DAJIN_temp/fasta_ont -type f | sort |
         END{print "wait"}' |
 sh -
 
-if [ "$mutation_type" = "P" ]; then
-    rm .DAJIN_temp/data/MIDS_target*
-fi
+[ "$mutation_type" = "P" ] && rm .DAJIN_temp/data/MIDS_target*
 
 cat .DAJIN_temp/data/MIDS_* |
     sed -e "s/_aligned_reads//g" |
     sort -k 1,1 |
-cat - > ".DAJIN_temp/data/DAJIN_MIDS.txt"
+cat > ".DAJIN_temp/data/DAJIN_MIDS.txt"
 
 rm .DAJIN_temp/data/MIDS_*
 
@@ -472,13 +470,7 @@ rm .DAJIN_temp/data/MIDS_*
 # ============================================================================
 printf "Start allele prediction...\n"
 
-python DAJIN/src/ml_abnormal_detection.py ".DAJIN_temp"/data/DAJIN_MIDS.txt "${ont_cont}"
-
-if [ "$mutation_type" = "P" ]; then
-    mv ".DAJIN_temp/data/DAJIN_anomaly_classification.txt" ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
-else
-    python DAJIN/src/ml_prediction.py ".DAJIN_temp/data/DAJIN_MIDS.txt"
-fi
+python DAJIN/src/ml_abnormal_detection.py ".DAJIN_temp"/data/DAJIN_MIDS.txt "${ont_cont}" "${mutation_type}" "${threads}"
 
 printf "Prediction was finished...\n"
 
@@ -494,7 +486,7 @@ prediction_filtered=".DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt"
 # --------------------------------
 
 cat "${prediction}"  |
-    cut -f 1,3 |
+    cut -f 2,3 |
     sort |
     uniq -c |
     awk '{barcode[$2]+=$1
@@ -502,14 +494,14 @@ cat "${prediction}"  |
     END{for(key in barcode) print key,barcode[key], read_info[key]}' |
     awk '{for(i=3;i<=NF; i++) print $1,$2,$i}' |
     sed "s/____/ /g" |
-    awk '{print $1, int($3/$2*100+0.5), $4}' |
-cat - > ".DAJIN_temp/tmp_prediction_proportion"
+    awk '{print $1, $3/$2*100, $4}' |
+cat > ".DAJIN_temp/tmp_prediction_proportion"
 
 
 # --------------------------------
 # コントロールの異常アレルの割合を出す
 # --------------------------------
-persentage_of_abnormal_in_cont=$(
+percentage_of_abnormal_in_cont=$(
     cat ".DAJIN_temp"/tmp_prediction_proportion | 
     grep "${ont_cont:=barcode32}" | #! define "control" by automate manner
     grep abnormal |
@@ -518,17 +510,17 @@ persentage_of_abnormal_in_cont=$(
 # --------------------------------
 # Filter low-percent alleles
 # --------------------------------
+# --------------------------------
+# If the percentage of abnormal alleles in each sample is 
+# "within 3% of the percentage of abnormal alleles in the control", 
+# the abnormality is considered a false positive and removed.
+# 各サンプルの異常アレルの割合が
+# 「コントロールの異常アレルの割合＋3%以内」の場合、
+# その判定は偽陽性と判断し、取り除く
+# --------------------------------
 
 cat .DAJIN_temp/tmp_prediction_proportion |
-    # --------------------------------
-    # If the percentage of abnormal alleles in each sample is 
-    # "within 3% of the percentage of abnormal alleles in the control", 
-    # the abnormality is considered a false positive and removed.
-    # 各サンプルの異常アレルの割合が
-    # 「コントロールの異常アレルの割合＋3%以内」の場合、
-    # その判定は偽陽性と判断し、取り除く
-    # --------------------------------
-    awk -v refab="${persentage_of_abnormal_in_cont}" \
+    awk -v refab="${percentage_of_abnormal_in_cont}" \
         '!($2<refab+3 && $3 == "abnormal")' |
     # --------------------------------
     # Retain more than 5% of the "non-target" sample and more than 1% of the "target"
@@ -546,7 +538,7 @@ cat .DAJIN_temp/tmp_prediction_proportion |
     # --------------------------------
     awk '{print $1, int($3*100/$2+0.5),$4}' |
     sort |
-cat - > "${prediction_filtered}"
+cat > "${prediction_filtered}"
 
 rm .DAJIN_temp/tmp_*
 
@@ -627,7 +619,7 @@ find .DAJIN_temp/clustering/consensus/* -type f |
     sed "s/_/ /g" |
     awk '{print $1"_"$2,$3,$4}' |
     sort |
-cat - > tmp
+cat > tmp
 
 cat .DAJIN_temp/clustering/result_allele_percentage* |
     sed "s/_/ /g" |
@@ -676,7 +668,7 @@ do
         awk -v cl="${cluster}" '$2==cl' |
         cut -f 1 |
         sort |
-    cat - > ".DAJIN_temp/clustering/temp/tmp_id_$$"
+    cat > ".DAJIN_temp/clustering/temp/tmp_id_$$"
     #
     samtools view -h "${output_dir:-DAJIN_results}"/BAM/"${barcode}".bam |
         awk '/^@/{print}
