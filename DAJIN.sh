@@ -543,19 +543,21 @@ cat > "${prediction_filtered}"
 rm .DAJIN_temp/tmp_*
 
 # ============================================================================
-# Allele clustering
+# Clustering
 # ============================================================================
 # rm -rf .DAJIN_temp/clustering/
 
-cat "${prediction_filtered}" |
-    cut -d " " -f 3 |
-    grep -e "^normal" -e "^wt" |
-    sort -u |
-while read -r alleletype; do
-    # echo "${ont_cont}" "${alleletype}" 
-    ./DAJIN/src/clustering_prerequisit.sh "${ont_cont}" "${alleletype}" 
-done
-# >>> ls -l .DAJIN_temp/clustering/temp/control_score_*
+./DAJIN/src/clustering_prerequisit.sh "${ont_cont}" "wt"
+# wc -l .DAJIN_temp/clustering/temp/control_score_*
+
+# cat "${prediction_filtered}" |
+#     cut -d " " -f 3 |
+#     grep -e "^normal" -e "^wt" |
+#     sort -u |
+# while read -r alleletype; do
+#     # echo "${ont_cont}" "${alleletype}" 
+#     ./DAJIN/src/clustering_prerequisit.sh "${ont_cont}" "${alleletype}" 
+# done
 
 cat "${prediction_filtered}" |
     awk '{print "./DAJIN/src/clustering.sh",$1, $3, "&"}' |
@@ -593,14 +595,14 @@ sh -
 ls -l .DAJIN_temp/clustering/result_allele_percentage_*
 
 # ============================================================================
-# Variant call in each cluster
+# Get consensus sequence in each cluster
 # ============================================================================
 
 cat .DAJIN_temp/clustering/result_allele_percentage* |
     sed "s/_/ /" |
     awk '{nr[$1]++; print $0, nr[$1]}' |
     # grep -e barcode02  | #!============== -e barcode12
-    awk '{print "./DAJIN/src/clustering_variantcall.sh", $0, "&"}' |
+    awk '{print "./DAJIN/src/consensus.sh", $0, "&"}' |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
@@ -625,15 +627,16 @@ cat .DAJIN_temp/clustering/result_allele_percentage* |
     awk '{print $1"_allele"$5, $4, $2}' |
     sort |
     join -a 1 - tmp |
-    sed "s/_/ /g" |
+    sed "s/_/ /" |
     awk '$4=="abnormal" {$5="mutation"}1' |
     awk 'BEGIN{OFS=","}
         {gsub("allele","",$2)
-        gsub(/^normal/,"-", $4)
-        gsub(/^abnormal/,"+", $4)
+        
+        if($4 == "abnormal") $6 ="+"
+        else $6 = "-"
         gsub("intact","-", $5)
         gsub("mutation","+", $5)
-        print $1,$2,$3,$6,$5,$4}' |
+        }1' |
     sed -e "1i Sample, Allele ID, % of reads, Allele type, indel, large indel" |
 cat > "${output_dir:-DAJIN_results}"/Details.csv
 
@@ -649,7 +652,7 @@ cp -r .DAJIN_temp/clustering/consensus/* "${output_dir:-DAJIN_results}"/Consensu
 # rm "${output_dir:-DAJIN_results}"/BAM/*allele*
 
 cat .DAJIN_temp/clustering/result_allele_percentage* |
-     sed "s/_/ /g" |
+     sed "s/_/ /" |
     awk '{nr[$1]++; print $0, nr[$1]}' |
 while read -r allele
 do

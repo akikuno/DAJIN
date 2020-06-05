@@ -17,9 +17,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # ----------------------------------------
 # Input
 # ----------------------------------------
-# barcode="barcode03"
-# alleletype="flox_deletion"
-# original_percentage=56
+# barcode="barcode02"
+# alleletype="target"
 # suffix="${barcode}"_"${alleletype}"
 
 # mapping_alleletype="${alleletype}"
@@ -28,7 +27,6 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 barcode="${1}"
 alleletype="${2}"
-# original_percentage="${3}"
 suffix="${barcode}"_"${alleletype}"
 
 mapping_alleletype="${alleletype}"

@@ -17,16 +17,15 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # Input arguments
 # ----------------------------------------
 # barcode="barcode02"
-# alleletype="normal"
+# alleletype="target"
 # cluster=1
-# percentage=59
+# percentage=86
 # alleleid=3
 # in_suffix="${barcode}"_"${alleletype}"
 # out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
 
-# mapping_alleletype="${alleletype}"
-# [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
-# [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
+# mapping_alleletype="wt"
+
 
 barcode="${1}"
 alleletype="${2}"
@@ -71,16 +70,16 @@ cat "${allele_id}" |
     awk -F "" 'BEGIN{OFS=","}{$1=$1}1' |
 cat - > "${tmp_allele_id}"
 
-cat "${allele_id}" |
-    awk -v cl="${cluster}" '$2==cl' |
-    cut -f 3 |
-    # sed "s/z.*/ /g" |
-    # awk '{print length($1)}' |
-    # sort | uniq -c
-    awk '{print substr($0,738,1)}' |
-    sort | uniq -c
+# cat "${allele_id}" |
+#     awk -v cl="${cluster}" '$2==cl' |
+#     cut -f 3 |
+#     # sed "s/z.*/ /g" |
+#     # awk '{print length($1)}' |
+#     # sort | uniq -c
+#     awk '{print substr($0,738,1)}' |
+#     sort | uniq -c
 
-Rscript DAJIN/src/clustering_variantcall.R "${tmp_allele_id}" "${control_score}" "${cluster}"
+Rscript DAJIN/src/consensus.R "${tmp_allele_id}" "${control_score}" "${cluster}"
 
 if [ -s ".DAJIN_temp/clustering/temp/mutation_${out_suffix}" ]; then
     cat ".DAJIN_temp/clustering/temp/mutation_${out_suffix}" |
