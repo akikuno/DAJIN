@@ -58,12 +58,12 @@ query_label=".DAJIN_temp/clustering/temp/query_labels_${suffix}"
 # ----------------------------------------------------------
 # Get max sequence length
 # ----------------------------------------------------------
-seq_maxnum=$(
-    cat .DAJIN_temp/fasta/fasta.fa |
+seq_length=$(
+    cat .DAJIN_temp/fasta/"${mapping_alleletype}".fa |
     grep -v "^>" |
-    awk '{if(max<length($0)) max=length($0)}
-    END{print max}'
+    awk '{print length($0)}'
 )
+
 
 # ==============================================================================
 # Clustering
@@ -128,7 +128,7 @@ cat "${MIDS_que}" |
     # ----------------------------------------
     # 短い配列を"="でPaddingする
     # ----------------------------------------
-    awk -v seqnum="${seq_maxnum}" \
+    awk -v seqnum="${seq_length}" \
         'BEGIN{OFS=""}
         { if(length($0) < seqnum){
             seq="="
@@ -475,7 +475,7 @@ cat > "${query_score}"
 #         awk -v cut="${cut_start}" -v del="${del_size}" \
 #         '{if($1>cut) $1=$1+del
 #         print}' |
-#         awk -v seqnum="${seq_maxnum}" '$1 <= seqnum'
+#         awk -v seqnum="${seq_length}" '$1 <= seqnum'
 #     else
 #         cat -
 #     fi |
@@ -491,7 +491,7 @@ cat > "${query_score}"
 #             if($1 >= array[i] && $1 <= array[i+1] && $2 == "M") $2="T"
 #             }
 #         print}' |
-#         awk -v seqnum="${seq_maxnum}" '$1 <= seqnum'
+#         awk -v seqnum="${seq_length}" '$1 <= seqnum'
 #     else
 #         cat -
 #     fi |

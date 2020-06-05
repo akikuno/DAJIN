@@ -42,14 +42,8 @@ control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
 # ----------------------------------------------------------
 # Get max sequence length
 # ----------------------------------------------------------
-# seq_maxnum=$(
-#     cat .DAJIN_temp/fasta/fasta.fa |
-#     grep -v "^>" |
-#     awk '{if(max<length($0)) max=length($0)}
-#     END{print max}'
-# )
 
-seq_maxnum=$(
+seq_length=$(
     cat .DAJIN_temp/fasta/wt.fa |
     grep -v "^>" |
     awk '{print length($0)}'
@@ -111,7 +105,7 @@ cat "${MIDS_ref}" |
     # ----------------------------------------
     # 短い配列をPaddingする
     # ----------------------------------------
-    awk -v seqnum="${seq_maxnum}" \
+    awk -v seqnum="${seq_length}" \
         'BEGIN{OFS=""}
         { if(length($0) < seqnum){
             seq="="
@@ -160,35 +154,49 @@ cat "${MIDS_ref}" |
     }' |
 cat > "${control_score}"
 
+
+# ==============================================================================
+# Generate  "${control_score}"
+# ==============================================================================
+
+
 cat "${control_score}" |
     awk '{print $1,NR}' |
     sort -t " " -k 2,2 |
-cat > .DAJIN_temp/clustering/temp/tmp_control_score_flox_deletion
+cat > .DAJIN_temp/clustering/temp/tmp_control_score
 
 find .DAJIN_temp/fasta_conv/* |
     grep -v wt.fa |
     sed "s:.*/::g" |
     sed "s/.fa.*$//g" |
+    grep flox_deletion |
 while read -r label; do
     minimap2 -ax map-ont .DAJIN_temp/fasta_conv/wt.fa .DAJIN_temp/fasta_conv/"${label}".fa --cs=long 2>/dev/null |
     awk '$1 !~ /^@/ {print $(NF-1)}' |
     sed "s/cs:Z://g" |
     sed "s/*[acgt]//g" |
-    sed "s/[=+-]//g" |
+    sed "s/[=+]//g" |
     awk -F "" '{
         refnr=0
-        for(i=1; i<=NF; i++){
-            if($i ~ /[A|C|G|T]/){$i="ref"; refnr++; print $i, refnr, i}
-            else {$i="mut"; print $i, "empty", i}
-    }}' |
-    sort -t " " -k 2,2 |
-    join -a 1 -1 2 -2 2 - .DAJIN_temp/clustering/temp/tmp_control_score_flox_deletion |
+        if($0 !~ "-"){
+            for(i=1; i<=NF; i++){
+                if($i ~ /[A|C|G|T]/){refnr++; $i="ref"; print $i, refnr, i}
+                else {$i="mut"; print $i, "empty", i}
+                }}
+        else{
+            gsub("-","",$0)
+            for(i=1; i<=NF; i++){
+                if($i ~ /[A|C|G|T]/){refnr++; $i="ref"; print $i, refnr, i}
+            }
+        }}' |
+    sort -t " " -k 3,3 |
+    join -a 1 -1 3 -2 2 - .DAJIN_temp/clustering/temp/tmp_control_score |
     sort -k 3,3n |
     awk 'NF==3{$4=1}{print $NF}' |
     cat > ".DAJIN_temp/clustering/temp/control_score_${label}"
 done
 
-rm .DAJIN_temp/clustering/temp/tmp_control_score_flox_deletion
+rm .DAJIN_temp/clustering/temp/tmp_control_score
 # find .DAJIN_temp/fasta_conv/* |
 # grep -v wt.fa |
 # sed "s:.*/::g" |
