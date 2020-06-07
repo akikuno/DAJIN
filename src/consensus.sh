@@ -1,8 +1,8 @@
 #!/bin/sh
 
-# ==============================================================================
-# Initialize shell environment
-# ==============================================================================
+################################################################################
+#! Initialize shell environment
+################################################################################
 
 set -eu
 umask 0022
@@ -10,21 +10,23 @@ export LC_ALL=C
 type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
-# ==============================================================================
-# I/O naming
-# ==============================================================================
-# ----------------------------------------
-# Input arguments
-# ----------------------------------------
+################################################################################
+#! I/O naming
+################################################################################
+
+#===========================================================
+#? Auguments
+#===========================================================
 # barcode="barcode02"
-# alleletype="target"
+# alleletype="right_loxP"
 # cluster=1
-# percentage=86
-# alleleid=3
+# percentage=7
+# alleleid=2
 # in_suffix="${barcode}"_"${alleletype}"
 # out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
-
-# mapping_alleletype="wt"
+# mapping_alleletype="${alleletype}"
+# [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
+# [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
 
 
 barcode="${1}"
@@ -36,50 +38,49 @@ alleleid="${5}"
 in_suffix="${barcode}"_"${alleletype}"
 out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
 
-mapping_alleletype="wt"
-# mapping_alleletype="${alleletype}"
-# [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
-# [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
+mapping_alleletype="${alleletype}"
+[ "$alleletype" = "normal" ] && mapping_alleletype="wt"
+[ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
 
 
-# ----------------------------------------------------------
-# Input files
-# ----------------------------------------------------------
+#===========================================================
+#? Input
+#===========================================================
 control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
 allele_id=".DAJIN_temp/clustering/result_allele_id_${in_suffix}".txt
 
-# ----------------------------------------------------------
-# Output files
-# ----------------------------------------------------------
-# temporal --------------------------------
-tmp_allele_id=".DAJIN_temp/clustering/temp/allele_id_${out_suffix}"
-
-# results --------------------------------
+#===========================================================
+#? Output
+#===========================================================
 consensus_mutation=".DAJIN_temp/clustering/temp/consensus_${out_suffix}"
 mutation_info=".DAJIN_temp/clustering/temp/mutation_info_${out_suffix}"
 
-# ============================================================================
-# 変異情報のコンセンサスを得る
-# ============================================================================
-#?====================================================================================
+#===========================================================
+#? Temporal
+#===========================================================
+tmp_allele_id=".DAJIN_temp/clustering/temp/allele_id_${out_suffix}"
+
+
+################################################################################
+#! 変異情報のコンセンサスを得る
+################################################################################
+
+#===========================================================
+# 変異部を検出する
+#===========================================================
 
 cat "${allele_id}" |
     awk -v cl="${cluster}" '$2==cl' |
     cut -f 3 |
     sed "s/=/M/g" |
     awk -F "" 'BEGIN{OFS=","}{$1=$1}1' |
-cat - > "${tmp_allele_id}"
-
-# cat "${allele_id}" |
-#     awk -v cl="${cluster}" '$2==cl' |
-#     cut -f 3 |
-#     # sed "s/z.*/ /g" |
-#     # awk '{print length($1)}' |
-#     # sort | uniq -c
-#     awk '{print substr($0,738,1)}' |
-#     sort | uniq -c
+cat > "${tmp_allele_id}"
 
 Rscript DAJIN/src/consensus.R "${tmp_allele_id}" "${control_score}" "${cluster}"
+
+#===========================================================
+#? クラスタ番号、塩基番号、変異の種類、Insertion数の4つをレポートする
+#===========================================================
 
 if [ -s ".DAJIN_temp/clustering/temp/mutation_${out_suffix}" ]; then
     cat ".DAJIN_temp/clustering/temp/mutation_${out_suffix}" |
@@ -97,160 +98,104 @@ if [ -s ".DAJIN_temp/clustering/temp/mutation_${out_suffix}" ]; then
             }
             print $0}' |
         sed "s/35$/>35/g" |    
-    cat - > "${consensus_mutation}"
+    cat > "${consensus_mutation}"
 else
     echo "${cluster} 0 intact 0" > "${consensus_mutation}"
 fi
 
-# done
-#?====================================================================================
-
-# start=$(cut -f 2 .DAJIN_temp/data/gggenome_location)
-
-# len=$(samtools view DAJIN_results/BAM/${barcode}_allele${alleleid}.bam |
-#     awk '$2==0 || $2==16' |
-#     awk '{print length($10)}' |
-#     sort | uniq -c |
-#     awk '{if(max < $1) {max=$1; len=$2}} END{print len}')
-
-# samtools view DAJIN_results/BAM/${barcode}_allele${alleleid}.bam |
-#     awk '$2==0 || $2==16' |
-#     awk -v start="${start}" -v len="${len}" '$4==start && length($10) == len' |
-#     head -n 1 |
-#     awk '{print ">"$1"\n"$10}' |
-# cat > test_ref.fa
 
 
-# cat "${allele_id}" |
-#     awk -v cl="${cluster}" '$2==cl' |
-#     cut -f 1 |
-#     sort |
-# cat > tmp_allele_id
-
-# cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
-#     awk '$1~/[>@]/ {gsub("@","",$1); printf $1"\t"; next}1' |
-#     sort |
-#     join - tmp_allele_id |
-#     awk '{print ">"$1"\n"$2}' |
-# cat > test_que.fa 
-# minimap2 -ax map-ont test_ref.fa test_que.fa --cs=long 2>/dev/null |
-# cat > test.sam
-
-
-
-# samtools view DAJIN_results/BAM/${barcode}_allele${alleleid}.bam |
-#     awk '$2==0 || $2==16' |
-#     awk -v start="${start}" -v len="${len}" '$4==start && length($10) == len' |
-#     awk '{print ">"$1"\n"$10}' |
-
-# minimap2 -ax map-ont .DAJIN_temp/fasta/wt.fa - --cs=long 2>/dev/null |
-# awk '{print $(NF-1)}' |
-# grep "cs" |
-# awk '{cstag=$0
-#     gsub("cs:Z:=","",$0)
-#     gsub("=", " ", $0)
-#     gsub(/[ACGT]/, "M", $0)
-#     gsub(/\*[acgt][acgt]/, " S", $0)
-#     gsub(/\+[acgt]*/,  " I ", $0)
-#     gsub("-",  " ", $0)
-#     for(i=1; i<=NF; i++) if($i !~ /[MSI+]/ ){
-#         len="%" length($i) "s"
-#         D=sprintf(len,""); gsub(/ /," D ",D)
-#         $i=D
-#         }
-#     gsub(" ","", $0)
-#     }1' |
-
-# cat > test_MIDS
-
-# cat test_MIDS |
-#     awk '{print substr($0,721,1)}' |
-#     sort | uniq -c
-
-
-
-# ============================================================================
-# 変異情報の同定
+################################################################################
+#! 変異塩基の同定
 # Variant call
-# ============================================================================
-set $(cat "${consensus_mutation}" |
-    awk -v cl="${cluster}" \
-    '$1==cl {
-    type=type$3"_"
-    site=site$2"_"}
-    END{print type, site}')
-mutation_type=$(echo "$1" | sed "s/_/ /g") 
-mutation_site=$(echo "$2" | sed "s/_/ /g")
-# echo $mutation_type
-# echo $mutation_site
+################################################################################
 
-ref=".DAJIN_temp/fasta/wt.fa"
-cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
-    minimap2 -ax map-ont "${ref}" - --cs=long 2>/dev/null |
-    sort |
-cat - > .DAJIN_temp/clustering/temp/tmp_sam_"${out_suffix}"
+#===========================================================
+#? 
+#===========================================================
 
-cat "${allele_id}" |
-    awk -v cl="${cluster}" '$2==cl' |
-    cut -f 1 |
-    sort -u |
-    join .DAJIN_temp/clustering/temp/tmp_sam_"${out_suffix}" - |
-    awk '$2==0 || $2==16' |
-    awk '{print $4, $(NF-1)}' |
-    sed "s/cs:Z://g" |
-    awk '{seq=""
-        padding=$1-1
-        for(i=1; i<=padding; i++) seq=seq"-"
-        print seq""$2}' |
-    # -------------------------------------
-    # 変異塩基の入手
-    # -------------------------------------
-    awk -v type="${mutation_type}" -v site="${mutation_site}" \
-    'BEGIN{
-        split(type, type_, " ")
-        split(site, site_, " ")
-        }
-    {original_seq = $0
-    for(i in type_){
-        $0 = original_seq
-        if(type_[i] == "I"){
-            gsub("*[a-z]", " ", $0)
-            gsub("+", " +", $0)
-            gsub("[-|=]", " ", $0)
-            len=0
-            for(j=1; j<=NF;j++) {
-                if(len >= site_[i]-1) {print type_[i], len, $j; break}
-                else { if($j !~ /+/) len+=length($j) }}
+if [ "$(grep -c intact ${consensus_mutation})" -eq 0 ]; then
+    set $(cat "${consensus_mutation}" |
+        awk -v cl="${cluster}" \
+        '$1==cl {
+        type=type$3"_"
+        site=site$2"_"}
+        END{print type, site}')
+    mutation_type=$(echo "$1" | sed "s/_/ /g") 
+    mutation_site=$(echo "$2" | sed "s/_/ /g")
+    # echo $mutation_type
+    # echo $mutation_site
+
+    ref=".DAJIN_temp/fasta/${mapping_alleletype}.fa"
+    cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
+        minimap2 -ax map-ont "${ref}" - --cs=long 2>/dev/null |
+        sort |
+    cat > .DAJIN_temp/clustering/temp/tmp_sam_"${out_suffix}"
+
+    cat "${allele_id}" |
+        awk -v cl="${cluster}" '$2==cl' |
+        cut -f 1 |
+        sort -u |
+        join .DAJIN_temp/clustering/temp/tmp_sam_"${out_suffix}" - |
+        awk '$2==0 || $2==16' |
+        awk '{print $4, $(NF-1)}' |
+        sed "s/cs:Z://g" |
+        awk '{seq=""
+            padding=$1-1
+            for(i=1; i<=padding; i++) seq=seq"-"
+            print seq""$2}' |
+        # -------------------------------------
+        # 変異塩基の入手
+        # -------------------------------------
+        awk -v type="${mutation_type}" -v site="${mutation_site}" \
+        'BEGIN{
+            split(type, type_, " ")
+            split(site, site_, " ")
             }
-        else {
-            gsub("*[a-z]", "=", $0)
-            gsub("+[a-z]*", "", $0)
-            gsub("[-=]", "", $0)
-            print type_[i], site_[i], substr($0, site_[i], 1)
+        {original_seq = $0
+        for(i in type_){
+            $0 = original_seq
+            if(type_[i] == "I"){
+                gsub("*[a-z]", " ", $0)
+                gsub("+", " +", $0)
+                gsub("[-|=]", " ", $0)
+                len=0
+                for(j=1; j<=NF;j++) {
+                    if(len >= site_[i]-1) {print type_[i], len, $j; break}
+                    else { if($j !~ /+/) len+=length($j) }}
+                }
+            else {
+                gsub("*[a-z]", "=", $0)
+                gsub("+[a-z]*", "", $0)
+                gsub("[-=]", "", $0)
+                print type_[i], site_[i], substr($0, site_[i], 1)
+                }
             }
-        }
-    }' |
-    sort |
-    uniq -c |
-    sed "s/+//g" |
-    awk '{if(max[$2] < $1) {max[$2] = $1; out[$2]=$3" "$4}}
-        END{for(key in out) print key, out[key]}' |
-cat - > "${mutation_info}"
+        }' |
+        sort |
+        uniq -c |
+        sed "s/+//g" |
+        awk '{if(max[$2] < $1) {max[$2] = $1; out[$2]=$3" "$4}}
+            END{for(key in out) print key, out[key]}' |
+    cat > "${mutation_info}"
+else
+    echo "intact 0 0" > "${mutation_info}"
+fi
 
-# ============================================================================
-# コンセンサス配列の作製
-# ============================================================================
+################################################################################
+#! コンセンサス配列の作製
+################################################################################
 mkdir -p .DAJIN_temp/clustering/consensus
 
 mutation_type=$(cut -d " " -f 1 "${mutation_info}" | xargs echo)
 mutation_site=$(cut -d " " -f 2 "${mutation_info}" | xargs echo)
 mutation_nuc=$(cut -d " " -f 3 "${mutation_info}" | xargs echo)
 
-# -------------------------------
-# FASTA file
-# -------------------------------
+#===========================================================
+#? FASTA file
+#===========================================================
 
-cat .DAJIN_temp/fasta/wt.fa |
+cat .DAJIN_temp/fasta/${mapping_alleletype}.fa |
     sed 1d |
     awk -F "" -v type="${mutation_type}" -v site="${mutation_site}" -v nuc="${mutation_nuc}" \
         'BEGIN{
@@ -271,21 +216,26 @@ cat .DAJIN_temp/fasta/wt.fa |
                 }
         }}1' |
     sed -e "s/ //g" -e "s/_/ /g"|
-cat - > .DAJIN_temp/clustering/temp/"${out_suffix}".fa
+cat > .DAJIN_temp/clustering/temp/"${out_suffix}"
 
 # -------------------------------
 # 出力ファイル名をフォーマット
 # -------------------------------
 output_filename="${barcode}_allele${alleleid}"
 
-diff_wt=$(cat .DAJIN_temp/fasta/wt.fa |
-    sed 1d |
-    diff - .DAJIN_temp/clustering/temp/${out_suffix}.fa |
-    wc -l)
-diff_target=$(cat .DAJIN_temp/fasta/target.fa |
-    sed 1d |
-    diff - .DAJIN_temp/clustering/temp/${out_suffix}.fa |
-    wc -l)
+diff_wt=$(
+    cat .DAJIN_temp/fasta/wt.fa |
+        sed 1d |
+        diff - .DAJIN_temp/clustering/temp/${out_suffix} |
+    wc -l
+    )
+
+diff_target=$(
+    cat .DAJIN_temp/fasta/target.fa |
+        sed 1d |
+        diff - .DAJIN_temp/clustering/temp/${out_suffix} |
+    wc -l
+    )
 
 # if [ "$(awk '$1=="intact"' ${mutation_info} | wc -l)" -eq 0 ]; then
 #     include_target=$(
@@ -296,7 +246,6 @@ diff_target=$(cat .DAJIN_temp/fasta/target.fa |
 #     include_target=0
 # fi
 include_target=1
-
 
 if [ "${diff_wt}" -eq 0 ]; then
     output_filename="${output_filename}_intact_wt"
@@ -311,22 +260,22 @@ else
 fi
 
 # [ "$(cat .DAJIN_temp/fasta/target.fa | sed 1d |
-# diff - .DAJIN_temp/clustering/temp/${out_suffix}.fa |
+# diff - .DAJIN_temp/clustering/temp/${out_suffix} |
 # wc -l)" -eq 0 ] && output_filename="${output_filename}_intact_target"
 
 # [ "$(cat .DAJIN_temp/fasta/wt.fa | sed 1d |
-# diff - .DAJIN_temp/clustering/temp/${out_suffix}.fa |
+# diff - .DAJIN_temp/clustering/temp/${out_suffix} |
 # wc -l)" -eq 0 ] && output_filename="${output_filename}_intact_wt"
 
-cat .DAJIN_temp/clustering/temp/"${out_suffix}".fa |
+cat .DAJIN_temp/clustering/temp/"${out_suffix}" |
+    fold |
     sed -e "1i >${output_filename}_${percentage}%" |
-cat - > .DAJIN_temp/clustering/consensus/"${output_filename}".fa
+cat > .DAJIN_temp/clustering/consensus/"${output_filename}".fa
 
-# -------------------------------
-# HTML file
-# -------------------------------
-
-cat .DAJIN_temp/fasta/wt.fa |
+#===========================================================
+#? HTML file
+#===========================================================
+cat ".DAJIN_temp/fasta/${mapping_alleletype}.fa" |
     sed 1d |
     awk -F "" -v type="${mutation_type}" -v site="${mutation_site}" -v nuc="${mutation_nuc}" \
         'BEGIN{
@@ -348,7 +297,7 @@ cat .DAJIN_temp/fasta/wt.fa |
         }}1' |
     sed -e "s/ //g" -e "s/_/ /g"|
     sed -e "1i >${output_filename}_${percentage}%" |
-cat - > .DAJIN_temp/clustering/temp/tmp_html_"${out_suffix}".html
+cat > .DAJIN_temp/clustering/temp/tmp_html_"${out_suffix}".html
 
 cat << EOF > .DAJIN_temp/clustering/consensus/"${output_filename}".html
 <!DOCTYPE html>
@@ -387,7 +336,7 @@ p {
 EOF
 
 cat .DAJIN_temp/clustering/temp/tmp_html_"${out_suffix}".html |
-cat - >> .DAJIN_temp/clustering/consensus/"${output_filename}".html
+cat >> .DAJIN_temp/clustering/consensus/"${output_filename}".html
 
 cat << EOF >> .DAJIN_temp/clustering/consensus/"${output_filename}".html
 </p>
@@ -404,7 +353,7 @@ EOF
 ls -l .DAJIN_temp/clustering/consensus/"${output_filename}".fa
 
 
-
+#!===================================
 
 # cat "${allele_id}" |
 #     awk -v cl="${cluster}" '$2==cl' |
@@ -493,5 +442,113 @@ ls -l .DAJIN_temp/clustering/consensus/"${output_filename}".fa
 #         '{if(NR==1 && $0=="EOF") print cl, 0, "intact",0
 #         else print $0}' |
 #     grep -v "EOF" |
-# cat - > "${consensus_mutation}"
+# cat > "${consensus_mutation}"
 # # done
+
+
+
+# cat "${allele_id}" |
+#     awk -v cl="${cluster}" '$2==cl' |
+#     cut -f 1 |
+#     sort |
+# cat > "${tmp_allele_id}"
+
+# samtools view DAJIN_results/BAM/${barcode}.bam |
+# sort |
+# join - "${tmp_allele_id}" |
+# head -n 1 | #! -----------------------------
+# awk '{
+#     $0=$(NF-1)
+#     gsub("cs:Z:","",$0)
+#     gsub(/[ACGT]/,"M",$0)
+#     gsub(/\*[acgt][acgt]/,"S",$0)
+#     }1' |
+# sed "s/=/ /g" |
+# sed "s/\([acgt]\)S/\1 S/g" |
+# sed "s/-/ -/g" |
+# sed "s/+/ +/g" |
+# awk '{for(i=1; i<=NF; i++){
+#     if($i ~ "-"){len=length($i)-1; s=sprintf("%"len"s",""); gsub(/ /,"D",s); $i=s}
+#     else if($i ~ "+"){len=length($i)-1; s=sprintf("%"len"s",""); gsub(/ /,"D",s); $i=s}
+#     }}1'
+
+# awk 'BEGIN{for(i=33;i<=127; i++) printf("%c\n", i)}'
+# awk 'BEGIN {s=sprintf("%5s","");gsub(/ /,"-",s);print s}'
+
+# head
+
+# cat "${allele_id}" |
+#     awk -v cl="${cluster}" '$2==cl' |
+#     cut -f 3 |
+#     awk '{print length($1)}' |
+#     sort | uniq -c
+
+# cat "${allele_id}" |
+#     awk -v cl="${cluster}" '$2==cl' |
+#     cut -f 3 |
+#     awk '{print substr($0,1045,10)}' |
+#     sort | uniq -c
+
+# cat  "${control_score}" |
+#     head -n 1055 |
+#     tail -n 10
+
+# len=$(samtools view DAJIN_results/BAM/${barcode}_allele${alleleid}.bam |
+#     awk '$2==0 || $2==16' |
+#     awk '{print length($10)}' |
+#     sort | uniq -c |
+#     awk '{if(max < $1) {max=$1; len=$2}} END{print len}')
+
+# samtools view DAJIN_results/BAM/${barcode}_allele${alleleid}.bam |
+#     awk '$2==0 || $2==16' |
+#     awk -v start="${start}" -v len="${len}" '$4==start && length($10) == len' |
+#     head -n 1 |
+#     awk '{print ">"$1"\n"$10}' |
+# cat > test_ref.fa
+
+
+# cat "${allele_id}" |
+#     awk -v cl="${cluster}" '$2==cl' |
+#     cut -f 1 |
+#     sort |
+# cat > tmp_allele_id
+
+# cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
+#     awk '$1~/[>@]/ {gsub("@","",$1); printf $1"\t"; next}1' |
+#     sort |
+#     join - tmp_allele_id |
+#     awk '{print ">"$1"\n"$2}' |
+# cat > test_que.fa 
+# minimap2 -ax map-ont test_ref.fa test_que.fa --cs=long 2>/dev/null |
+# cat > test.sam
+
+
+
+# samtools view DAJIN_results/BAM/${barcode}_allele${alleleid}.bam |
+#     awk '$2==0 || $2==16' |
+#     awk -v start="${start}" -v len="${len}" '$4==start && length($10) == len' |
+#     awk '{print ">"$1"\n"$10}' |
+
+# minimap2 -ax map-ont .DAJIN_temp/fasta/wt.fa - --cs=long 2>/dev/null |
+# awk '{print $(NF-1)}' |
+# grep "cs" |
+# awk '{cstag=$0
+#     gsub("cs:Z:=","",$0)
+#     gsub("=", " ", $0)
+#     gsub(/[ACGT]/, "M", $0)
+#     gsub(/\*[acgt][acgt]/, " S", $0)
+#     gsub(/\+[acgt]*/,  " I ", $0)
+#     gsub("-",  " ", $0)
+#     for(i=1; i<=NF; i++) if($i !~ /[MSI+]/ ){
+#         len="%" length($i) "s"
+#         D=sprintf(len,""); gsub(/ /," D ",D)
+#         $i=D
+#         }
+#     gsub(" ","", $0)
+#     }1' |
+
+# cat > test_MIDS
+
+# cat test_MIDS |
+#     awk '{print substr($0,721,1)}' |
+#     sort | uniq -c

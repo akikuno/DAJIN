@@ -3,7 +3,7 @@
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 options(repos='https://cloud.r-project.org/')
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
-pacman::p_load(tidyverse, dbscan)
+pacman::p_load(tidyverse)
 
 args <- commandArgs(trailingOnly = TRUE)
 df_que <- read_csv(args[1], col_names = FALSE, col_types = cols(.default = "c"))
