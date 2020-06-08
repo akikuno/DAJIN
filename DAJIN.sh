@@ -430,17 +430,12 @@ printf "Next converting BAM to MIDS format...\n"
 # MIDS conversion
 ################################################################################
 
-printf \
-"++++++++++++
-Converting ACGT into MIDS format
-++++++++++++\n"
+printf "Converting ACGT into MIDS format...\n"
 
 reference=".DAJIN_temp/fasta_conv/wt.fa"
 query=".DAJIN_temp/fasta_conv/target.fa"
 
 # Get mutation loci...
-# true > .DAJIN_temp/data/mutation_points
-# for query in .DAJIN_temp/fasta_conv/target*.fa; do
 cat "$reference" |
     minimap2 -ax splice - "${query}" --cs 2>/dev/null |
     awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
@@ -449,9 +444,18 @@ cat "$reference" |
     awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
 cat > .DAJIN_temp/data/mutation_points
 
+# # MIDS conversion...
+# find .DAJIN_temp/fasta_ont -type f | sort |
+#     awk '{print "./DAJIN/src/mids_convertion.sh",$0, "wt", "&"}' |
+#     awk -v th=${threads:-1} '{
+#         if (NR%th==0) gsub("&","&\nwait",$0)
+#         print}
+#         END{print "wait"}' |
+# sh -
+
 # MIDS conversion...
 find .DAJIN_temp/fasta_ont -type f | sort |
-    awk '{print "./DAJIN/src/mids_convertion.sh",$0, "wt", "&"}' |
+    awk '{print "./DAJIN/src/mids_classification.sh",$0, "wt", "&"}' |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)
         print}
@@ -460,6 +464,13 @@ sh -
 
 [ "$mutation_type" = "P" ] && rm .DAJIN_temp/data/MIDS_target*
 
+: > ".DAJIN_temp/data/DAJIN_MIDS.txt"
+for i in .DAJIN_temp/data/MIDS_*; do
+    head -n 2000 $i |
+    sed -e "s/_aligned_reads//g" |
+    cat >> ".DAJIN_temp/data/DAJIN_MIDS.txt"
+done
+
 cat .DAJIN_temp/data/MIDS_* |
     sed -e "s/_aligned_reads//g" |
     sort -k 1,1 |
@@ -467,20 +478,21 @@ cat > ".DAJIN_temp/data/DAJIN_MIDS.txt"
 
 rm .DAJIN_temp/data/MIDS_*
 
+
+printf "MIDS conversion was finished...\n"
+
 ################################################################################
-# Prediction
-# 異常検知→アレルタイプの予測
-# 一塩基置換の場合はアレルタイプの予測はしない
+#! Prediction
 ################################################################################
 
-printf "Start allele prediction...\n"
+printf "Start allele type prediction...\n"
 
 python DAJIN/src/ml_abnormal_detection.py ".DAJIN_temp"/data/DAJIN_MIDS.txt "${ont_cont}" "${mutation_type}" "${threads}"
 
 printf "Prediction was finished...\n"
 
 #===========================================================
-# Filter low-persentage allele
+#? Filter low-persentage allele
 #===========================================================
 
 # --------------------------------
