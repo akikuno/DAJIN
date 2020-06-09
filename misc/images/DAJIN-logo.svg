@@ -1,88 +1,239 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
    xmlns:svg="http://www.w3.org/2000/svg"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   sodipodi:docname="DAJIN-logo.svg"
-   inkscape:version="1.1-dev (8dfbab2fe0, 2020-05-18)"
-   id="svg6"
-   version="1.1"
-   viewBox="0 0 210.94337 157.45465"
-   height="157.45465mm"
-   width="210.94337mm"
-   inkscape:export-filename="/home/kuno/Downloads/DAJIN-logo.png"
+   inkscape:export-ydpi="350"
    inkscape:export-xdpi="350"
-   inkscape:export-ydpi="350">
+   inkscape:export-filename="/home/kuno/Downloads/DAJIN-logo.png"
+   width="210.94337mm"
+   height="157.45465mm"
+   viewBox="0 0 210.94337 157.45465"
+   version="1.1"
+   id="svg6"
+   inkscape:version="1.0 (4035a4fb49, 2020-05-01)"
+   sodipodi:docname="DAJIN-logo.svg">
+  <metadata
+     id="metadata49">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
   <defs
-     id="defs2" />
+     id="defs2">
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipEmfPath1">
+      <path
+         d="M 0,0 L 1160.9338,0 L 1160.9338,581.78314 L 0,581.78314 z"
+         id="path874" />
+    </clipPath>
+    <pattern
+       id="EMFhbasepattern"
+       patternUnits="userSpaceOnUse"
+       width="6"
+       height="6"
+       x="0"
+       y="0" />
+  </defs>
   <sodipodi:namedview
-     inkscape:window-maximized="0"
-     inkscape:window-y="195"
-     inkscape:window-x="-367"
-     inkscape:window-height="1378"
-     inkscape:window-width="3440"
-     fit-margin-bottom="5"
-     fit-margin-right="5"
-     fit-margin-left="5"
-     fit-margin-top="5"
-     lock-margins="true"
-     showgrid="false"
-     inkscape:current-layer="layer1"
-     inkscape:document-units="mm"
-     inkscape:cy="480.71639"
-     inkscape:cx="325.12868"
-     inkscape:zoom="0.98994949"
-     inkscape:pageshadow="2"
-     inkscape:pageopacity="1"
-     borderopacity="1.0"
-     bordercolor="#666666"
-     pagecolor="#ffffff"
+     inkscape:document-rotation="0"
+     inkscape:pagecheckerboard="false"
      id="base"
-     inkscape:pagecheckerboard="false" />
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="1"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.98994949"
+     inkscape:cx="325.12868"
+     inkscape:cy="480.71639"
+     inkscape:document-units="mm"
+     inkscape:current-layer="g934"
+     showgrid="false"
+     lock-margins="true"
+     fit-margin-top="5"
+     fit-margin-left="5"
+     fit-margin-right="5"
+     fit-margin-bottom="5"
+     inkscape:window-width="3418"
+     inkscape:window-height="1378"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0" />
   <g
-     transform="translate(-6.341823,-1.0772213)"
-     id="layer1"
+     inkscape:label="レイヤー 1"
      inkscape:groupmode="layer"
-     inkscape:label="レイヤー 1">
+     id="layer1"
+     transform="translate(-6.341823,-1.0772213)">
     <text
-       id="text825"
-       y="21.820711"
-       x="14.894673"
+       xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.4907px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:3.37361px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.421698"
-       xml:space="preserve"><tspan
-         y="21.820711"
-         x="14.894673"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.4907px;font-family:'Baekmuk Headline';-inkscape-font-specification:'Baekmuk Headline';stroke-width:0.421698"
+       x="14.894673"
+       y="21.820711"
+       id="text825"><tspan
+         sodipodi:role="line"
          id="tspan823"
-         sodipodi:role="line">DAJIN</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.4907px;font-family:'Baekmuk Headline';-inkscape-font-specification:'Baekmuk Headline';stroke-width:0.421698"
+         x="14.894673"
+         y="21.820711">DAJIN</tspan></text>
     <path
-       id="path827"
+       style="fill:none;stroke:#808080;stroke-width:0.396875;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        d="M 11.510812,25.959838 H 100.39034"
-       style="fill:none;stroke:#808080;stroke-width:0.396875;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
-    <path
-       id="path841"
-       d="M 11.510811,31.003025 H 100.39034"
-       style="fill:none;stroke:#808080;stroke-width:0.396874;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+       id="path827" />
     <path
        style="fill:none;stroke:#808080;stroke-width:0.396874;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 11.510811,31.003025 H 100.39034"
+       id="path841" />
+    <path
+       id="path839"
        d="M 11.510811,28.590887 H 100.39034"
-       id="path839" />
+       style="fill:none;stroke:#808080;stroke-width:0.396874;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.0682px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.378653"
+       x="99.140038"
+       y="53.079193"
+       id="text853"
+       inkscape:export-xdpi="350"
+       inkscape:export-ydpi="350"><tspan
+         sodipodi:role="line"
+         id="tspan851"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.0682px;font-family:Sawasdee;-inkscape-font-specification:Sawasdee;stroke-width:0.378653"
+         x="99.140038"
+         y="53.079193">One-step whole-allele profiler</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.0682px;font-family:Sawasdee;-inkscape-font-specification:Sawasdee;stroke-width:0.378653"
+         x="99.140038"
+         y="62.096481"
+         id="tspan855">using long-read sequencing</tspan></text>
+    <text
+       id="text895"
+       y="63.624886"
+       x="14.894673"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.4907px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:3.37361px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.421698"
+       xml:space="preserve"
+       inkscape:export-xdpi="350"
+       inkscape:export-ydpi="350"><tspan
+         y="63.624886"
+         x="14.894673"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.4907px;font-family:'Baekmuk Headline';-inkscape-font-specification:'Baekmuk Headline';stroke-width:0.421698"
+         id="tspan893"
+         sodipodi:role="line">DAJIN</tspan></text>
+    <path
+       id="path897"
+       d="M 11.510813,67.764007 H 195.18282"
+       style="fill:none;stroke:#808080;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       inkscape:export-xdpi="350"
+       inkscape:export-ydpi="350" />
+    <path
+       id="path899"
+       d="M 11.510811,72.807193 H 195.18282"
+       style="fill:none;stroke:#808080;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       inkscape:export-xdpi="350"
+       inkscape:export-ydpi="350" />
+    <circle
+       r="0.79818124"
+       cy="72.663345"
+       cx="167.44183"
+       id="circle901"
+       style="fill:none;stroke:#00aad4;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       inkscape:export-xdpi="350"
+       inkscape:export-ydpi="350" />
+    <circle
+       style="fill:none;stroke:#71c837;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="circle903"
+       cx="94.120209"
+       cy="72.663345"
+       r="0.79818124"
+       inkscape:export-xdpi="350"
+       inkscape:export-ydpi="350" />
+    <path
+       style="fill:none;stroke:#808080;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 11.510811,70.395055 H 195.18282"
+       id="path907"
+       inkscape:export-xdpi="350"
+       inkscape:export-ydpi="350" />
+    <circle
+       style="fill:none;stroke:#ff5555;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="circle909"
+       cx="113.98096"
+       cy="70.213676"
+       r="0.79818124"
+       inkscape:export-xdpi="350"
+       inkscape:export-ydpi="350" />
+    <circle
+       style="fill:none;stroke:#ff5555;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="circle911"
+       cx="26.947407"
+       cy="70.213676"
+       r="0.79818124"
+       inkscape:export-xdpi="350"
+       inkscape:export-ydpi="350" />
+    <circle
+       style="fill:none;stroke:#00aad4;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="circle927"
+       cx="40.441833"
+       cy="30.859175"
+       r="0.79818124" />
+    <circle
+       r="0.79818124"
+       cy="30.859175"
+       cx="62.370232"
+       id="circle929"
+       style="fill:none;stroke:#71c837;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke" />
+    <circle
+       r="0.79818124"
+       cy="28.409506"
+       cx="71.647652"
+       id="circle931"
+       style="fill:none;stroke:#ff5555;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke" />
+    <circle
+       r="0.79818124"
+       cy="28.409506"
+       cx="26.947407"
+       id="circle933"
+       style="fill:none;stroke:#ff5555;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke" />
+    <circle
+       r="0.79818124"
+       cy="72.663345"
+       cx="20.036882"
+       id="circle935"
+       style="fill:none;stroke:#71c837;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       inkscape:export-xdpi="350"
+       inkscape:export-ydpi="350" />
+    <circle
+       style="fill:none;stroke:#00aad4;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="circle937"
+       cx="40.441833"
+       cy="70.213676"
+       r="0.79818124"
+       inkscape:export-xdpi="350"
+       inkscape:export-ydpi="350" />
     <text
        inkscape:export-ydpi="350"
        inkscape:export-xdpi="350"
-       id="text853"
-       y="53.079193"
+       id="text848"
+       y="95.412514"
        x="99.140038"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.0682px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.378653"
        xml:space="preserve"><tspan
-         y="53.079193"
+         y="95.412514"
          x="99.140038"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.0682px;font-family:Sawasdee;-inkscape-font-specification:Sawasdee;stroke-width:0.378653"
-         id="tspan851"
+         id="tspan844"
          sodipodi:role="line">One-step whole-allele profiler</tspan><tspan
-         id="tspan855"
-         y="62.096481"
+         id="tspan846"
+         y="104.4298"
          x="99.140038"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.0682px;font-family:Sawasdee;-inkscape-font-specification:Sawasdee;stroke-width:0.378653"
          sodipodi:role="line">using long-read sequencing</tspan></text>
@@ -92,241 +243,156 @@
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.4907px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:3.37361px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.421698"
        x="14.894673"
-       y="63.624886"
-       id="text895"><tspan
-         sodipodi:role="line"
-         id="tspan893"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.4907px;font-family:'Baekmuk Headline';-inkscape-font-specification:'Baekmuk Headline';stroke-width:0.421698"
-         x="14.894673"
-         y="63.624886">DAJIN</tspan></text>
-    <path
-       inkscape:export-ydpi="350"
-       inkscape:export-xdpi="350"
-       style="fill:none;stroke:#808080;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       d="M 11.510813,67.764007 H 195.18282"
-       id="path897" />
-    <path
-       inkscape:export-ydpi="350"
-       inkscape:export-xdpi="350"
-       style="fill:none;stroke:#808080;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       d="M 11.510811,72.807193 H 195.18282"
-       id="path899" />
-    <circle
-       inkscape:export-ydpi="350"
-       inkscape:export-xdpi="350"
-       style="fill:none;stroke:#00aad4;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
-       id="circle901"
-       cx="167.44183"
-       cy="72.663345"
-       r="0.79818124" />
-    <circle
-       inkscape:export-ydpi="350"
-       inkscape:export-xdpi="350"
-       r="0.79818124"
-       cy="72.663345"
-       cx="94.120209"
-       id="circle903"
-       style="fill:none;stroke:#71c837;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke" />
-    <path
-       inkscape:export-ydpi="350"
-       inkscape:export-xdpi="350"
-       id="path907"
-       d="M 11.510811,70.395055 H 195.18282"
-       style="fill:none;stroke:#808080;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
-    <circle
-       inkscape:export-ydpi="350"
-       inkscape:export-xdpi="350"
-       r="0.79818124"
-       cy="70.213676"
-       cx="113.98096"
-       id="circle909"
-       style="fill:none;stroke:#ff5555;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke" />
-    <circle
-       inkscape:export-ydpi="350"
-       inkscape:export-xdpi="350"
-       r="0.79818124"
-       cy="70.213676"
-       cx="26.947407"
-       id="circle911"
-       style="fill:none;stroke:#ff5555;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke" />
-    <circle
-       r="0.79818124"
-       cy="30.859175"
-       cx="40.441833"
-       id="circle927"
-       style="fill:none;stroke:#00aad4;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke" />
-    <circle
-       style="fill:none;stroke:#71c837;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
-       id="circle929"
-       cx="62.370232"
-       cy="30.859175"
-       r="0.79818124" />
-    <circle
-       style="fill:none;stroke:#ff5555;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
-       id="circle931"
-       cx="71.647652"
-       cy="28.409506"
-       r="0.79818124" />
-    <circle
-       style="fill:none;stroke:#ff5555;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
-       id="circle933"
-       cx="26.947407"
-       cy="28.409506"
-       r="0.79818124" />
-    <circle
-       inkscape:export-ydpi="350"
-       inkscape:export-xdpi="350"
-       style="fill:none;stroke:#71c837;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
-       id="circle935"
-       cx="20.036882"
-       cy="72.663345"
-       r="0.79818124" />
-    <circle
-       inkscape:export-ydpi="350"
-       inkscape:export-xdpi="350"
-       r="0.79818124"
-       cy="70.213676"
-       cx="40.441833"
-       id="circle937"
-       style="fill:none;stroke:#00aad4;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke" />
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.0682px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.378653"
-       x="99.140038"
-       y="95.412514"
-       id="text848"
-       inkscape:export-xdpi="350"
-       inkscape:export-ydpi="350"><tspan
-         sodipodi:role="line"
-         id="tspan844"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.0682px;font-family:Sawasdee;-inkscape-font-specification:Sawasdee;stroke-width:0.378653"
-         x="99.140038"
-         y="95.412514">One-step whole-allele profiler</tspan><tspan
-         sodipodi:role="line"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.0682px;font-family:Sawasdee;-inkscape-font-specification:Sawasdee;stroke-width:0.378653"
-         x="99.140038"
-         y="104.4298"
-         id="tspan846">using long-read sequencing</tspan></text>
-    <text
-       id="text852"
        y="105.95819"
-       x="14.894673"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.4907px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:3.37361px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.421698"
-       xml:space="preserve"
-       inkscape:export-xdpi="350"
-       inkscape:export-ydpi="350"><tspan
-         y="105.95819"
-         x="14.894673"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.4907px;font-family:LeviReBrushed;-inkscape-font-specification:LeviReBrushed;stroke-width:0.421698"
+       id="text852"><tspan
+         sodipodi:role="line"
          id="tspan850"
-         sodipodi:role="line">DAJIN</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.4907px;font-family:LeviReBrushed;-inkscape-font-specification:LeviReBrushed;stroke-width:0.421698"
+         x="14.894673"
+         y="105.95819">DAJIN</tspan></text>
     <path
-       id="path854"
-       d="M 11.510813,110.09735 H 195.18282"
-       style="fill:none;stroke:#808080;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       inkscape:export-xdpi="350"
-       inkscape:export-ydpi="350" />
-    <path
-       id="path856"
-       d="M 11.510811,115.14053 H 195.18282"
-       style="fill:none;stroke:#808080;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       inkscape:export-xdpi="350"
-       inkscape:export-ydpi="350" />
-    <ellipse
-       ry="0.79818124"
-       rx="1.893"
-       cy="114.99665"
-       cx="167.44183"
-       id="circle858"
-       style="fill:none;stroke:#00aad4;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
-       inkscape:export-xdpi="350"
-       inkscape:export-ydpi="350" />
-    <ellipse
-       ry="0.79818124"
-       rx="1.893"
-       style="fill:none;stroke:#71c837;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
-       id="circle860"
-       cx="94.120209"
-       cy="114.99665"
-       inkscape:export-xdpi="350"
-       inkscape:export-ydpi="350" />
-    <path
-       style="fill:none;stroke:#808080;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       d="M 11.510811,112.7284 H 195.18282"
-       id="path862"
-       inkscape:export-xdpi="350"
-       inkscape:export-ydpi="350" />
-    <ellipse
-       ry="0.79818124"
-       rx="1.893"
-       style="fill:none;stroke:#ff5555;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
-       id="circle864"
-       cx="113.98096"
-       cy="112.547"
-       inkscape:export-xdpi="350"
-       inkscape:export-ydpi="350" />
-    <ellipse
-       ry="0.79818124"
-       rx="1.893"
-       style="fill:none;stroke:#ff5555;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
-       id="circle866"
-       cx="26.947407"
-       cy="112.547"
-       inkscape:export-xdpi="350"
-       inkscape:export-ydpi="350" />
-    <ellipse
-       ry="0.79818124"
-       rx="1.893"
-       cy="114.99665"
-       cx="20.036882"
-       id="circle868"
-       style="fill:none;stroke:#71c837;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
-       inkscape:export-xdpi="350"
-       inkscape:export-ydpi="350" />
-    <ellipse
-       ry="0.79818124"
-       rx="1.893"
-       style="fill:none;stroke:#00aad4;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
-       id="circle870"
-       cx="40.441833"
-       cy="112.547"
-       inkscape:export-xdpi="350"
-       inkscape:export-ydpi="350" />
-    <g
        inkscape:export-ydpi="350"
        inkscape:export-xdpi="350"
+       style="fill:none;stroke:#808080;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 11.510813,110.09735 H 195.18282"
+       id="path854" />
+    <path
+       inkscape:export-ydpi="350"
+       inkscape:export-xdpi="350"
+       style="fill:none;stroke:#808080;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 11.510811,115.14053 H 195.18282"
+       id="path856" />
+    <ellipse
+       inkscape:export-ydpi="350"
+       inkscape:export-xdpi="350"
+       style="fill:none;stroke:#00aad4;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="circle858"
+       cx="167.44183"
+       cy="114.99665"
+       rx="1.893"
+       ry="0.79818124" />
+    <ellipse
+       inkscape:export-ydpi="350"
+       inkscape:export-xdpi="350"
+       cy="114.99665"
+       cx="94.120209"
+       id="circle860"
+       style="fill:none;stroke:#71c837;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       rx="1.893"
+       ry="0.79818124" />
+    <path
+       inkscape:export-ydpi="350"
+       inkscape:export-xdpi="350"
+       id="path862"
+       d="M 11.510811,112.7284 H 195.18282"
+       style="fill:none;stroke:#808080;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+    <ellipse
+       inkscape:export-ydpi="350"
+       inkscape:export-xdpi="350"
+       cy="112.547"
+       cx="113.98096"
+       id="circle864"
+       style="fill:none;stroke:#ff5555;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       rx="1.893"
+       ry="0.79818124" />
+    <ellipse
+       inkscape:export-ydpi="350"
+       inkscape:export-xdpi="350"
+       cy="112.547"
+       cx="26.947407"
+       id="circle866"
+       style="fill:none;stroke:#ff5555;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       rx="1.893"
+       ry="0.79818124" />
+    <ellipse
+       inkscape:export-ydpi="350"
+       inkscape:export-xdpi="350"
+       style="fill:none;stroke:#71c837;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="circle868"
+       cx="20.036882"
+       cy="114.99665"
+       rx="1.893"
+       ry="0.79818124" />
+    <ellipse
+       inkscape:export-ydpi="350"
+       inkscape:export-xdpi="350"
+       cy="112.547"
+       cx="40.441833"
+       id="circle870"
+       style="fill:none;stroke:#00aad4;stroke-width:1.6868;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       rx="1.893"
+       ry="0.79818124" />
+    <g
+       id="g934"
        transform="translate(-3.9801734)"
-       id="g934">
+       inkscape:export-xdpi="350"
+       inkscape:export-ydpi="350">
       <text
-         xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.26092px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.388977"
-         x="98.690231"
-         y="137.88605"
+         inkscape:export-ydpi="350"
+         inkscape:export-xdpi="350"
          id="text876"
-         inkscape:export-xdpi="350"
-         inkscape:export-ydpi="350"><tspan
-           sodipodi:role="line"
+         y="137.88605"
+         x="98.690231"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.26092px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.388977"
+         xml:space="preserve"><tspan
+           y="137.88605"
+           x="98.690231"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.26092px;font-family:'Arial Black';-inkscape-font-specification:'Arial Black, ';stroke-width:0.388977"
            id="tspan872"
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.26092px;font-family:'Arial Black';-inkscape-font-specification:'Arial Black, ';stroke-width:0.388977"
-           x="98.690231"
-           y="137.88605">One-step whole-allele profiler</tspan><tspan
-           sodipodi:role="line"
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.26092px;font-family:'Arial Black';-inkscape-font-specification:'Arial Black, ';stroke-width:0.388977"
-           x="98.690231"
+           sodipodi:role="line">One-step whole-allele profiler</tspan><tspan
+           id="tspan874"
            y="146.99251"
-           id="tspan874">using long-read sequencing</tspan></text>
+           x="98.690231"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.26092px;font-family:'Arial Black';-inkscape-font-specification:'Arial Black, ';stroke-width:0.388977"
+           sodipodi:role="line">using long-read sequencing</tspan></text>
       <text
-         id="text880"
-         y="148.14867"
-         x="14.883022"
+         inkscape:export-ydpi="350"
+         inkscape:export-xdpi="350"
+         xml:space="preserve"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:23.1039px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:3.4656px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.433196"
+         x="14.883022"
+         y="148.14867"
+         id="text880"><tspan
+           sodipodi:role="line"
+           id="tspan878"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:23.1039px;font-family:'Dr Jekyll';-inkscape-font-specification:'Dr Jekyll';stroke-width:0.433196"
+           x="14.883022"
+           y="148.14867">DAJIN</tspan></text>
+      <text
+         inkscape:export-ydpi="350"
+         inkscape:export-xdpi="350"
+         id="text897"
+         y="177.16351"
+         x="107.5208"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+         xml:space="preserve"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Arial Black';-inkscape-font-specification:'Arial Black, ';stroke-width:0.264583"
+           y="177.16351"
+           x="107.5208"
+           id="tspan895"
+           sodipodi:role="line">Determine Allele mutations and</tspan><tspan
+           id="tspan899"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Arial Black';-inkscape-font-specification:'Arial Black, ';stroke-width:0.264583"
+           y="186.01242"
+           x="107.5208"
+           sodipodi:role="line">Judge Intended genotype by</tspan><tspan
+           id="tspan901"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Arial Black';-inkscape-font-specification:'Arial Black, ';stroke-width:0.264583"
+           y="194.86133"
+           x="107.5208"
+           sodipodi:role="line">Nanopore sequencer</tspan></text>
+      <text
+         id="text905"
+         y="195.21725"
+         x="7.5729375"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:28.0411px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:4.20619px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.525769"
          xml:space="preserve"
          inkscape:export-xdpi="350"
          inkscape:export-ydpi="350"><tspan
-           y="148.14867"
-           x="14.883022"
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:23.1039px;font-family:'Dr Jekyll';-inkscape-font-specification:'Dr Jekyll';stroke-width:0.433196"
-           id="tspan878"
+           y="195.21725"
+           x="7.5729375"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:28.0411px;font-family:'Dr Jekyll';-inkscape-font-specification:'Dr Jekyll';stroke-width:0.525769"
+           id="tspan903"
            sodipodi:role="line">DAJIN</tspan></text>
     </g>
   </g>
