@@ -127,7 +127,7 @@ model.compile(optimizer='adam', loss='categorical_crossentropy',
 ###############################################
 # Training
 ###############################################
-early_stopping = EarlyStopping(monitor='val_loss', patience=10) 
+early_stopping = EarlyStopping(monitor='val_loss', patience=5) 
 
 history = model.fit(X_train, Y_train, epochs=100, verbose=1,
                     batch_size = 32,
@@ -144,7 +144,7 @@ history = model.fit(X_train, Y_train, epochs=100, verbose=1,
 X_all = np.concatenate([X_sim, X_real])
 print("Abnormal allele detection...")
 
-normal = X_train[0:500]
+normal = X_train[0:1000]
 # if any(df_sim.barcodeID.str.contains("wt_del")) and any(df_sim.barcodeID.str.contains("wt_ins")):
 #     normal = X_sim[df_sim[df_sim.barcodeID=="wt_simulated"].sample(1000).index]
 # else:

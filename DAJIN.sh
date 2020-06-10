@@ -464,12 +464,12 @@ sh -
 
 [ "$mutation_type" = "P" ] && rm .DAJIN_temp/data/MIDS_target*
 
-: > ".DAJIN_temp/data/DAJIN_MIDS.txt"
-for i in .DAJIN_temp/data/MIDS_*; do
-    head -n 2000 $i |
-    sed -e "s/_aligned_reads//g" |
-    cat >> ".DAJIN_temp/data/DAJIN_MIDS.txt"
-done
+# : > ".DAJIN_temp/data/DAJIN_MIDS.txt"
+# for i in .DAJIN_temp/data/MIDS_*; do
+#     head -n 2000 $i |
+#     sed -e "s/_aligned_reads//g" |
+#     cat >> ".DAJIN_temp/data/DAJIN_MIDS.txt"
+# done
 
 cat .DAJIN_temp/data/MIDS_* |
     sed -e "s/_aligned_reads//g" |
@@ -477,7 +477,6 @@ cat .DAJIN_temp/data/MIDS_* |
 cat > ".DAJIN_temp/data/DAJIN_MIDS.txt"
 
 rm .DAJIN_temp/data/MIDS_*
-
 
 printf "MIDS conversion was finished...\n"
 
@@ -487,7 +486,9 @@ printf "MIDS conversion was finished...\n"
 
 printf "Start allele type prediction...\n"
 
-python DAJIN/src/ml_abnormal_detection.py ".DAJIN_temp"/data/DAJIN_MIDS.txt "${ont_cont}" "${mutation_type}" "${threads}"
+python DAJIN/src/ml_abnormal_detection.py \
+    ".DAJIN_temp"/data/DAJIN_MIDS.txt \
+    "${ont_cont}" "${mutation_type}" "${threads}"
 
 printf "Prediction was finished...\n"
 
@@ -560,6 +561,9 @@ rm .DAJIN_temp/tmp_*
 #! Clustering
 ################################################################################
 
+printf "Allele clustering...\n"
+
+
 #===========================================================
 #? Prepare control score
 #===========================================================
@@ -614,6 +618,8 @@ ls -l .DAJIN_temp/clustering/result_allele_percentage_*
 ################################################################################
 #! Get consensus sequence in each cluster
 ################################################################################
+
+printf "Report consensus sequence...\n"
 
 cat .DAJIN_temp/clustering/result_allele_percentage* |
     sed "s/_/ /" |
@@ -699,19 +705,6 @@ do
     samtools index "${output_dir:-DAJIN_results}"/BAM/"${output_bam}".bam
 done
 
-# ----------------------------------------------------------------
-# 2-cut deletionの場合は、大丈夫そうなabnormalを検出する
-# ----------------------------------------------------------------
-
-# if [ "$mutation_type" = "D" ]; then
-#     ./DAJIN/src/anomaly_exondeletion.sh ${genome} ${threads}
-# else
-#     cp .DAJIN_temp/anomaly_classification.txt .DAJIN_temp/anomaly_classification_revised.txt
-# fi
-#
-# cp .DAJIN_temp/anomaly_classification.txt .DAJIN_temp/anomaly_classification_revised.txt
-#
-
 ################################################################################
 # Alignment viewing
 ################################################################################
@@ -727,3 +720,16 @@ printf "Completed! \nCheck 'results/figures/' directory.\n"
 
 exit 0
 
+
+# ----------------------------------------------------------------
+# 2-cut deletionの場合は、大丈夫そうなabnormalを検出する
+# ----------------------------------------------------------------
+
+# if [ "$mutation_type" = "D" ]; then
+#     ./DAJIN/src/anomaly_exondeletion.sh ${genome} ${threads}
+# else
+#     cp .DAJIN_temp/anomaly_classification.txt .DAJIN_temp/anomaly_classification_revised.txt
+# fi
+#
+# cp .DAJIN_temp/anomaly_classification.txt .DAJIN_temp/anomaly_classification_revised.txt
+#

@@ -10,7 +10,9 @@ from sklearn.preprocessing import LabelEncoder, LabelBinarizer
 from sklearn.neighbors import LocalOutlierFactor
 
 import tensorflow as tf
-from tensorflow.keras.layers import Conv1D, Dense, Flatten,MaxPooling1D
+from tensorflow.keras.layers import Conv1D, Dense, Flatten, MaxPooling1D
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras import regularizers
 
 ################################################################################
 #! I/O naming
@@ -21,8 +23,8 @@ from tensorflow.keras.layers import Conv1D, Dense, Flatten,MaxPooling1D
 #===========================================================
 
 file_name = ".DAJIN_temp/data/DAJIN_MIDS.txt"
-ont_cont = "barcode01"
-mutation_type = "I"
+ont_cont = "barcode26"
+mutation_type = "D"
 threads = 10
 
 #===========================================================
@@ -52,22 +54,19 @@ df = pd.read_csv(file_name, header=None, sep='\t')
 df.columns = ["seqID", "seq", "barcodeID"]
 df.seq = "MIDS=" + df.seq
 
-df_cont = df[df.barcodeID.str.contains(ont_cont)].reset_index(drop=True)
-df_cont.barcodeID = "wt_simulated"
 
 df_sim = df[df.barcodeID.str.contains("simulated")].reset_index(drop=True)
-df_sim = df_sim.append(df_cont).reset_index(drop=True)
 df_real = df[~df.barcodeID.str.contains("simulated")].reset_index(drop=True)
 
 del df
-del df_cont
 
+    
 ################################################################################
-#! Novelity (Anomaly) detection
+#! Training model
 ################################################################################
 
 #===========================================================
-#? Encording
+#? Encording Function
 #===========================================================
 
 def label_encorde_seq(seq):
@@ -77,44 +76,6 @@ def label_encorde_seq(seq):
         to_numpy()
     return(label_seq)
 
-#===========================================================
-#? Train test split
-#===========================================================
-
-labels, labels_index = pd.factorize(df_sim.barcodeID)
-
-X_train, X_test, Y_train, Y_test = train_test_split(
-    label_encorde_seq(df_sim.seq), labels,
-    test_size=0.2, shuffle=True)
-
-#===========================================================
-#? LOF
-#===========================================================
-print("LOF") #? >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-clf = LocalOutlierFactor(n_neighbors=20, leaf_size = 400, novelty=True, n_jobs = threads)
-
-clf.fit(X_train[:10000])
-
-outliers = clf.predict(label_encorde_seq(df_real.seq))
-outliers = np.where(outliers==1, "normal", "abnormal") 
-df_real["outliers"] = outliers
-
-# df_real.groupby("barcodeID").outliers.value_counts()
-df_real.to_csv(
-    ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt",
-    header=False, index=False, sep="\t")
-
-if mutation_type == "P" :
-    sys.exit()
-    
-################################################################################
-#! Classification
-################################################################################
-
-#===========================================================
-#? Encording
-#===========================================================
-
 def onehot_encode_seq(seq):
     onehot_seq = np.apply_along_axis(LabelBinarizer().fit_transform, 1, label_encorde_seq(seq))
     return(onehot_seq)
@@ -123,6 +84,7 @@ def onehot_encode_seq(seq):
 #? Train test split
 #===========================================================
 
+labels, labels_index = pd.factorize(df_sim.barcodeID)
 labels = tf.keras.utils.to_categorical(labels)
 
 X_train, X_test, Y_train, Y_test = train_test_split(
@@ -130,55 +92,101 @@ X_train, X_test, Y_train, Y_test = train_test_split(
     test_size=0.2, shuffle=True)
 
 #===========================================================
-#? CNN
+#? L2-constrained Softmax Loss
 #===========================================================
 
 model = tf.keras.Sequential()
 
-model.add(Conv1D(filters=32, kernel_size=32, activation="relu", padding = "same",
+model = Sequential()
+
+model.add(Conv1D(filters=32, kernel_size=32, activation="relu",
                 input_shape=(X_train.shape[1], X_train.shape[2]), name="1st_Conv1D"))
 model.add(MaxPooling1D(pool_size=4, name="1st_MaxPooling1D"))
 
-model.add(Conv1D(filters=64, kernel_size=16, padding = "same",
+model.add(Conv1D(filters=32, kernel_size=16,
                 activation="relu", name="2nd_Conv1D"))
-model.add(MaxPooling1D(pool_size=8, name="2nd_MaxPooling1D"))
+model.add(MaxPooling1D(pool_size=4, name="2nd_MaxPooling1D"))
 
-model.add(Conv1D(filters=128, kernel_size=8, padding = "same",
+model.add(Conv1D(filters=32, kernel_size=8,
                 activation="relu", name="3rd_Conv1D"))
-model.add(MaxPooling1D(pool_size=16, name="3rd_MaxPooling1D"))
+model.add(MaxPooling1D(pool_size=4, name="3rd_MaxPooling1D"))
+
+model.add(Conv1D(filters=32, kernel_size=4,
+                activation="relu", name="4th_Conv1D"))
+model.add(MaxPooling1D(pool_size=4, name="4th_MaxPooling1D"))
 
 model.add(Flatten(name="flatten"))
 
 model.add(Dense(64, activation='relu', name="1st_FC"))
 
+alpha = 0.1  # hyperparameter
+model.add(Dense(64, activation='linear',
+                activity_regularizer=regularizers.l2(alpha), name="L2-softmax"))
+
 model.add(Dense(len(labels_index), activation='softmax', name="final_layer"))
-model.compile(loss=tf.keras.losses.categorical_crossentropy,
-              optimizer=tf.keras.optimizers.Adam(),
-              metrics=['accuracy'])
-
-model.fit(X_train, Y_train,
-          epochs=15, verbose=1, batch_size = 64,
-          validation_data=(X_test, Y_test), shuffle=True)
+model.compile(optimizer='adam', loss='categorical_crossentropy',
+            metrics=['accuracy'])
 
 #===========================================================
-#? prediction
+#? Training
 #===========================================================
-from tqdm import tqdm
+
+early_stopping = EarlyStopping(monitor='val_loss', patience=5) 
+
+history = model.fit(X_train, Y_train, epochs=100, verbose=1,
+                    batch_size = 32,
+                    validation_split=0.2, shuffle=True,
+                    callbacks = [early_stopping])
+
+# evaluate = model.evaluate(X_test, Y_test, verbose=0)
+
+################################################################################
+#! Novelity (Anomaly) detection
+################################################################################
+#===========================================================
+#? L2 layer
+#===========================================================
+print("Abnormal allele detection...")
+
+model_ = Model(model.get_layer(index=0).input,
+                model.get_layer(index=-2).output)  
+
+train_vector = model_.predict(X_train, verbose=0, batch_size=32)
 
 X_real = onehot_encode_seq(df_real.seq)
 del df_real["seq"] #! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+predict_vector = model_.predict(X_real, verbose=0, batch_size=32)
 
+#===========================================================
+#? LocalOutlierFactor
+#===========================================================
+
+print("Abnormal allele detection") #? >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+clf = LocalOutlierFactor(n_neighbors=20, metric = "euclidean", contamination = "auto",
+                         leaf_size = 30, novelty=True, n_jobs = threads)
+
+clf.fit(train_vector)
+
+outliers = clf.predict(predict_vector)
+outliers = np.where(outliers==1, "normal", "abnormal") 
+
+df_real["outliers"] = outliers
+
+# df_real.groupby("barcodeID").outliers.value_counts()
+
+
+################################################################################
+#! Prediction
+################################################################################
+ 
 iter_ = 1000
 prediction = np.zeros(X_real.shape[0], dtype="uint8")
-for i in tqdm(range(0, X_real.shape[0], iter_)):
+for i in range(0, X_real.shape[0], iter_):
     predict_ = model.predict(X_real[i: i + iter_].astype("float16"),
                              verbose=0, batch_size=32)
     prediction[i:i+iter_] = np.argmax(predict_, axis=1)
 
 del X_real #! >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-    
-# prediction = model.predict(onehot_encode_seq(df_real.seq).astype(np.float16))
-# prediction = prediction.argmax(axis=1)
 
 df_real["prediction"] = prediction
 df_real["prediction"].mask(df_real["outliers"] == "abnormal", "abnormal", inplace=True)
@@ -188,7 +196,13 @@ for index,label in enumerate(labels_index):
     label=label.replace("_simulated","")
     df_real["prediction"].mask(df_real["prediction"] == index, label, inplace=True)
 
-print(df_real.groupby("barcodeID").prediction.value_counts()) #? >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+#---------------------------------------
+#* 点変異の場合、wt_ins, wt_delと判定されたリードを「abnormal」として処理する
+#---------------------------------------
+if mutation_type == "P" :
+    df_real["prediction"].mask(df_real["prediction"].str.contains("wt_"), "abnormal", inplace=True)
+    
+# df_real.groupby("barcodeID").prediction.value_counts()
 
 df_real.to_csv(
     ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt",
@@ -196,7 +210,60 @@ df_real.to_csv(
 
 
 
+# ################################################################################
+# #! Novelity (Anomaly) detection
+# ################################################################################
 
+# #===========================================================
+# #? Encording Function
+# #===========================================================
+
+# def label_encorde_seq(seq):
+#     label_seq = seq.apply(list).\
+#         apply(LabelEncoder().fit_transform).\
+#         apply(pd.Series).\
+#         to_numpy()
+#     return(label_seq)
+
+# #===========================================================
+# #? Train test split
+# #===========================================================
+
+# labels, labels_index = pd.factorize(df_sim.barcodeID)
+
+# X_train, X_test, Y_train, Y_test = train_test_split(
+#     label_encorde_seq(df_sim.seq), labels,
+#     test_size=0.2, shuffle=True)
+
+# #===========================================================
+# #? LOF
+# #===========================================================
+# print("Abnormal allele detection") #? >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# clf = LocalOutlierFactor(n_neighbors=20, leaf_size = 400, novelty=True, n_jobs = threads)
+
+# clf.fit(X_train[:10000])
+
+# outliers = clf.predict(label_encorde_seq(df_real.seq))
+# outliers = np.where(outliers==1, "normal", "abnormal") 
+# df_real["outliers"] = outliers
+
+# # df_real.groupby("barcodeID").outliers.value_counts()
+# df_real.to_csv(
+#     ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt",
+#     header=False, index=False, sep="\t")
+
+# if mutation_type == "P" :
+#     sys.exit()
+    
+    
+# # ? >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# df_real = df[df.barcodeID.str.contains("barcode23")].reset_index(drop=True)
+# prediction = model.predict(onehot_encode_seq(df_real.seq).astype(np.float16))
+# prediction = prediction.argmax(axis=1)
+# df_real["prediction"] = prediction
+# print(df_real.groupby("barcodeID").prediction.value_counts())
+# # ? >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>    
+    
 # # ====================================
 # # RandomForestClassifier
 # # ====================================
@@ -225,7 +292,6 @@ df_real.to_csv(
 # df_real.to_csv(
 #     ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt",
 #     header=False, index=False, sep="\t")
-
 
 # =============================================================
 # PCA

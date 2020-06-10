@@ -1,0 +1,7 @@
+design=DAJIN/example/design.fa
+input_dir=DAJIN/example/demultiplex
+control=barcode01
+output_dir=Cables2
+genome=mm10
+grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
+threads=6
