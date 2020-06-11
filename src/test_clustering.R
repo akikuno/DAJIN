@@ -1,33 +1,13 @@
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Install required packages
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-options(repos='https://cloud.r-project.org/')
+options(repos = "https://cloud.r-project.org/")
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
 pacman::p_load(tidyverse, dbscan)
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Import data
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# suffix <- "barcode08_normal"
-# que <- paste0(".DAJIN_temp/clustering/temp/query_score_", sprintf("%s",suffix))
-# label <- paste0(".DAJIN_temp/clustering/temp/query_labels_", sprintf("%s", suffix))
-# df_que <- read_csv(que, col_names = F, col_types = cols())
-# df_que <- t(df_que)
-# df_que[is.na(df_que)] <- 0
-# df_label <- read_csv(label, col_names = c("id", "label"), col_types = cols())
-# output_suffix <- label %>% str_remove(".*labels_")
-
-# df_score <- read_csv("tmp_score", col_names = F, col_types = cols())
-# df_weight <- read_csv("tmp_weight", col_names = F, col_types = cols())
-# df_label <- read_csv("tmp_label", col_names = c("id", "label"), col_types = cols())
-
-# dim(df_score)
-# dim(df_weight)
-# dim(df_label)
-
-# df_que <- read_csv("test_MIDS.csv", col_names = FALSE, col_types = cols())
-# df_label <- read_csv("tmp_label", col_names = c("id", "label"), col_types = cols())
-# control <- read_csv("test_control", col_names = FALSE, col_types = cols())
 
 args <- commandArgs(trailingOnly = TRUE)
 df_que <- read_csv(args[1], col_names = FALSE, col_types = cols())
@@ -36,59 +16,29 @@ control <- read_csv(args[3], col_names = FALSE, col_types = cols())
 
 output_suffix <- args[2] %>% str_remove(".*labels_")
 
-score_MIDS <- matrix(NA,4,ncol(df_que))
-rownames(score_MIDS) <- c("M","I", "D", "S")
+mids_score <- matrix(NA, 4, ncol(df_que))
+rownames(mids_score) <- c("M", "I", "D", "S")
 
-for (row in 1:4){
-    mutation = rownames(score_MIDS)[row]
-    for(col in 1:ncol(df_que)){
-        score_MIDS[row,col] <-
-            str_count(pull(df_que[,col]),pattern = mutation) %>%
+for (row in 1:4) {
+    mutation <- rownames(mids_score)[row]
+    for (col in 1 : ncol(df_que)) {
+        mids_score[row, col] <-
+            str_count(pull(df_que[, col]), pattern = mutation) %>%
             sum()
     }
 }
-score_MIDS[1,] <- 0
-score_MIDS["D",] <- score_MIDS["D",]*-1
+mids_score[1, ] <- 0
+mids_score["D", ] <- mids_score["D", ] * -1
 
-for(col in 1:ncol(df_que)){
-    res <- score_MIDS[,col]
-    df_que[,col] <- pull(df_que[,col]) %>% res[.]
+for (col in 1:ncol(df_que)) {
+    res <- mids_score[, col]
+    df_que[, col] <- pull(df_que[, col]) %>% res[.]
 }
 
-df_que[,pull(control)==2] <- 0
+df_que[, pull(control) == 2] <- 0
 df_que <- df_que[, colSums(df_que) != 0]
 
-rm(score_MIDS, control)
-
-# args <- commandArgs(trailingOnly = TRUE)
-# df_que <- read_csv(args[1], col_names = F, col_types = cols(), delim = ",")
-# df_label <- read_csv(args[2], col_names = c("id", "label"), col_types = cols())
-# output_suffix <- args[2] %>% str_remove(".*labels_")
-
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# Format input
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# df_que_new <- df_score * t(df_weight[1,])
-
-# test1 <- df_res[1:2,50:75] %>% as.matrix
-# test2 <- df_que[1:2,50:75] %>% as.matrix
-# rownames(test1) <- rownames(test2)
-# colnames(test1) <- colnames(test2)
-# identical(test1,test2)
-# test1
-# test2
-
-# df[,52] %>% table()
-
-# df_que_rm0 <- df_que[, colSums(df_que) != 0]
-
-# test1 <- df_que_rm0 %>% as.matrix
-# test2 <- df_que_rm02 %>% as.matrix
-# rownames(test1) <- rownames(test2)
-# colnames(test1) <- colnames(test2)
-# identical(test1,test2)
-# test1
-# test2
+rm(mids_score, control)
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # PCA
@@ -100,10 +50,11 @@ pca_res <- prcomp(df_que, scale. = F)
 components <- 1:10
 output_pca <- pca_res$x[, components]
 output_pca_importance <- summary(pca_res)$importance[2, components]
-for (i in components){
+for (i in components) {
     output_pca[, i] <- output_pca[, i] * output_pca_importance[i]
 }
 rm(pca_res)
+
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # HDBSCAN
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -122,7 +73,7 @@ for (i in seq_along(cl_sizes)) {
         table() %>%
         length()
 }
-# cl_nums %>% table()
+
 cl_num_opt <- cl_nums %>% table()
 
 if (length(cl_num_opt[names(cl_num_opt) != 1]) > 0) {
@@ -139,9 +90,9 @@ cl_num_opt <- which(cl_nums == cl_num_opt) %>% max()
 cl <- hdbscan(output_pca, minPts = cl_sizes[cl_num_opt])
 hdbscan_cl <- cl$cluster + 1
 
-# # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# # Extract feature nucleotide position
-# # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# Extract feature nucleotide position
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # input: df_que, hdbscan_cl
 # --------------------------------------------------
 
@@ -151,7 +102,7 @@ df_cluster <- tibble(loc = integer(), cluster = integer(), score = double())
 for (i in unique(hdbscan_cl)) {
     tmp_score <- df_que[hdbscan_cl == i, ] %>%
         colSums() %>%
-    zero_to_one()
+        zero_to_one()
 
     tmp_df <- tibble(
         loc = seq_len(ncol(df_que)),
@@ -162,9 +113,9 @@ for (i in unique(hdbscan_cl)) {
 }
 rm(df_que)
 
-# # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# # Cosine similarity to merge similar clusters
-# # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# Cosine similarity to merge similar clusters
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # input: df_cluster, hdbscan_cl
 output_cl <- hdbscan_cl
 # --------------------------------------------------
@@ -217,7 +168,7 @@ query_ <- output_cl %>%
     order() %>%
     sort()
 
-for (i in seq_along(pattern_)){
+for (i in seq_along(pattern_)) {
     output_cl[output_cl == pattern_[i]] <- query_[i]
 }
 
@@ -226,29 +177,3 @@ write_tsv(result,
     sprintf(".DAJIN_temp/clustering/temp/hdbscan_%s", output_suffix),
     col_names = F
 )
-
-
-
-# # TEST >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# hdbscan_cl %>% table()
-# pca_plot <- as_tibble(output_pca) %>%
-#     bind_cols(cluster = factor(hdbscan_cl)) %>%
-#     select(PC1, PC2, cluster)
-
-# g <- ggplot(
-#     data = pca_plot,
-#     aes(
-#         x = PC1, y = PC2,
-#         color = cluster
-#     )
-# ) +
-#     geom_point(size = 3) +
-#     theme_bw(base_size = 20) # +
-
-# ggsave(
-#     plot = g,
-#     filename = "tmp_pca1.png",
-#     width = 10, height = 8
-# )
-
-

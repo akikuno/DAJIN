@@ -16,9 +16,11 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===========================================================
 #? Auguments
 #===========================================================
-# input_fa=".DAJIN_temp/fasta_ont/barcode03.fa"
 # input_fa=".DAJIN_temp/fasta_ont/inversion_simulated_aligned_reads.fasta"
-# genotype="inversion"
+# input_fa=".DAJIN_temp/fasta_ont/barcode26.fa"
+# genotype="wt"
+# label=$(echo "${input_fa}" | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
+# suffix="${label}_${genotype}"
 
 input_fa=${1}
 genotype=${2}
@@ -83,6 +85,7 @@ mids_conv(){
 
 #===========================================================
 #? 変数の定義
+# 切断面から含むべき塩基数
 #===========================================================
 
 reference=".DAJIN_temp/fasta_conv/wt.fa"
@@ -107,7 +110,7 @@ second_flank=$(
 #===========================================================
 
 minimap2 -ax map-ont "${reference}" "${input_fa}" --cs=long 2>/dev/null |
-    awk -v ref="${ref}" '$3 == ref' |
+    awk -v ref="${ref}" -v reflen="${reflength}" '$3 == ref && length($10) < reflen * 1.1' |
     tee "${tmp_mapping}" |
     grep -v "^@" |
     # fetch sequence start and end sites
@@ -167,7 +170,7 @@ cat > "${tmp_secondary}"
 cat "${tmp_primary}" "${tmp_secondary}" |
     sort -t " " -k 2,2n |
     awk '{seq_[$1]=seq_[$1]" "$2" "$3" "$4}
-    END{for(key in seq_) print key,seq_[key]}' |
+        END{for(key in seq_) print key,seq_[key]}' |
     # grep inversion_100_aligned_7213_F_54_2709_73 |
     awk 'NF==3
     #---------------------------------------
@@ -201,15 +204,15 @@ cat "${tmp_primary}" "${tmp_secondary}" |
         print id, minloc, $3 $5 $7
     }' |
     sed "s/D*$//g" |
-    # complement seqences to match sequence length (insert "=")
+    # complement seqences to match sequence length (insert "M")
     ## start
-    awk '{start=""; for(i=1; i < $2; i++) start=start"="; print $1,$2,start""$3}' |
+    awk '{start=""; for(i=1; i < $2; i++) start=start"M"; print $1,$2,start""$3}' |
     ## end
     awk -v reflen="${reflength}" '{
         seqlen=length($3);
         end="";
         if(seqlen>reflen) {print $1,substr($3,1,reflen)}
-        else {for(i=seqlen; i < reflen; i++) end=end"="; print $1,$3""end}
+        else {for(i=seqlen; i < reflen; i++) end=end"M"; print $1,$3""end}
     }' |
     # 全てが変異になったリードがあれば除去する。
     awk '$2 !~ /^[I|D|S]+$/' |

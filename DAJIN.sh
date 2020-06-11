@@ -476,6 +476,15 @@ cat .DAJIN_temp/data/MIDS_* |
     sort -k 1,1 |
 cat > ".DAJIN_temp/data/DAJIN_MIDS.txt"
 
+
+# cat .DAJIN_temp/data/MIDS_"${ont_cont}"_wt |
+#     grep -v "DDDDDDDDDD" |
+#     grep -v "IIIIIIIIII" |
+#     grep -v "SSSSSSSSSS" |
+#     grep -v "IIIIIIIIII" |
+#     sed "s/${ont_cont}/wt_simulated/g" |
+# cat >> ".DAJIN_temp/data/DAJIN_MIDS.txt"
+
 rm .DAJIN_temp/data/MIDS_*
 
 printf "MIDS conversion was finished...\n"
@@ -486,9 +495,9 @@ printf "MIDS conversion was finished...\n"
 
 printf "Start allele type prediction...\n"
 
-python DAJIN/src/ml_abnormal_detection.py \
+python DAJIN/src/ml_l2softmax.py \
     ".DAJIN_temp"/data/DAJIN_MIDS.txt \
-    "${ont_cont}" "${mutation_type}" "${threads}"
+    "${mutation_type}" "${threads}"
 
 printf "Prediction was finished...\n"
 
@@ -496,9 +505,9 @@ printf "Prediction was finished...\n"
 #? Filter low-persentage allele
 #===========================================================
 
-# --------------------------------
-# 各サンプルに含まれるアレルの割合を出す
-# --------------------------------
+#---------------------------------------
+#* 各サンプルに含まれるアレルの割合を出す
+#---------------------------------------
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     cut -f 2,3 |
@@ -512,27 +521,19 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk '{print $1, $3/$2*100, $4}' |
 cat > ".DAJIN_temp/tmp_prediction_proportion"
 
+#---------------------------------------
+#* コントロールの異常アレルの割合を出す
+#---------------------------------------
 
-# --------------------------------
-# コントロールの異常アレルの割合を出す
-# --------------------------------
 percentage_of_abnormal_in_cont=$(
     cat ".DAJIN_temp"/tmp_prediction_proportion | 
     grep "${ont_cont:=barcode32}" | #! define "control" by automate manner
     grep abnormal |
     cut -d " " -f 2)
 
-# --------------------------------
-# Filter low-percent alleles
-# --------------------------------
-# --------------------------------
-# If the percentage of abnormal alleles in each sample is 
-# "within 3% of the percentage of abnormal alleles in the control", 
-# the abnormality is considered a false positive and removed.
-# 各サンプルの異常アレルの割合が
-# 「コントロールの異常アレルの割合＋3%以内」の場合、
-# その判定は偽陽性と判断し、取り除く
-# --------------------------------
+#---------------------------------------
+#* Filter low-percent alleles
+#---------------------------------------
 
 cat .DAJIN_temp/tmp_prediction_proportion |
     awk -v refab="${percentage_of_abnormal_in_cont}" \
@@ -562,7 +563,6 @@ rm .DAJIN_temp/tmp_*
 ################################################################################
 
 printf "Allele clustering...\n"
-
 
 #===========================================================
 #? Prepare control score
@@ -635,7 +635,7 @@ sh -
 #! Summarize to Details.csv
 ################################################################################
 
-find .DAJIN_temp/clustering/consensus/* -type f |
+find .DAJIN_temp/consensus/* -type f |
     grep html |
     sed "s:.*/::g" |
     sed "s/.html//g" |
@@ -664,18 +664,14 @@ cat .DAJIN_temp/clustering/result_allele_percentage* |
 cat > "${output_dir:-DAJIN_results}"/Details.csv
 
 mkdir -p "${output_dir:-DAJIN_results}"/Consensus/
-cp -r .DAJIN_temp/clustering/consensus/* "${output_dir:-DAJIN_results}"/Consensus/
+cp -r .DAJIN_temp/consensus/* "${output_dir:-DAJIN_results}"/Consensus/
 
 ################################################################################
 #! Generate BAM files on each cluster
 ################################################################################
 
-# output_bamdir=".DAJIN_temp/clustering/bam_clustering"
-# mkdir -p "${output_bamdir}"
-# rm "${output_dir:-DAJIN_results}"/BAM/*allele*
-
 cat .DAJIN_temp/clustering/result_allele_percentage* |
-     sed "s/_/ /" |
+    sed "s/_/ /" |
     awk '{nr[$1]++; print $0, nr[$1]}' |
 while read -r allele
 do
@@ -706,7 +702,7 @@ do
 done
 
 ################################################################################
-# Alignment viewing
+#! Alignment viewing
 ################################################################################
 
 printf "Visualizing alignment reads...\n"

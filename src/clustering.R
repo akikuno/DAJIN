@@ -1,7 +1,7 @@
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Install required packages
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-options(repos='https://cloud.r-project.org/')
+options(repos = "https://cloud.r-project.org/")
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
 pacman::p_load(tidyverse, dbscan, vroom)
 
@@ -60,7 +60,7 @@ for (i in seq_along(cl_sizes)) {
         table() %>%
         length()
 }
-# cl_nums %>% table()
+
 cl_num_opt <- cl_nums %>% table()
 
 if (length(cl_num_opt[names(cl_num_opt) != 1]) > 0) {
@@ -77,9 +77,9 @@ cl_num_opt <- which(cl_nums == cl_num_opt) %>% max()
 cl <- hdbscan(input_hdbscan, minPts = cl_sizes[cl_num_opt])
 output_hdbscan <- cl$cluster + 1
 
-# # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# # Extract feature nucleotide position
-# # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# Extract feature nucleotide position
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 input_que <- df_que_rm0
 input_cl <- output_hdbscan
 # --------------------------------------------------
@@ -101,9 +101,9 @@ for (i in unique(input_cl)) {
 }
 
 
-# # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# # Cosine similarity to merge similar clusters
-# # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# Cosine similarity to merge similar clusters
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 input_cossim <- df_cluster
 output_cl <- output_hdbscan

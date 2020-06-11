@@ -62,7 +62,7 @@ query_seq=".DAJIN_temp/clustering/temp/query_seq_${suffix}"
 #? MIDS conversion
 #===========================================================
 
-find .DAJIN_temp/fasta_ont/ -type f |
+find .DAJIN_temp/fasta/ -type f |
     grep "${barcode}" |
     xargs -I @ ./DAJIN/src/mids_convertion.sh @ "${mapping_alleletype}"
 cp ".DAJIN_temp/data/MIDS_${barcode}_${mapping_alleletype}" "${MIDS_que}"

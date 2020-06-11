@@ -57,7 +57,7 @@ seq_length=$(
 # # MIDS conversion
 # # ----------------------------------------------------------
 
-find .DAJIN_temp/fasta_ont/ -type f |
+find .DAJIN_temp/fasta/ -type f |
     grep "${barcode}" |
     xargs -I @ ./DAJIN/src/mids_convertion.sh @ "${mapping_alleletype}" "control"
 cp ".DAJIN_temp/data/MIDS_${barcode}_${mapping_alleletype}" "${MIDS_ref}"
@@ -147,9 +147,6 @@ cat "${MIDS_ref}" |
         else if(sum[4] > NF*per/100) num = 2
         else if(sum[5] > NF*per/100) num = 2
         else num=1
-        #
-        # print NR, "@", sum[1], sum[2], sum[3], sum[4], sum[5], "@", \
-        #     (sum[1]+sum[2])/NF, sum[3]/NF,sum[4]/NF,sum[5]/NF, num
         print num
     }' |
 cat > "${control_score}"
@@ -169,9 +166,8 @@ find .DAJIN_temp/fasta_conv/* |
     grep -v wt.fa |
     sed "s:.*/::g" |
     sed "s/.fa.*$//g" |
-    grep flox_deletion |
 while read -r label; do
-    minimap2 -ax map-ont .DAJIN_temp/fasta_conv/wt.fa .DAJIN_temp/fasta_conv/"${label}".fa --cs=long 2>/dev/null |
+    minimap2 -ax map-ont .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/"${label}".fa --cs=long 2>/dev/null |
     awk '$1 !~ /^@/ {print $(NF-1)}' |
     sed "s/cs:Z://g" |
     sed "s/*[acgt]//g" |
@@ -197,46 +193,5 @@ while read -r label; do
 done
 
 rm .DAJIN_temp/clustering/temp/tmp_control_score
-# find .DAJIN_temp/fasta_conv/* |
-# grep -v wt.fa |
-# sed "s:.*/::g" |
-# sed "s/.fa.*$//g" |
-# xargs -I @ \
-#     minimap2 -ax map-ont .DAJIN_temp/fasta_conv/wt.fa .DAJIN_temp/fasta_conv/@.fa --cs=long 2>/dev/null |
-#     awk '$1 !~ /^@/ {
-#         id=$1
-#         cstag=$(NF-1)
-#         gsub("cs:Z:","",cstag)
-#         gsub(/*[acgt]/,"",cstag)
-#         gsub(/[+=-]/,"",cstag)
-#         print id, cstag}' |
-#     awk -F "" '{
-#         refnr=0
-#         for(i=1; i<=NF; i++){
-#             if($i ~ /[A|C|G|T]/){$i="ref"; refnr++; print $1, $i, refnr, i}
-#             else {$i="mut"; print $1, $i, "empty", i}
-#     }}' |
-#     sort -t " " -k 2,2 |
-#     join -a 1 -1 2 -2 2 - test2 |
-#     sort -k 3,3n |
-#     awk 'NF==3{$4=1}{print $NF}' |
-#     wc -l
 
-# while read -r label; do
-#     minimap2 -ax map-ont .DAJIN_temp/fasta_conv/wt.fa .DAJIN_temp/fasta_conv/"${label}".fa --cs=long 2>/dev/null |
-#     awk '$1 !~ /^@/ {print $(NF-1)}' |
-#     sed "s/cs:Z://g" |
-#     sed "s/*[acgt]//g" |
-#     sed "s/[=+-]//g" |
-#     awk -F "" '{
-#         refnr=0
-#         for(i=1; i<=NF; i++){
-#             if($i ~ /[A|C|G|T]/){$i="ref"; refnr++; print $i, refnr, i}
-#             else {$i="mut"; print $i, "empty", i}
-#     }}' |
-#     sort -t " " -k 2,2 |
-#     join -a 1 -1 2 -2 2 - test2 |
-#     sort -k 3,3n |
-#     awk 'NF==3{$4=1}{print $NF}' |
-#     wc -l
-# done
+exit 0
