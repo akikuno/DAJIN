@@ -14,9 +14,9 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 ################################################################################
 # I/O naming
 ################################################################################
-# ----------------------------------------
-# Aurguments
-# ----------------------------------------
+#===========================================================
+#? TEST Aurguments
+#===========================================================
 # barcode="barcode02"
 # alleletype="target"
 # suffix="${barcode}"_"${alleletype}"
@@ -24,6 +24,10 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # mapping_alleletype="${alleletype}"
 # [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
 # [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
+
+#===========================================================
+#? Aurguments
+#===========================================================
 
 barcode="${1}"
 alleletype="${2}"
@@ -52,5 +56,7 @@ mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
 ################################################################################
 
 Rscript DAJIN/src/test_clustering.R "${query_score}" "${query_label}" "${control_score}"
+
+echo "Clustering ${barcode} ${alleletype} finished..."
 
 exit 0

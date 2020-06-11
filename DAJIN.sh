@@ -567,7 +567,6 @@ printf "Allele clustering...\n"
 #===========================================================
 #? Prepare control score
 #===========================================================
-
 ./DAJIN/src/clustering_prerequisit.sh "${ont_cont}" "wt"
 # wc -l .DAJIN_temp/clustering/temp/control_score_*
 
@@ -577,15 +576,6 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt |
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
 sh -
-
-# find .DAJIN_temp/clustering/temp/query_score* |
-# while read -r input; do
-# cat $input |
-#     awk -F "," '{print NF}' |
-#     sort -u |
-# xargs -I @ echo $input @
-# done
-# ls -l .DAJIN_temp/clustering/temp/query_score*
 
 #===========================================================
 #? Clustering by HDBSCAN

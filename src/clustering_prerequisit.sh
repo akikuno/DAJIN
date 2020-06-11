@@ -162,7 +162,7 @@ cat "${control_score}" |
     sort -t " " -k 2,2 |
 cat > .DAJIN_temp/clustering/temp/tmp_control_score
 
-find .DAJIN_temp/fasta_conv/* |
+find .DAJIN_temp/fasta/* |
     grep -v wt.fa |
     sed "s:.*/::g" |
     sed "s/.fa.*$//g" |
