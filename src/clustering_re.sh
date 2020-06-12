@@ -45,14 +45,13 @@ mapping_alleletype="${alleletype}"
 #===========================================================
 mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
 query_score=".DAJIN_temp/clustering/temp/query_score_${suffix}"
+query_seq=".DAJIN_temp/clustering/temp/query_seq_${suffix}"
 query_label=".DAJIN_temp/clustering/temp/query_labels_${suffix}"
 
 #===========================================================
 #? Temporal
 #===========================================================
 MIDS_que=".DAJIN_temp/clustering/temp/MIDS_${suffix}"
-query_seq=".DAJIN_temp/clustering/temp/query_seq_${suffix}"
-
 
 ################################################################################
 #! Clustering
@@ -62,13 +61,7 @@ query_seq=".DAJIN_temp/clustering/temp/query_seq_${suffix}"
 #? MIDS conversion
 #===========================================================
 
-./DAJIN/src/mids_clustering.sh "${barcode}" "${mapping_alleletype}"
-cp ".DAJIN_temp/data/MIDS_${barcode}_${mapping_alleletype}" "${MIDS_que}"
-
-# find .DAJIN_temp/fasta/ -type f |
-#     grep "${barcode}" |
-#     xargs -I @ ./DAJIN/src/mids_convertion.sh @ "${mapping_alleletype}"
-# cp ".DAJIN_temp/data/MIDS_${barcode}_${mapping_alleletype}" "${MIDS_que}"
+./DAJIN/src/mids_clustering.sh "${barcode}" "${mapping_alleletype}" > "${MIDS_que}"
 
 #===========================================================
 #? Output Sequence ID and Lable
@@ -88,15 +81,6 @@ cat > "${query_label}"
 #===========================================================
 
 #---------------------------------------
-#* Get max sequence length
-#---------------------------------------
-seq_length=$(
-    cat .DAJIN_temp/fasta/"${mapping_alleletype}".fa |
-    grep -v "^>" |
-    awk '{print length($0)}'
-)
-
-#---------------------------------------
 #* 挿入塩基を1つの挿入塩基数にまとめて配列のズレを無くす
 #---------------------------------------
 cat "${MIDS_que}" |
@@ -105,38 +89,6 @@ cat "${MIDS_que}" |
     join - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk -v atype="${alleletype}" '$NF==atype' |
     cut -d " " -f 2 |
-    awk -F "" '{
-        for(i=1; i<=NF; i++){
-            if($i=="I") num=num+1
-            if($i=="I" && $(i+1)!="I") {
-                # -----------------------------------
-                # e.g) if num=10, num becomes "a"
-                # -----------------------------------
-                if(num>=10 && num<=35) num=sprintf("%c", num+87)
-                else if(num>=36) num="z"
-                #
-                $(i+1)=num; num=0}
-            }
-        print $0}' |
-    # ----------------------------------------
-    # MIDS変換で末尾がDになった配列を=に変換する
-    # ----------------------------------------
-    sed -e "s/I//g" -e "s/ //g" |
-    sed "s/\(D*$\)/ \1/g" |
-    awk '{
-        for(i=1; i<=NF; i++) if($i~/^D*$/) gsub(/./, "=", $i)
-    }1' |
-    sed "s/ //g" |
-    # ----------------------------------------
-    # 短い配列を"="でPaddingする
-    # ----------------------------------------
-    awk -v seqnum="${seq_length}" \
-        'BEGIN{OFS=""}
-        { if(length($0) < seqnum){
-            seq="="
-            for(i=length($0)+1; i<=seqnum; i++) $i=seq
-            print $0}
-        }' |
 cat > "${query_seq}"
 
 # ----------------------------------------------------------
@@ -148,5 +100,7 @@ cat "${query_seq}" |
     sed "s/[0-9]/I/g" |
     sed "s/[a-z]/I/g" |
 cat > "${query_score}"
+
+rm "${MIDS_que}"
 
 exit 0

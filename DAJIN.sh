@@ -567,11 +567,15 @@ printf "Allele clustering...\n"
 #===========================================================
 #? Prepare control score
 #===========================================================
-./DAJIN/src/clustering_prerequisit.sh "${ont_cont}" "wt"
+# rm -rf .DAJIN_temp/clustering
+./DAJIN/src/clustering_prerequisit_re.sh "${ont_cont}" "wt"
 # wc -l .DAJIN_temp/clustering/temp/control_score_*
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt |
-    awk '{print "./DAJIN/src/clustering.sh",$1, $3, "&"}' |
+    #!--------------------------------------------------------
+    grep barcode18 | grep target |
+    #!--------------------------------------------------------
+    awk '{print "./DAJIN/src/clustering_re.sh",$1, $3, "&"}' |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
@@ -582,6 +586,9 @@ sh -
 #===========================================================
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt |
+    #!--------------------------------------------------------
+    grep -e barcode18 | grep target |
+    #!--------------------------------------------------------
     awk '{print "./DAJIN/src/clustering_hdbscan.sh",$1, $3}' |
 sh -
 
@@ -594,10 +601,9 @@ sh -
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt |
     awk '{print "./DAJIN/src/clustering_allele_percentage.sh",$1, $3, $2}' |
-    #! ---------------------------------
-    # grep -e barcode18 -e barcode23 -e barcode26 |
-    # grep -e barcode02 |
-    #! ---------------------------------
+    #!--------------------------------------------------------
+    grep barcode18 | grep target |
+    #!--------------------------------------------------------
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
@@ -614,7 +620,9 @@ printf "Report consensus sequence...\n"
 cat .DAJIN_temp/clustering/result_allele_percentage* |
     sed "s/_/ /" |
     awk '{nr[$1]++; print $0, nr[$1]}' |
-    # grep -e barcode02  | #!============== -e barcode12
+    #!--------------------------------------------------------
+    grep barcode18 | grep target |
+    #!--------------------------------------------------------
     awk '{print "./DAJIN/src/consensus.sh", $0, "&"}' |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1

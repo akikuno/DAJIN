@@ -8,10 +8,10 @@ pacman::p_load(tidyverse)
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 #! Argument
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# df_que <- read_csv(".DAJIN_temp/clustering/temp/allele_id_barcode23_target_2", col_names = FALSE, col_types = cols(.default = "c"))
+# df_que <- read_csv(".DAJIN_temp/consensus/temp/allele_id_barcode23_target_2", col_names = FALSE, col_types = cols(.default = "c"))
 # control <- read_csv(".DAJIN_temp/clustering/temp/control_score_target", col_names = FALSE, col_types = cols())
 # cluster <- 1
-# suffix <- ".DAJIN_temp/clustering/temp/allele_id_barcode23_target_2" %>% str_remove(".*allele_id_")
+# suffix <- ".DAJIN_temp/consensus/temp/allele_id_barcode23_target_2" %>% str_remove(".*allele_id_")
 
 args <- commandArgs(trailingOnly = TRUE)
 df_que <- read_csv(args[1], col_names = FALSE, col_types = cols(.default = "c"))

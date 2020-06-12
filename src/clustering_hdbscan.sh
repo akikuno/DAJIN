@@ -57,6 +57,6 @@ mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
 
 Rscript DAJIN/src/test_clustering.R "${query_score}" "${query_label}" "${control_score}"
 
-echo "Clustering ${barcode} ${alleletype} finished..."
+echo "Clustering ${barcode} ${alleletype} was finished..."
 
 exit 0
