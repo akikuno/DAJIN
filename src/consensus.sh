@@ -17,11 +17,11 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===========================================================
 #? Auguments
 # ===========================================================
-# barcode="barcode23"
+# barcode="barcode18"
 # alleletype="target"
 # cluster=1
-# percentage=36
-# alleleid=2
+# percentage=22
+# alleleid=1
 # in_suffix="${barcode}"_"${alleletype}"
 # out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
 # mapping_alleletype="${alleletype}"
@@ -222,7 +222,7 @@ cat .DAJIN_temp/fasta/${mapping_alleletype}.fa |
                 $(site_[i]) = $site_[i]""nuc_[i]
                 }
             else if(type_[i] == "D"){
-                $(site_[i]) = nuc_[i]
+                $(site_[i]) = ""
                 }
         }}1' |
     sed -e "s/ //g" -e "s/_/ /g"|

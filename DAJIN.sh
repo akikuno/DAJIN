@@ -640,14 +640,14 @@ find .DAJIN_temp/consensus/* -type f |
     sed "s/_/ /g" |
     awk '{print $1"_"$2,$3,$4}' |
     sort |
-cat > tmp
+cat > .DAJIN_temp/tmp_nameid
 
 cat .DAJIN_temp/clustering/result_allele_percentage* |
     sed "s/_/ /" |
     awk '{nr[$1]++; print $0, nr[$1]}' |
     awk '{print $1"_allele"$5, $4, $2}' |
     sort |
-    join -a 1 - tmp |
+    join -a 1 - .DAJIN_temp/tmp_nameid |
     sed "s/_/ /" |
     awk '$4=="abnormal" {$5="mutation"}1' |
     awk 'BEGIN{OFS=","}
@@ -660,6 +660,8 @@ cat .DAJIN_temp/clustering/result_allele_percentage* |
         }1' |
     sed -e "1i Sample, Allele ID, % of reads, Allele type, indel, large indel" |
 cat > "${output_dir:-DAJIN_results}"/Details.csv
+
+rm .DAJIN_temp/tmp_nameid
 
 mkdir -p "${output_dir:-DAJIN_results}"/Consensus/
 cp -r .DAJIN_temp/consensus/* "${output_dir:-DAJIN_results}"/Consensus/
