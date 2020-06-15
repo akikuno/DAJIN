@@ -85,8 +85,8 @@ Rscript DAJIN/src/consensus.R "${tmp_allele_id}" "${control_score}" "${cluster}"
 #? クラスタ番号、塩基番号、変異の種類、Insertion数の4つをレポートする
 #===========================================================
 
-if [ -s ".DAJIN_temp/clustering/temp/mutation_${out_suffix}" ]; then
-cat ".DAJIN_temp/clustering/temp/mutation_${out_suffix}" |
+if [ -s ".DAJIN_temp/consensus/temp/mutation_${out_suffix}" ]; then
+cat ".DAJIN_temp/consensus/temp/mutation_${out_suffix}" |
     sed "s/^/${cluster} /g" |
     # ----------------------------------------------------------
     # 挿入塩基数が10以上の場合に数値情報に逆変換する
@@ -134,13 +134,13 @@ cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
         ".DAJIN_temp/fasta/${mapping_alleletype}.fa" - \
         --cs=long 2>/dev/null |
     sort |
-cat > .DAJIN_temp/clustering/temp/tmp_sam_"${out_suffix}"
+cat > .DAJIN_temp/consensus/temp/tmp_sam_"${out_suffix}"
 
 cat "${allele_id}" |
     awk -v cl="${cluster}" '$2==cl' |
     cut -f 1 |
     sort -u |
-    join .DAJIN_temp/clustering/temp/tmp_sam_"${out_suffix}" - |
+    join .DAJIN_temp/consensus/temp/tmp_sam_"${out_suffix}" - |
     awk '$2==0 || $2==16' |
     awk '{print $4, $(NF-1)}' |
     sed "s/cs:Z://g" |
@@ -195,7 +195,6 @@ fi
 ################################################################################
 #! コンセンサス配列の作製
 ################################################################################
-mkdir -p .DAJIN_temp/consensus
 
 mutation_type=$(cut -d " " -f 1 "${mutation_info}" | xargs echo)
 mutation_site=$(cut -d " " -f 2 "${mutation_info}" | xargs echo)
@@ -226,7 +225,7 @@ cat .DAJIN_temp/fasta/${mapping_alleletype}.fa |
                 }
         }}1' |
     sed -e "s/ //g" -e "s/_/ /g"|
-cat > .DAJIN_temp/clustering/temp/"${out_suffix}"
+cat > .DAJIN_temp/consensus/temp/"${out_suffix}"
 
 #===========================================================
 #? 変異情報をもとにOutput file nameをフォーマットする
@@ -237,14 +236,14 @@ output_filename="${barcode}_allele${alleleid}"
 diff_wt=$(
     cat .DAJIN_temp/fasta/wt.fa |
         sed 1d |
-        diff - .DAJIN_temp/clustering/temp/${out_suffix} |
+        diff - .DAJIN_temp/consensus/temp/${out_suffix} |
     wc -l
     )
 
 diff_target=$(
     cat .DAJIN_temp/fasta/target.fa |
         sed 1d |
-        diff - .DAJIN_temp/clustering/temp/${out_suffix} |
+        diff - .DAJIN_temp/consensus/temp/${out_suffix} |
     wc -l
     )
 
@@ -258,7 +257,7 @@ else
     output_filename="${output_filename}_mutation_${alleletype}"
 fi
 
-cat .DAJIN_temp/clustering/temp/"${out_suffix}" |
+cat .DAJIN_temp/consensus/temp/"${out_suffix}" |
     fold |
     sed -e "1i >${output_filename}_${percentage}%" |
 cat > .DAJIN_temp/consensus/"${output_filename}".fa
@@ -289,7 +288,7 @@ cat ".DAJIN_temp/fasta/${mapping_alleletype}.fa" |
         }}1' |
     sed -e "s/ //g" -e "s/_/ /g"|
     sed -e "1i >${output_filename}_${percentage}%" |
-cat > .DAJIN_temp/clustering/temp/tmp_html_"${out_suffix}".html
+cat > .DAJIN_temp/consensus/temp/tmp_html_"${out_suffix}".html
 
 cat << EOF > .DAJIN_temp/consensus/"${output_filename}".html
 <!DOCTYPE html>
@@ -327,7 +326,7 @@ p {
 <p>
 EOF
 
-cat .DAJIN_temp/clustering/temp/tmp_html_"${out_suffix}".html |
+cat .DAJIN_temp/consensus/temp/tmp_html_"${out_suffix}".html |
 cat >> .DAJIN_temp/consensus/"${output_filename}".html
 
 cat << EOF >> .DAJIN_temp/consensus/"${output_filename}".html

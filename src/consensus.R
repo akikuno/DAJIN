@@ -37,5 +37,5 @@ df_mut <- tibble(loc = which(df_que != "M"),
 df_mut$insnum[str_detect(df_mut$insnum, pattern = "S|D")] <- 0
 df_mut$mut[!str_detect(df_mut$mut, pattern = "S|D")] <- "I"
 
-write_delim(df_mut, sprintf(".DAJIN_temp/clustering/temp/mutation_%s", suffix),
+write_delim(df_mut, sprintf(".DAJIN_temp/consensus/temp/mutation_%s", suffix),
     delim=" ", col_names = FALSE)

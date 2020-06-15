@@ -573,7 +573,7 @@ printf "Allele clustering...\n"
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt |
     #!--------------------------------------------------------
-    grep barcode18 | grep target |
+    # grep barcode18 | grep target |
     #!--------------------------------------------------------
     awk '{print "./DAJIN/src/clustering_re.sh",$1, $3, "&"}' |
     awk -v th=${threads:-1} '{
@@ -587,7 +587,7 @@ sh -
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt |
     #!--------------------------------------------------------
-    grep -e barcode18 | grep target |
+    # grep -e barcode18 | grep target |
     #!--------------------------------------------------------
     awk '{print "./DAJIN/src/clustering_hdbscan.sh",$1, $3}' |
 sh -
@@ -602,7 +602,7 @@ sh -
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt |
     awk '{print "./DAJIN/src/clustering_allele_percentage.sh",$1, $3, $2}' |
     #!--------------------------------------------------------
-    grep barcode18 | grep target |
+    # grep barcode18 | grep target |
     #!--------------------------------------------------------
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
@@ -621,7 +621,7 @@ cat .DAJIN_temp/clustering/result_allele_percentage* |
     sed "s/_/ /" |
     awk '{nr[$1]++; print $0, nr[$1]}' |
     #!--------------------------------------------------------
-    grep barcode18 | grep target |
+    # grep barcode18 | grep target |
     #!--------------------------------------------------------
     awk '{print "./DAJIN/src/consensus.sh", $0, "&"}' |
     awk -v th=${threads:-1} '{
@@ -696,6 +696,7 @@ do
             NR==FNR{a[$1];next}
             $1 in a' \
             ".DAJIN_temp/clustering/temp/tmp_id_$$" - |
+        head -n 22 |
         samtools sort -@ "${threads:-1}" 2>/dev/null |
     cat > "${output_dir:-DAJIN_results}"/BAM/"${output_bam}".bam
     samtools index "${output_dir:-DAJIN_results}"/BAM/"${output_bam}".bam
