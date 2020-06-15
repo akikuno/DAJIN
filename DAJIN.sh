@@ -629,6 +629,9 @@ cat .DAJIN_temp/clustering/result_allele_percentage* |
         END{print "wait"}' |
 sh -
 
+mkdir -p "${output_dir:-DAJIN_results}"/Consensus/
+cp -r .DAJIN_temp/consensus/* "${output_dir:-DAJIN_results}"/Consensus/
+
 ################################################################################
 #! Summarize to Details.csv
 ################################################################################
@@ -663,8 +666,6 @@ cat > "${output_dir:-DAJIN_results}"/Details.csv
 
 rm .DAJIN_temp/tmp_nameid
 
-mkdir -p "${output_dir:-DAJIN_results}"/Consensus/
-cp -r .DAJIN_temp/consensus/* "${output_dir:-DAJIN_results}"/Consensus/
 
 ################################################################################
 #! Generate BAM files on each cluster

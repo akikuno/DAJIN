@@ -125,12 +125,16 @@ model.compile(optimizer='adam', loss='categorical_crossentropy',
 #? Training
 #===========================================================
 
-early_stopping = EarlyStopping(monitor='val_loss', patience=5) 
+# early_stopping = EarlyStopping(monitor='val_loss', patience=5) 
+
+# history = model.fit(X_train, Y_train, epochs=20, verbose=1,
+#                     batch_size = 64,
+#                     validation_split=0.2, shuffle=True,
+#                     callbacks = [early_stopping])
 
 history = model.fit(X_train, Y_train, epochs=20, verbose=1,
-                    batch_size = 64,
-                    validation_split=0.2, shuffle=True,
-                    callbacks = [early_stopping])
+                    batch_size=32,
+                    validation_split=0.2, shuffle=True)
 
 ################################################################################
 #! Novelity (Anomaly) detection
@@ -156,8 +160,8 @@ predict_vector = model_.predict(X_real, verbose=0, batch_size=32)
 #? LocalOutlierFactor
 #===========================================================
 
-clf = LocalOutlierFactor(n_neighbors=20, metric = "euclidean", contamination = "auto",
-                         leaf_size = 30, novelty=True, n_jobs = threads)
+clf = LocalOutlierFactor(n_neighbors=20, metric="euclidean", contamination="auto",
+                         leaf_size=30, novelty=True, n_jobs=threads)
 
 clf.fit(train_vector)
 
