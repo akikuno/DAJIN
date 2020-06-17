@@ -1,17 +1,17 @@
 #!/bin/sh
 
 ################################################################################
-# Initialize shell environment
+#! Initialize shell environment
 ################################################################################
 
-set -eu
+set -u
 umask 0022
 export LC_ALL=C
 type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 ################################################################################
-# Define the functions for printing usage and error message
+#! Define the functions for printing usage and error message
 ################################################################################
 VERSION=1.0
 
@@ -53,7 +53,7 @@ error_exit() {
 }
 
 ################################################################################
-# Parse arguments
+#! Parse arguments
 ################################################################################
 [ $# -eq 0 ] && usage_and_exit
 
@@ -95,7 +95,7 @@ then
 fi
 
 #===========================================================
-# Check fasta file
+#? Check fasta file
 #===========================================================
 
 if ! [ -e "$design" ]; then
@@ -107,8 +107,9 @@ if [ "$(grep -c '>target' ${design})" -eq 0 ] || [ "$(grep -c '>wt' ${design})" 
 fi
 
 #===========================================================
-# Check directory
+#? Check directory
 #===========================================================
+
 if ! [ -d "${ont_dir}" ]; then
     error_exit "$ont_dir: No such directory"
 fi
@@ -117,7 +118,7 @@ if [ -z "$(ls $ont_dir)" ]; then
 fi
 
 #===========================================================
-# Check control
+#? Check control
 #===========================================================
 
 if [ -z "$(find ${ont_dir}/ -name ${ont_cont}.f*)" ]; then
@@ -125,7 +126,7 @@ if [ -z "$(find ${ont_dir}/ -name ${ont_cont}.f*)" ]; then
 fi
 
 #===========================================================
-# Check genome
+#? Check genome
 #===========================================================
 
 genome_check=$(
@@ -138,11 +139,11 @@ if [ "$genome_check" -eq 0 ]; then
 fi
 
 #===========================================================
-# Check grna
+#? Check grna
 #===========================================================
 
 #===========================================================
-# Check output directory name
+#? Check output directory name
 #===========================================================
 if [ $(echo "$output_dir" | grep  -c -e '\\' -e ':' -e '*' -e '?' -e '"' -e '<' -e '>' -e '|') -eq 1 ]; then
     error_exit "$output_dir: invalid directory name"
@@ -150,7 +151,7 @@ fi
 mkdir -p "${output_dir:=DAJIN_results}"/BAM "${output_dir}"/Consensus
 
 #===========================================================
-# Define threads
+#? Define threads
 #===========================================================
 
 expr "$threads" + 1 >/dev/null 2>&1
@@ -169,26 +170,20 @@ else
 fi
 
 #===========================================================
-# Required software
+#? Required software
 #===========================================================
 
-type python 1>/dev/null 2>/dev/null
-if [ "$?" -gt 0 ]; then error_exit 'Command "python" not found'; return 1; fi
+type gzip > /dev/null 2>&1 || error_exit 'Command "gzip" not found'
+type wget > /dev/null 2>&1 || error_exit 'Command "wget" not found'
+type python > /dev/null 2>&1 || error_exit 'Command "python" not found'
+type samtools > /dev/null 2>&1 || error_exit 'Command "samtools" not found'
+type minimap2 > /dev/null 2>&1 || error_exit 'Command "minimap2" not found'
 
-type samtools 1>/dev/null 2>/dev/null
-if [ "$?" -gt 0 ]; then error_exit 'Command "samtools" not found'; return 1; fi
-
-type minimap2 1>/dev/null 2>/dev/null
-if [ "$?" -gt 0 ]; then error_exit 'Command "minimap2" not found'; return 1; fi
-
-type gzip 1>/dev/null 2>/dev/null
-if [ "$?" -gt 0 ]; then error_exit 'Command "gzip" not found'; return 1; fi
-
-python -c "import tensorflow as tf" 1>/dev/null 2>/dev/null
-if [ "$?" -gt 0 ]; then error_exit '"Tensorflow" not found'; return 1; fi
+python -c "import tensorflow as tf" > /dev/null 2>&1 ||
+error_exit '"Tensorflow" not found'
 
 #===========================================================
-# For WSL (Windows Subsystem for Linux)
+#? For WSL (Windows Subsystem for Linux)
 #===========================================================
 
 uname -a | 
@@ -196,11 +191,11 @@ grep Microsoft 1>/dev/null 2>/dev/null &&
 alias python="python.exe"
 
 ################################################################################
-# Formatting environments
+#! Formatting environments
 ################################################################################
 
 #===========================================================
-# Make temporal directory
+#? Make temporal directory
 #===========================================================
 rm -rf ".DAJIN_temp" 2>/dev/null || true
 dirs="fasta fasta_conv fasta_ont NanoSim bam igvjs data clustering/temp seqlogo/temp"
@@ -211,7 +206,7 @@ echo "${dirs}" |
 xargs mkdir -p
 
 #===========================================================
-# Format FASTA file
+#? Format FASTA file
 #===========================================================
 
 cat "${design}" |
@@ -258,7 +253,7 @@ convert_revcomp=$(
 
 if [ "$convert_revcomp" -eq 1 ] ; then
     cat "${design_LF}" |
-    ./DAJIN/src/revcomp.sh - |
+        ./DAJIN/src/revcomp.sh - |
     cat > .DAJIN_temp/fasta/fasta_revcomp.fa
     design_LF=".DAJIN_temp/fasta/fasta_revcomp.fa"
 fi
@@ -278,7 +273,7 @@ cat ${design_LF} |
     }'
 
 #---------------------------------------
-# 変異のタイプ（Deletion, knock-In, or Point-mutation）を判定する
+#* 変異のタイプ（Deletion, knock-In, or Point-mutation）を判定する
 #---------------------------------------
 mutation_type=$(
     minimap2 -ax map-ont \
@@ -289,14 +284,14 @@ mutation_type=$(
     awk '{
         cstag=$(NF-1)
         if(cstag ~ "-") print "D"
-        else if(cstag ~ "+") print "I"
-        else if(cstag ~ "*") print "P"
+        else if(cstag ~ "\+") print "I"
+        else if(cstag ~ "\*") print "P"
         }'
 )
 
 #---------------------------------------
-# Targetが一塩基変異の場合: 
-# Cas9の切断部に対してgRNA部自体の欠損およびgRNA長分の塩基挿入したものを異常アレルとして作成する
+#* Targetが一塩基変異の場合: 
+#* Cas9の切断部に対してgRNA部自体の欠損およびgRNA長分の塩基挿入したものを異常アレルとして作成する
 #---------------------------------------
 
 if [ "$mutation_type" = "P" ]; then
@@ -328,7 +323,7 @@ if [ "$mutation_type" = "P" ]; then
 fi
 
 #---------------------------------------
-# Format ONT reads into FASTA file
+#* Format ONT reads into FASTA file
 #---------------------------------------
 
 for input in ${ont_dir}/* ; do
@@ -344,17 +339,18 @@ for input in ${ont_dir}/* ; do
         cat "${input}"
     fi |
     awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' |
+    sed "s/^@/>/g" |
     cat > "${output}"
 done
 
 ################################################################################
-# NanoSim (v2.5.0)
+#! NanoSim (v2.5.0)
 ################################################################################
-
-printf "
-+++++++++++++++++++++
-NanoSim simulation starts
-+++++++++++++++++++++\n"
+cat << EOF
+++++++++++++++++++++++++++++++++++++++++++
+NanoSim read simulation
+++++++++++++++++++++++++++++++++++++++++++
+EOF
 
 printf "Read analysis...\n"
 ./DAJIN/utils/NanoSim/src/read_analysis.py genome \
@@ -362,6 +358,8 @@ printf "Read analysis...\n"
     -rg .DAJIN_temp/fasta_conv/wt.fa \
     -t ${threads:-1} \
     -o .DAJIN_temp/NanoSim/training
+
+exit 0 #!---------------------------------------
 
 wt_seqlen=$(awk '!/[>|@]/ {print length($0)}' .DAJIN_temp/fasta/wt.fa)
 
@@ -400,13 +398,14 @@ rm -rf DAJIN/utils/NanoSim/src/__pycache__
 printf 'Success!!\nSimulation is finished\n'
 
 ################################################################################
-# Mapping by minimap2 for IGV visualization
+#! Mapping by minimap2 for IGV visualization
 ################################################################################
 
-printf \
-"+++++++++++++++++++++
+cat << EOF
+++++++++++++++++++++++++++++++++++++++++++
 Generate BAM files
-+++++++++++++++++++++\n"
+++++++++++++++++++++++++++++++++++++++++++"
+EOF
 
 if [ "$mutation_type" = "P" ]; then
     mv .DAJIN_temp/fasta_ont/wt_ins* .DAJIN_temp/
@@ -427,10 +426,13 @@ printf "BAM files are saved at bam\n"
 printf "Next converting BAM to MIDS format...\n"
 
 ################################################################################
-# MIDS conversion
+#! MIDS conversion
 ################################################################################
-
-printf "Converting ACGT into MIDS format...\n"
+cat << EOF
+++++++++++++++++++++++++++++++++++++++++++
+Converting ACGT into MIDS format
+++++++++++++++++++++++++++++++++++++++++++"
+EOF
 
 reference=".DAJIN_temp/fasta_conv/wt.fa"
 query=".DAJIN_temp/fasta_conv/target.fa"
@@ -492,8 +494,11 @@ printf "MIDS conversion was finished...\n"
 ################################################################################
 #! Prediction
 ################################################################################
-
-printf "Start allele type prediction...\n"
+cat << EOF
+++++++++++++++++++++++++++++++++++++++++++
+Allele prediction
+++++++++++++++++++++++++++++++++++++++++++"
+EOF
 
 python DAJIN/src/ml_l2softmax.py \
     ".DAJIN_temp"/data/DAJIN_MIDS.txt \
@@ -561,8 +566,11 @@ rm .DAJIN_temp/tmp_*
 ################################################################################
 #! Clustering
 ################################################################################
-
-printf "Allele clustering...\n"
+cat << EOF
+++++++++++++++++++++++++++++++++++++++++++
+Allele clustering
+++++++++++++++++++++++++++++++++++++++++++"
+EOF
 
 #===========================================================
 #? Prepare control score
@@ -614,8 +622,11 @@ ls -l .DAJIN_temp/clustering/result_allele_percentage_*
 ################################################################################
 #! Get consensus sequence in each cluster
 ################################################################################
-
-printf "Report consensus sequence...\n"
+cat << EOF
+++++++++++++++++++++++++++++++++++++++++++
+"Report consensus sequence
+++++++++++++++++++++++++++++++++++++++++++"
+EOF
 
 cat .DAJIN_temp/clustering/result_allele_percentage* |
     sed "s/_/ /" |

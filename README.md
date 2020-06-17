@@ -13,28 +13,28 @@ A simple, rapid, scalable whole-allelic profile of genome editing aminals using 
 ## Linux
 The latest [Anaconda](https://docs.anaconda.com/anaconda/install/) or [Miniconda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) installation is highly recommended.  
 
-### 1. Setup channels to add [Bioconda](https://bioconda.github.io/user/install.html#set-up-channels)
+### 1. Setup channels and Install required packages
+
 ```
-conda config --add channels defaults
-conda config --add channels bioconda
-conda config --add channels conda-forge
+conda config --add channels defaults &&
+conda config --add channels bioconda &&
+conda config --add channels conda-forge &&
+conda update -y -n base conda &&
+conda create -y -n DAJIN python=3.6 \
+  anaconda git nodejs \
+  tensorflow tensorflow-gpu joblib \
+  nanosim samtools minimap2 \
+  r-essentials r-base
 ```
-### 2. Install required packages
-```
-conda update -y -n base conda
-conda create -y -n DAJIN python=3.6 anaconda git \
-  tensorflow-gpu keras keras-radam tqdm hdbscan nodejs pdf2svg \
-  nanosim samtools htslib fasta3 clustalo weblogo
-```
-### 3. Activate the environment
+### 2. Activate the environment
 ```
 conda activate DAJIN
 ```
-### 4. Clone this repository
+### 3. Clone DAJIN repository
 ```
 git clone https://github.com/akikuno/DAJIN.git
 ```
-You need only `3. Activate the environment` from the second time on.
+You need only `2. Activate the environment` from the second time on.
 
 ---
 ## Windows10
@@ -48,34 +48,31 @@ You can use DAJIN with CPU whereas long computational time.
 
 # Usuage
 ```
-allele_profiler.sh \
-  -i <FASTA file> (required) \
-  -ont_dir <directory> (required)  \
-  -ont_ref <FASTA|FASTQ file> (required) \
-  -genome <reference genome name> (required) \
-  -o <string> (optional) \
-  -t <integer> (optional)
+Usage     : DAJIN.sh -f [text file] (described at "Input")
 
-Options :   
--i            Multi-FASTA file. It must include ">target" and ">wt"
--ont_dir      Directory containing ONT demultiplexed reads 
--ont_ref      Reference (= wild-type) reads from ONT MinION
--genome       Reference genome name (e.g. hg38, mm10)
-              See https://gggenome.dbcls.jp/en/help.html#db_list 
--o            Output file name (default = sequence_MIDS)
--t            Number of threads to NanoSim and BAM compression
-              (default =  half of total available thread in CPU)
--h            show the help message
+Input     : Input file should be formatted as below:
+            --------------------------------
+            design=DAJIN/example/design.txt
+            input_dir=DAJIN/example/demultiplex
+            control=barcode01
+            output_dir=Cables2
+            genome=mm10
+            grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
+            threads=10
+            --------------------------------
+            - desing: a multi-FASTA file contains sequences of each genotype. ">wt" and ">target" must be included. 
+            - input_dir: a directory contains FASTA or FASTQ files of long-read sequencing
+            - control: control barcode ID
+            - output_dir: output directory name. optional. default is DAJIN_results
+            - genome: reference genome. e.g. mm10, hg38
+            - grna: gRNA sequence(s). multiple gRNA sequences must be deliminated by comma.
+            - threads: optional. default is two-thirds of available CPU threads.
 ```
 
 # Example
 
 ```
-./DAJIN/allele_profiler.sh \
-  -i DAJIN/example/cables2_flox.fa \
-  -ont DAJIN/example/demultiplex \
-  -ont_ref DAJIN/example/demultiplex/barcode01.fq.gz \
-  -genome mm10
+./DAJIN/DAJIN.sh -f DAJIN/example/example.txt
 ```
 
 # Output
