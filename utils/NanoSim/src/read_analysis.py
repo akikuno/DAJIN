@@ -17,8 +17,8 @@ import re
 import argparse
 import numpy
 from sklearn.neighbors import KernelDensity
-# from sklearn.externals import joblib
-import joblib
+from sklearn.externals import joblib
+# import joblib
 import head_align_tail_dist as align
 import get_besthit_maf
 import get_primary_sam

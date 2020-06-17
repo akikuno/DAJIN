@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 ################################################################################
 #! Initialize shell environment
@@ -351,15 +351,30 @@ cat << EOF
 NanoSim read simulation
 ++++++++++++++++++++++++++++++++++++++++++
 EOF
-
+#===========================================================
+#? Setting Conda environment
+#===========================================================
+set +eu
+CONDA_BASE=$(conda info --base)
+source "${CONDA_BASE}/etc/profile.d/conda.sh"
+if [ "$(conda info -e | grep -c DAJIN_nanosim)" -eq 0 ]; then
+    conda config --add channels defaults
+    conda config --add channels bioconda
+    conda config --add channels conda-forge
+    conda create -y -n DAJIN_nanosim python=3.6
+    conda install -y -n DAJIN_nanosim --file ./DAJIN/utils/NanoSim/requirements.txt
+    conda install -y -n DAJIN_nanosim minimap2
+fi
+conda activate DAJIN_nanosim
+#===========================================================
+#? NanoSim
+#===========================================================
 printf "Read analysis...\n"
 ./DAJIN/utils/NanoSim/src/read_analysis.py genome \
     -i ".DAJIN_temp/fasta_ont/${ont_cont}.fa" \
     -rg .DAJIN_temp/fasta_conv/wt.fa \
     -t ${threads:-1} \
     -o .DAJIN_temp/NanoSim/training
-
-exit 0 #!---------------------------------------
 
 wt_seqlen=$(awk '!/[>|@]/ {print length($0)}' .DAJIN_temp/fasta/wt.fa)
 
@@ -394,6 +409,9 @@ for input in .DAJIN_temp/fasta_conv/*; do
 done
 
 rm -rf DAJIN/utils/NanoSim/src/__pycache__
+
+conda activate DAJIN
+set -u
 
 printf 'Success!!\nSimulation is finished\n'
 
