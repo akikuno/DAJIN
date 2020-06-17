@@ -22,8 +22,8 @@ conda config --add channels conda-forge &&
 conda update -y -n base conda &&
 conda create -y -n DAJIN python=3.6 \
   anaconda git nodejs \
-  tensorflow tensorflow-gpu joblib \
-  nanosim samtools minimap2 \
+  tensorflow tensorflow-gpu \
+  samtools minimap2 \
   r-essentials r-base
 ```
 ### 2. Activate the environment
