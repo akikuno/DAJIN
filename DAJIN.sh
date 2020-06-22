@@ -325,7 +325,7 @@ mutation_type=$(
         if(cstag ~ "-") print "D"
         else if(cstag ~ "\+") print "I"
         else if(cstag ~ "\*") print "P"
-        }'
+        }' 2>/dev/null
 )
 
 #---------------------------------------
@@ -440,7 +440,6 @@ rm -rf DAJIN/utils/NanoSim/src/__pycache__
 
 printf 'Success!!\nSimulation is finished\n'
 
-
 ################################################################################
 #! Mapping by minimap2 for IGV visualization
 ################################################################################
@@ -503,13 +502,6 @@ sh - 2>/dev/null
 
 [ "_${mutation_type}" = "_P" ] && rm .DAJIN_temp/data/MIDS_target*
 
-# : > ".DAJIN_temp/data/DAJIN_MIDS.txt"
-# for i in .DAJIN_temp/data/MIDS_*; do
-#     head -n 2000 $i |
-#     sed -e "s/_aligned_reads//g" |
-#     cat >> ".DAJIN_temp/data/DAJIN_MIDS.txt"
-# done
-
 cat .DAJIN_temp/data/MIDS_* |
     sed -e "s/_aligned_reads//g" |
     sort -k 1,1 |
@@ -519,6 +511,32 @@ rm .DAJIN_temp/data/MIDS_*
 
 printf "MIDS conversion was finished...\n"
 
+
+cat ".DAJIN_temp/data/DAJIN_MIDS.txt" |
+    grep "_sim" |
+cat > ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
+
+cat ".DAJIN_temp/data/DAJIN_MIDS.txt" |
+    grep -v "_sim" |
+cat > ".DAJIN_temp/data/DAJIN_MIDS_real.txt"
+
+python ./DAJIN/src/ml_simulated.py \
+    ".DAJIN_temp/data/DAJIN_MIDS_sim.txt" \
+    "${mutation_type}" "${threads}"
+
+
+mkdir -p .DAJIN_temp/data/split
+split -l 10000 ".DAJIN_temp/data/DAJIN_MIDS_real.txt" .DAJIN_temp/data/split/DAJIN_MIDS_
+
+find .DAJIN_temp/data/split/DAJIN_MIDS_* |
+head -n 2 |
+while read -r input; do
+    python ./DAJIN/src/ml_real.py \
+        "${input}" \
+        "${mutation_type}" "${threads}"
+    #
+    wc -l ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
+done
 
 ################################################################################
 #! Prediction

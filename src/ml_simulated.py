@@ -6,8 +6,8 @@ os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
 import sys
 import numpy as np
 import pandas as pd
-import swifter
-import dask.dataframe as dd
+
+import pickle
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, LabelBinarizer
@@ -27,9 +27,9 @@ from tensorflow.keras.models import Model
 # ? TEST auguments
 # ===========================================================
 
-# file_name = ".DAJIN_temp/data/DAJIN_MIDS.txt"
-# mutation_type = "P"
-# threads = 65
+file_name = ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
+mutation_type = "P"
+threads = 65
 
 # ===========================================================
 # ? Auguments
@@ -50,16 +50,10 @@ if threads == "":
 # ? Input
 # ===========================================================
 
-# df = pd.read_csv(file_name, header=None, sep="\t")
-df = dd.read_csv(file_name, header=None, sep="\t")
-# df = dd.from_pandas(pd.read_csv(file_name, header=None, sep="\t"), npartitions=threads)
-df.columns = ["seqID", "seq", "barcodeID"]
-df.seq = "MIDS=" + df.seq
+df_sim = pd.read_csv(file_name, header=None, sep="\t")
+df_sim.columns = ["seqID", "seq", "barcodeID"]
+df_sim.seq = "MIDS=" + df_sim.seq
 
-df_sim = df[df.barcodeID.str.contains("simulated")].reset_index(drop=True)
-df_real = df[~df.barcodeID.str.contains("simulated")].reset_index(drop=True)
-
-del df  # <<<
 
 ################################################################################
 #! Training model
@@ -84,15 +78,6 @@ def onehot_encode_seq(seq):
     return onehot_seq
 
 
-# from sklearn.preprocessing import OneHotEncoder
-# def one_hot_encoder(my_array):
-#     integer_encoded = label_encoder.transform(my_array)
-#     onehot_encoder = OneHotEncoder(sparse=False, dtype=int, n_values=5)
-#     integer_encoded = integer_encoded.reshape(len(integer_encoded), 1)
-#     onehot_encoded = onehot_encoder.fit_transform(integer_encoded)
-#     onehot_encoded = np.delete(onehot_encoded, -1, 1)
-#     return onehot_encoded
-
 # ===========================================================
 # ? Train test split
 # ===========================================================
@@ -101,7 +86,7 @@ labels, labels_index = pd.factorize(df_sim.barcodeID)
 labels = tf.keras.utils.to_categorical(labels)
 
 X_train, X_test, Y_train, Y_test = train_test_split(
-    onehot_encode_seq(df_sim.seq.compute()), labels, test_size=0.2, shuffle=True
+    onehot_encode_seq(df_sim.seq), labels, test_size=0.2, shuffle=True
 )
 
 del X_test
@@ -163,15 +148,8 @@ model.fit(
 # ===========================================================
 print("Abnormal allele detection...")  # >>>
 
-X_real = onehot_encode_seq(df_real.seq.compute())
-
-del df_real["seq"]  # <<<
-
 model_ = Model(model.get_layer(index=0).input, model.get_layer(index=-2).output)
-# model_.summary()
-
 train_vector = model_.predict(X_train, verbose=0, batch_size=32)
-predict_vector = model_.predict(X_real, verbose=0, batch_size=32)
 
 del X_train  # <<<
 
@@ -190,55 +168,12 @@ clf = LocalOutlierFactor(
 
 clf.fit(train_vector)
 
-outliers = clf.predict(predict_vector)
-outliers = np.where(outliers == 1, "normal", "abnormal")
-pd.Series(outliers).value_counts()
-
-df_real["outliers"] = outliers
-
-df_real.groupby("barcodeID").outliers.value_counts()
-# df_real
-# df_real[df_real.outliers == "abnormal"]
-# df_real[df_real.seqID.str.contains("^977f")]
-# df_real[df_real.seqID.str.contains("^000650e8")]
 ################################################################################
-#! Prediction
+#! Save models
 ################################################################################
-print("Alleye type prediction...")  # >>>
+np.save(".DAJIN_temp/data/labels_index.npy", labels_index)
 
-iter_ = 1000
-prediction = np.zeros(X_real.shape[0], dtype="uint8")
-for i in range(0, X_real.shape[0], iter_):
-    predict_ = model.predict(
-        X_real[i : i + iter_].astype("float16"), verbose=0, batch_size=32
-    )
-    prediction[i : i + iter_] = np.argmax(predict_, axis=1)
+model.save(".DAJIN_temp/data/model_l2.h5")
 
-del X_real  # <<<
-
-df_real["prediction"] = prediction
-df_real["prediction"].mask(df_real["outliers"] == "abnormal", "abnormal", inplace=True)
-
-del df_real["outliers"]  # <<<
-
-for index, label in enumerate(labels_index):
-    label = label.replace("_simulated", "")
-    df_real["prediction"].mask(df_real["prediction"] == index, label, inplace=True)
-
-# ---------------------------------------
-# * In the case of a point mutation, the reads determined to be wt_ins and wt_del should be treated as "abnormal".
-# ---------------------------------------
-if mutation_type == "P":
-    df_real["prediction"].mask(
-        df_real["prediction"].str.contains("wt_"), "abnormal", inplace=True
-    )
-
-df_real.groupby("barcodeID").prediction.value_counts()
-
-df_real.to_csv(
-    ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt",
-    header=False,
-    index=False,
-    sep="\t",
-)
+pickle.dump(clf, open(".DAJIN_temp/data/model_lof.sav", "wb"))
 

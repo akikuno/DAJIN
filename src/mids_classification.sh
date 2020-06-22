@@ -16,8 +16,7 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===========================================================
 #? Auguments
 #===========================================================
-# input_fa=".DAJIN_temp/fasta_ont/inversion_simulated_aligned_reads.fasta"
-# input_fa=".DAJIN_temp/fasta_ont/barcode26.fa"
+# input_fa=".DAJIN_temp/fasta_ont/wt_simulated_aligned_reads.fasta"
 # genotype="wt"
 # label=$(echo "${input_fa}" | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
 # suffix="${label}_${genotype}"
@@ -54,15 +53,15 @@ tmp_secondary=".DAJIN_temp/tmp_secondary_${suffix}"_$$
 mids_conv(){
     set /dev/stdin
     cat "${1}" |
-        awk '{id=$1; strand=$3; loc=$4; $0=$5
+        gawk '{id=$1; strand=$3; loc=$4; $0=$5
         sub("cs:Z:","",$0)
-        gsub("[ACGT]", "M", $0)
-        gsub("*[acgt][acgt]", " S", $0)
+        gsub(/[ACGT]/, "M", $0)
+        gsub(/\*[acgt][acgt]/, " S", $0)
         gsub("=", " ", $0)
-        gsub("+", " +", $0)
+        gsub("\+", " +", $0)
         gsub("-", " -", $0)
         for(i=1; i<=NF; i++){
-            if($i ~ "^+"){
+            if($i ~ /^\+/){
                 len=length($i)-1
                 str=sprintf("%"len"s","")
                 gsub(/ /,"I",str)
@@ -119,7 +118,7 @@ minimap2 -ax map-ont "${reference}" "${input_fa}" --cs=long 2>/dev/null |
         gsub("[0-9]*S","",cigar);
         gsub("[0-9]*H","",cigar);
         gsub("M|D|I|N","\t",cigar);
-        gsub("+$","",cigar);
+        gsub(/\+$/,"",cigar);
         print $1, $4, cigar}' |
     awk '{sum=0; for(i=3; i<=NF; i++){ sum+=$i }
         print $1,$2,$2+sum}' |
@@ -218,7 +217,6 @@ cat "${tmp_primary}" "${tmp_secondary}" |
     awk '$2 !~ /^[I|D|S]+$/' |
     sed -e "s/$/\t${label}/g" -e "s/ /\t/g" | 
 cat > "${output_MIDS}"
-
 
 rm "${tmp_mapping}" "${tmp_seqID}" "${tmp_all}" "${tmp_primary}" "${tmp_secondary}"
 exit 0

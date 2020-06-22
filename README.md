@@ -7,34 +7,19 @@
 
 [日本語はこちら](https://github.com/akikuno/DAJIN/blob/master/misc/README_JP.md)
 # DAJIN
-A simple, rapid, scalable whole-allelic profile of genome editing aminals using ONT MinION
+A simple, rapid, scalable whole-allelic profile of genome editing aminals using long-read sequencer
 
-# Installation
+# Set-up
+
 ## Linux
-The latest [Anaconda](https://docs.anaconda.com/anaconda/install/) or [Miniconda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) installation is highly recommended.  
 
-### 1. Setup channels and Install required packages
+### 1. Install `conda`
+The latest [Anaconda](https://docs.anaconda.com/anaconda/install/) or [Miniconda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) installation is required.
 
-```
-conda config --add channels defaults &&
-conda config --add channels bioconda &&
-conda config --add channels conda-forge &&
-conda update -y -n base conda &&
-conda create -y -n DAJIN python=3.6 \
-  anaconda git nodejs \
-  tensorflow tensorflow-gpu \
-  samtools minimap2 \
-  r-essentials r-base
-```
-### 2. Activate the environment
-```
-conda activate DAJIN
-```
-### 3. Clone DAJIN repository
+### 2. Clone DAJIN repository
 ```
 git clone https://github.com/akikuno/DAJIN.git
 ```
-You need only `2. Activate the environment` from the second time on.
 
 ---
 ## Windows10
@@ -44,9 +29,9 @@ See [this page](https://github.com/akikuno/DAJIN/blob/master/misc/WindowsOS_Sett
 ---
 ## macOS
 macOS is not recommended because [Nvidia CUDA will not support it](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html).  
-You can use DAJIN with CPU whereas long computational time.  
+You can use DAJIN with CPU though long computational time.  
 
-# Usuage
+# Usage
 ```
 Usage     : DAJIN.sh -f [text file] (described at "Input")
 
