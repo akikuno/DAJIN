@@ -27,7 +27,7 @@ from tensorflow.keras.models import Model
 # ? TEST auguments
 # ===========================================================
 
-# file_name = ".DAJIN_temp/data/DAJIN_MIDS.txt"
+# file_name = ".DAJIN_temp/data/split/DAJIN_MIDS_aa"
 # mutation_type = "P"
 # threads = 65
 
@@ -73,6 +73,9 @@ def onehot_encode_seq(seq):
     return onehot_seq
 
 
+X_real = onehot_encode_seq(df.seq)
+
+
 ################################################################################
 #! load trained models
 ################################################################################
@@ -88,7 +91,7 @@ clf = pickle.load(open(".DAJIN_temp/data/model_lof.sav", "rb"))
 # ===========================================================
 
 model_ = Model(model.get_layer(index=0).input, model.get_layer(index=-2).output)
-predict_vector = model_.predict(onehot_encode_seq(df.seq), verbose=0, batch_size=32)
+predict_vector = model_.predict(X_real, verbose=0, batch_size=32)
 
 # ===========================================================
 # ? LocalOutlierFactor
@@ -112,7 +115,7 @@ predict = np.argmax(predict, axis=1)
 
 del X_real  # <<<
 
-df["prediction"] = prediction
+df["prediction"] = predict
 df["prediction"].mask(df["outliers"] == "abnormal", "abnormal", inplace=True)
 
 del df["outliers"]  # <<<

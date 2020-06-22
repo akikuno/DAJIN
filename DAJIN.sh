@@ -511,7 +511,6 @@ rm .DAJIN_temp/data/MIDS_*
 
 printf "MIDS conversion was finished...\n"
 
-
 cat ".DAJIN_temp/data/DAJIN_MIDS.txt" |
     grep "_sim" |
 cat > ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
@@ -528,15 +527,17 @@ python ./DAJIN/src/ml_simulated.py \
 mkdir -p .DAJIN_temp/data/split
 split -l 10000 ".DAJIN_temp/data/DAJIN_MIDS_real.txt" .DAJIN_temp/data/split/DAJIN_MIDS_
 
+rm ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt" 2>/dev/null
+
+num=$(find .DAJIN_temp/data/split/DAJIN_MIDS_* | wc -l)
+i=1
 find .DAJIN_temp/data/split/DAJIN_MIDS_* |
-head -n 2 |
 while read -r input; do
+    echo "${i}"/"${num}"
     python ./DAJIN/src/ml_real.py \
         "${input}" \
         "${mutation_type}" "${threads}"
-    #
-    ls -lh  ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
-    wc -l ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
+    i=$((i+1))
 done
 
 ################################################################################
