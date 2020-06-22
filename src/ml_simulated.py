@@ -146,7 +146,6 @@ model.fit(
 # ===========================================================
 # ? L2 layer
 # ===========================================================
-print("Abnormal allele detection...")  # >>>
 
 model_ = Model(model.get_layer(index=0).input, model.get_layer(index=-2).output)
 train_vector = model_.predict(X_train, verbose=0, batch_size=32)

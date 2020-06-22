@@ -535,6 +535,7 @@ while read -r input; do
         "${input}" \
         "${mutation_type}" "${threads}"
     #
+    ls -lh  ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
     wc -l ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
 done
 
