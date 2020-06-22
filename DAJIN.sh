@@ -4,11 +4,12 @@
 #! Initialize shell environment
 ################################################################################
 
-set -u
+# set -u
 umask 0022
 export LC_ALL=C
 type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
+
 
 ################################################################################
 #! Define the functions for printing usage and error message
@@ -48,8 +49,8 @@ usage_and_exit(){
 }
 
 error_exit() {
-  echo "$@" 1>&2
-  exit 1
+    echo "$@" 1>&2
+    exit 1
 }
 
 ################################################################################
@@ -167,6 +168,40 @@ else
     [ -z "$threads" ] && threads=$(ksh93 -c 'getconf NPROCESSORS_ONLN' | awk '{print int($0/1.5+0.5)}')
     # Give up...
     [ -z "$threads" ] && threads=1
+fi
+
+################################################################################
+#! Setting Conda environment
+################################################################################
+
+#===========================================================
+#? DAJIN_nanosim
+#===========================================================
+
+CONDA_BASE=$(conda info --base)
+source "${CONDA_BASE}/etc/profile.d/conda.sh"
+
+if [ "$(conda info -e | grep -c DAJIN_nanosim)" -eq 0 ]; then
+    conda config --add channels defaults
+    conda config --add channels bioconda
+    conda config --add channels conda-forge
+    conda create -y -n DAJIN_nanosim python=3.6
+    conda install -y -n DAJIN_nanosim --file ./DAJIN/utils/NanoSim/requirements.txt
+    conda install -y -n DAJIN_nanosim minimap2
+fi
+#===========================================================
+#? DAJIN
+#===========================================================
+
+if [ "$(conda info -e | cut -d " " -f 1 | grep -c DAJIN$)" -eq 0 ]; then
+    conda config --add channels defaults
+    conda config --add channels bioconda
+    conda config --add channels conda-forge
+    conda create -y -n DAJIN python=3.6 \
+        anaconda nodejs wget \
+        tensorflow tensorflow-gpu \
+        samtools minimap2 \
+        r-essentials r-base
 fi
 
 #===========================================================
@@ -351,21 +386,9 @@ cat << EOF
 NanoSim read simulation
 ++++++++++++++++++++++++++++++++++++++++++
 EOF
-#===========================================================
-#? Setting Conda environment
-#===========================================================
-set +eu
-CONDA_BASE=$(conda info --base)
-source "${CONDA_BASE}/etc/profile.d/conda.sh"
-if [ "$(conda info -e | grep -c DAJIN_nanosim)" -eq 0 ]; then
-    conda config --add channels defaults
-    conda config --add channels bioconda
-    conda config --add channels conda-forge
-    conda create -y -n DAJIN_nanosim python=3.6
-    conda install -y -n DAJIN_nanosim --file ./DAJIN/utils/NanoSim/requirements.txt
-    conda install -y -n DAJIN_nanosim minimap2
-fi
+
 conda activate DAJIN_nanosim
+
 #===========================================================
 #? NanoSim
 #===========================================================
@@ -411,7 +434,6 @@ done
 rm -rf DAJIN/utils/NanoSim/src/__pycache__
 
 conda activate DAJIN
-set -u
 
 printf 'Success!!\nSimulation is finished\n'
 
