@@ -27,7 +27,7 @@ Input     : Input file should be formatted as below:
             ------
             design=DAJIN/example/design.txt
             input_dir=DAJIN/example/demultiplex
-            control=barcode03
+            control=barcode01
             output_dir=Cables2
             genome=mm10
             grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
@@ -114,6 +114,7 @@ fi
 if ! [ -d "${ont_dir}" ]; then
     error_exit "$ont_dir: No such directory"
 fi
+
 if [ -z "$(ls $ont_dir)" ]; then
     error_exit "$ont_dir: Empty directory"
 fi
@@ -122,9 +123,8 @@ fi
 #? Check control
 #===========================================================
 
-if [ -z "$(find ${ont_dir}/ -name ${ont_cont}.f*)" ]; then
-    error_exit "$ont_cont: No control file in ${ont_dir}"
-fi
+[ -z "$(find ${ont_dir}/ -name ${ont_cont}.f*)" ] &&
+error_exit "$ont_cont: No control file in ${ont_dir}"
 
 #===========================================================
 #? Check genome
@@ -135,13 +135,14 @@ genome_check=$(
     grep "href" |
     grep -c "/${genome:-XXX}/")
 
-if [ "$genome_check" -eq 0 ]; then
-    error_exit "$genome: No such reference genome"
-fi
+[ "$genome_check" -eq 0 ] &&
+error_exit "$genome: No such reference genome"
 
 #===========================================================
 #? Check grna
 #===========================================================
+[ $(cat "${design}" | grep -c "${grna}") -eq 0 ] &&
+error_exit "No gRNA sites"
 
 #===========================================================
 #? Check output directory name
@@ -198,8 +199,8 @@ if [ "$(conda info -e | cut -d " " -f 1 | grep -c DAJIN$)" -eq 0 ]; then
     conda config --add channels bioconda
     conda config --add channels conda-forge
     conda create -y -n DAJIN python=3.6 \
-        anaconda nodejs wget \
-        tensorflow tensorflow-gpu \
+        anaconda nodejs wget gawk \
+        tensorflow tensorflow-gpu swifter \
         samtools minimap2 \
         r-essentials r-base
 fi
@@ -208,14 +209,14 @@ fi
 #? Required software
 #===========================================================
 
-type gzip > /dev/null 2>&1 || error_exit 'Command "gzip" not found'
-type wget > /dev/null 2>&1 || error_exit 'Command "wget" not found'
-type python > /dev/null 2>&1 || error_exit 'Command "python" not found'
-type samtools > /dev/null 2>&1 || error_exit 'Command "samtools" not found'
-type minimap2 > /dev/null 2>&1 || error_exit 'Command "minimap2" not found'
+# type gzip > /dev/null 2>&1 || error_exit 'Command "gzip" not found'
+# type wget > /dev/null 2>&1 || error_exit 'Command "wget" not found'
+# type python > /dev/null 2>&1 || error_exit 'Command "python" not found'
+# type samtools > /dev/null 2>&1 || error_exit 'Command "samtools" not found'
+# type minimap2 > /dev/null 2>&1 || error_exit 'Command "minimap2" not found'
 
-python -c "import tensorflow as tf" > /dev/null 2>&1 ||
-error_exit '"Tensorflow" not found'
+# python -c "import tensorflow as tf" > /dev/null 2>&1 ||
+# error_exit '"Tensorflow" not found'
 
 #===========================================================
 #? For WSL (Windows Subsystem for Linux)
@@ -268,9 +269,10 @@ cat ${design_LF} |
         print $1"\n"toupper($2) > output
     }'
 
-# When mutation point(s) are closer to もし変異部がFASTAファイルの5'側より3'側に近い場合、
-# right flanking than left flanking,   reverse complementにする。
-# convert a sequence into its reverse-complement
+#===========================================================
+#? Reverse complement if the mutation sites are closer
+#? to right flanking than left flanking 
+#===========================================================
 
 wt_seqlen=$(awk '!/[>|@]/ {print length($0)}' .DAJIN_temp/fasta/wt.fa)
 
@@ -293,7 +295,9 @@ if [ "$convert_revcomp" -eq 1 ] ; then
     design_LF=".DAJIN_temp/fasta/fasta_revcomp.fa"
 fi
 
-# Separate multiple-FASTA into FASTA files
+#---------------------------------------
+#* Separate multiple-FASTA into FASTA files
+#---------------------------------------
 cat ${design_LF} |
     sed "s/^/@/g" |
     tr -d "\n" |
@@ -308,13 +312,13 @@ cat ${design_LF} |
     }'
 
 #---------------------------------------
-#* 変異のタイプ（Deletion, knock-In, or Point-mutation）を判定する
+#* Define mutation type
 #---------------------------------------
 mutation_type=$(
     minimap2 -ax map-ont \
-    .DAJIN_temp/fasta/wt.fa \
-    .DAJIN_temp/fasta/target.fa \
-    --cs 2>/dev/null |
+        .DAJIN_temp/fasta/wt.fa \
+        .DAJIN_temp/fasta/target.fa \
+        --cs 2>/dev/null |
     grep -v "^@" |
     awk '{
         cstag=$(NF-1)
@@ -329,8 +333,7 @@ mutation_type=$(
 #* Cas9の切断部に対してgRNA部自体の欠損およびgRNA長分の塩基挿入したものを異常アレルとして作成する
 #---------------------------------------
 
-if [ "$mutation_type" = "P" ]; then
-    grna=CCCTGCGGCCAGCTTTCAGGCAG #!----------------------------------------------------------------------------
+if [ "_${mutation_type}" = "_P" ]; then
     grna_len=$(awk -v grna="$grna" 'BEGIN{print length(grna)}')
     grna_firsthalf=$(awk -v grna="$grna" 'BEGIN{print substr(grna, 1, int(length(grna)/2))}')
     grna_secondhalf=$(awk -v grna="$grna" 'BEGIN{print substr(grna, int(length(grna)/2)+1, length(grna))}')
@@ -381,17 +384,19 @@ done
 ################################################################################
 #! NanoSim (v2.5.0)
 ################################################################################
+
+conda activate DAJIN_nanosim
+
 cat << EOF
 ++++++++++++++++++++++++++++++++++++++++++
 NanoSim read simulation
 ++++++++++++++++++++++++++++++++++++++++++
 EOF
 
-conda activate DAJIN_nanosim
-
 #===========================================================
 #? NanoSim
 #===========================================================
+
 printf "Read analysis...\n"
 ./DAJIN/utils/NanoSim/src/read_analysis.py genome \
     -i ".DAJIN_temp/fasta_ont/${ont_cont}.fa" \
@@ -433,13 +438,14 @@ done
 
 rm -rf DAJIN/utils/NanoSim/src/__pycache__
 
-conda activate DAJIN
-
 printf 'Success!!\nSimulation is finished\n'
+
 
 ################################################################################
 #! Mapping by minimap2 for IGV visualization
 ################################################################################
+
+conda activate DAJIN
 
 cat << EOF
 ++++++++++++++++++++++++++++++++++++++++++
@@ -478,7 +484,7 @@ reference=".DAJIN_temp/fasta_conv/wt.fa"
 query=".DAJIN_temp/fasta_conv/target.fa"
 
 # Get mutation loci...
-cat "$reference" |
+cat "${reference}" |
     minimap2 -ax splice - "${query}" --cs 2>/dev/null |
     awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
     sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
@@ -486,25 +492,16 @@ cat "$reference" |
     awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
 cat > .DAJIN_temp/data/mutation_points
 
-# # MIDS conversion...
-# find .DAJIN_temp/fasta_ont -type f | sort |
-#     awk '{print "./DAJIN/src/mids_convertion.sh",$0, "wt", "&"}' |
-#     awk -v th=${threads:-1} '{
-#         if (NR%th==0) gsub("&","&\nwait",$0)
-#         print}
-#         END{print "wait"}' |
-# sh -
-
 # MIDS conversion...
 find .DAJIN_temp/fasta_ont -type f | sort |
-    awk '{print "./DAJIN/src/mids_classification.sh",$0, "wt", "&"}' |
+    awk '{print "./DAJIN/src/mids_classification.sh", $0, "wt", "&"}' |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)
         print}
         END{print "wait"}' |
-sh -
+sh - 2>/dev/null
 
-[ "$mutation_type" = "P" ] && rm .DAJIN_temp/data/MIDS_target*
+[ "_${mutation_type}" = "_P" ] && rm .DAJIN_temp/data/MIDS_target*
 
 # : > ".DAJIN_temp/data/DAJIN_MIDS.txt"
 # for i in .DAJIN_temp/data/MIDS_*; do
@@ -518,22 +515,15 @@ cat .DAJIN_temp/data/MIDS_* |
     sort -k 1,1 |
 cat > ".DAJIN_temp/data/DAJIN_MIDS.txt"
 
-
-# cat .DAJIN_temp/data/MIDS_"${ont_cont}"_wt |
-#     grep -v "DDDDDDDDDD" |
-#     grep -v "IIIIIIIIII" |
-#     grep -v "SSSSSSSSSS" |
-#     grep -v "IIIIIIIIII" |
-#     sed "s/${ont_cont}/wt_simulated/g" |
-# cat >> ".DAJIN_temp/data/DAJIN_MIDS.txt"
-
 rm .DAJIN_temp/data/MIDS_*
 
 printf "MIDS conversion was finished...\n"
 
+
 ################################################################################
 #! Prediction
 ################################################################################
+
 cat << EOF
 ++++++++++++++++++++++++++++++++++++++++++
 Allele prediction
