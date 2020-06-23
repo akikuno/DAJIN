@@ -4,7 +4,7 @@
 #! Initialize shell environment
 ################################################################################
 
-set -eu
+set -u
 umask 0022
 export LC_ALL=C
 type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
@@ -15,19 +15,23 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 ################################################################################
 
 #===========================================================
-#? Auguments
-# ===========================================================
-# barcode="barcode18"
-# alleletype="target"
-# cluster=1
-# percentage=22
-# alleleid=1
+#? TEST Auguments
+#===========================================================
+# barcode="barcode12"
+# alleletype="wt"
+# cluster=2
+# percentage=91
+# alleleid=2
+
 # in_suffix="${barcode}"_"${alleletype}"
 # out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
 # mapping_alleletype="${alleletype}"
 # [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
 # [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
 
+#===========================================================
+#? Auguments
+#===========================================================
 
 barcode="${1}"
 alleletype="${2}"
@@ -37,7 +41,6 @@ alleleid="${5}"
 
 in_suffix="${barcode}"_"${alleletype}"
 out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
-
 mapping_alleletype="${alleletype}"
 [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
 [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
@@ -52,13 +55,13 @@ allele_id=".DAJIN_temp/clustering/result_allele_id_${in_suffix}".txt
 #===========================================================
 #? Output
 #===========================================================
+mkdir -p .DAJIN_temp/consensus/temp
 # .DAJIN_temp/consensus/"${output_filename}".fa
 # .DAJIN_temp/consensus/"${output_filename}".html
 
 #===========================================================
 #? Temporal
 #===========================================================
-mkdir -p .DAJIN_temp/consensus/temp
 tmp_allele_id=".DAJIN_temp/consensus/temp/allele_id_${out_suffix}"
 consensus_mutation=".DAJIN_temp/consensus/temp/consensus_${out_suffix}"
 mutation_info=".DAJIN_temp/consensus/temp/mutation_info_${out_suffix}"
@@ -78,6 +81,8 @@ cat "${allele_id}" |
     sed "s/=/M/g" |
     awk -F "" 'BEGIN{OFS=","}{$1=$1}1' |
 cat > "${tmp_allele_id}"
+
+# cut -d "," -f 738-740 $tmp_allele_id | sort | uniq -c
 
 Rscript DAJIN/src/consensus.R "${tmp_allele_id}" "${control_score}" "${cluster}"
 

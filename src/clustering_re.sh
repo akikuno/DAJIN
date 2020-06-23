@@ -16,16 +16,19 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 ################################################################################
 
 #===========================================================
-#? Auguments
+#? TEST Aurguments
 #===========================================================
-
-# barcode="barcode23"
-# alleletype="target"
+# barcode="barcode12"
+# alleletype="wt"
 # suffix="${barcode}"_"${alleletype}"
 
 # mapping_alleletype="${alleletype}"
 # [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
 # [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
+
+#===========================================================
+#? Auguments
+#===========================================================
 
 barcode="${1}"
 alleletype="${2}"

@@ -4,10 +4,11 @@
 #! Initialize shell environment
 ################################################################################
 
-set -eu
+set -u
 umask 0022
 export LC_ALL=C
-type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
+export PATH="$(command -p getconf PATH 2>/dev/null)${PATH+:}${PATH-}"
+case $PATH in :*) PATH=${PATH#?};; esac
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 
@@ -16,12 +17,16 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 ################################################################################
 
 #===========================================================
-#? Auguments
+#? TEST Auguments
 #===========================================================
 
-# barcode=barcode23
-# alleletype="target"
+# barcode=barcode32
+# alleletype="wt"
 # suffix="${barcode}_${alleletype}"
+
+#===========================================================
+#? Auguments
+#===========================================================
 
 barcode=${1}
 alleletype=${2}
@@ -51,33 +56,35 @@ tmp_secondary=".DAJIN_temp/tmp_secondary_${suffix}"_$$
 
 
 ################################################################################
-#! Function
+#! Function definitions
 ################################################################################
 
 mids_compressed(){
     set /dev/stdin
     cat "${1}" |
-    # cat $tmp_all | grep "primary plus 1" | grep +tgattgc  | grep +tgattgc |
-    # echo "1 2 3 4 TCTTAGCAC*ac=G+ga=GT-ta=TGC" |
-        awk '{id=$1; strand=$3; loc=$4; $0=$5
+        awk '{id=$1; strand=$3; loc=$4; $0=$5;
         sub("cs:Z:","",$0)
-        gsub("[ACGT]", "M", $0)
-        gsub("*[acgt][acgt]", " S", $0)
+        gsub(/[ACGT]/, "M", $0)
+        gsub(/\*[acgt][acgt]/, " S", $0)
         gsub("=", " ", $0)
-        gsub("+", " +", $0)
-        gsub("-", " -", $0)
+        gsub("\+", " +", $0)
+        gsub("\-", " -", $0)
         for(i=1; i<=NF; i++){
-            if($i ~ "^+"){
+            if($i ~ /^\+/){
                 len=length($i)-1
                 if(len>=10 && len<=35) len=sprintf("%c", len+87)
                 else if(len>=36) len="z"
                 $i=" "
                 $(i+1)=len substr($(i+1),2) }
-            else if($i ~ "^-"){
+            else if($i ~ /^\-/){
                 len=length($i)-1
-                str=sprintf("%"len"s","")
-                gsub(/ /,"D",str)
-                $i=str }
+                for(len_=1; len_ <= len; len_++){
+                    str= "D" str
+                }
+                # str=sprintf("%"len"s","")
+                # gsub(/ /,"D",str)
+                $i=str
+                str=""}
             }
         gsub(" ", "", $0)
         print id, loc, $0}' | # awk '{print match($NF,"7")}' | sort | uniq -c
@@ -116,7 +123,7 @@ second_flank=$(
 ################################################################################
 
 #===========================================================
-#? 変異部から±100塩基を含むリードのみを取り出す
+#? Remove only reads containing ±100 bases from the mutation site
 #===========================================================
 
 minimap2 -ax map-ont "${reference}" "${query}" --cs=long 2>/dev/null |
@@ -130,7 +137,7 @@ minimap2 -ax map-ont "${reference}" "${query}" --cs=long 2>/dev/null |
         gsub("[0-9]*S","",cigar);
         gsub("[0-9]*H","",cigar);
         gsub("M|D|I|N","\t",cigar);
-        gsub("+$","",cigar);
+        gsub(/\+$/,"",cigar);
         print $1, $4, cigar}' |
     awk '{sum=0; for(i=3; i<=NF; i++){ sum+=$i }
         print $1,$2,$2+sum}' |
@@ -171,7 +178,7 @@ cat "${tmp_all}" |
 cat > "${tmp_secondary}"
 
 #===========================================================
-#? primaryとsecondaryを結合する
+#? Concatenate "primary" and "secondary"
 #===========================================================
 
 cat "${tmp_primary}" "${tmp_secondary}" |
@@ -190,8 +197,7 @@ cat "${tmp_primary}" "${tmp_secondary}" |
             if(maxloc<$i) maxloc=$i
         }
         len=maxloc-minloc-len
-        str=sprintf("%"len"s","")
-        gsub(/ /,"D",str) 
+        for(len_=1; len_<=len; len_++) str="D" str
         for(key in seq_) seq=seq seq_[key] str
         print id, minloc, seq
         delete seq_
@@ -205,8 +211,9 @@ cat "${tmp_primary}" "${tmp_secondary}" |
             if(maxloc<$i) maxloc=$i
         }
         len=length($5)
-        str=sprintf("%"len"s","")
-        gsub(/ /,"=",str) 
+        for(len_=1; len_<=len; len_++) str="=" str
+        # str=sprintf("%"len"s","")
+        # gsub(/ /,"=",str) 
         $5=str
         print id, minloc, $3 $5 $7
     }' |
@@ -221,7 +228,7 @@ cat "${tmp_primary}" "${tmp_secondary}" |
         if(seqlen>reflen) {print $1,substr($3,1,reflen)}
         else {for(i=seqlen; i < reflen; i++) end=end"M"; print $1,$3""end}
     }' |
-    # 全てが変異になったリードがあれば除去する。
+    # Remove all-mutated reads
     awk '$2 !~ /^[I|D|S]+$/' |
     sed -e "s/$/\t${barcode}/g" -e "s/ /\t/g" | 
 cat

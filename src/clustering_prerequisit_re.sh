@@ -15,10 +15,17 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 ################################################################################
 
 #===========================================================
+#? TEST Auguments
+#===========================================================
+# barcode=barcode32
+# alleletype=wt
+# mapping_alleletype="${alleletype}"
+# [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
+# [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
+
+#===========================================================
 #? Auguments
 #===========================================================
-# barcode=barcode26
-# alleletype=wt
 
 barcode="${1}"
 alleletype="${2}"
@@ -107,6 +114,7 @@ cat > "${control_tmp}"
 
 find .DAJIN_temp/fasta/* |
     grep -v wt.fa |
+    grep -v fasta.fa |
     sed "s:.*/::g" |
     sed "s/.fa.*$//g" |
 while read -r label; do

@@ -7,7 +7,6 @@
 # set -u
 umask 0022
 export LC_ALL=C
-type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 
@@ -502,43 +501,7 @@ sh - 2>/dev/null
 
 [ "_${mutation_type}" = "_P" ] && rm .DAJIN_temp/data/MIDS_target*
 
-cat .DAJIN_temp/data/MIDS_* |
-    sed -e "s/_aligned_reads//g" |
-    sort -k 1,1 |
-cat > ".DAJIN_temp/data/DAJIN_MIDS.txt"
-
-rm .DAJIN_temp/data/MIDS_*
-
 printf "MIDS conversion was finished...\n"
-
-cat ".DAJIN_temp/data/DAJIN_MIDS.txt" |
-    grep "_sim" |
-cat > ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
-
-cat ".DAJIN_temp/data/DAJIN_MIDS.txt" |
-    grep -v "_sim" |
-cat > ".DAJIN_temp/data/DAJIN_MIDS_real.txt"
-
-python ./DAJIN/src/ml_simulated.py \
-    ".DAJIN_temp/data/DAJIN_MIDS_sim.txt" \
-    "${mutation_type}" "${threads}"
-
-
-mkdir -p .DAJIN_temp/data/split
-split -l 10000 ".DAJIN_temp/data/DAJIN_MIDS_real.txt" .DAJIN_temp/data/split/DAJIN_MIDS_
-
-rm ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt" 2>/dev/null
-
-num=$(find .DAJIN_temp/data/split/DAJIN_MIDS_* | wc -l)
-i=1
-find .DAJIN_temp/data/split/DAJIN_MIDS_* |
-while read -r input; do
-    echo "${i}"/"${num}"
-    python ./DAJIN/src/ml_real.py \
-        "${input}" \
-        "${mutation_type}" "${threads}"
-    i=$((i+1))
-done
 
 ################################################################################
 #! Prediction
@@ -550,15 +513,58 @@ Allele prediction
 ++++++++++++++++++++++++++++++++++++++++++"
 EOF
 
-python DAJIN/src/ml_l2softmax.py \
-    ".DAJIN_temp"/data/DAJIN_MIDS.txt \
+
+#===========================================================
+#? Train models
+#===========================================================
+
+cat .DAJIN_temp/data/MIDS_* |
+    grep "_sim" |
+    sed -e "s/_aligned_reads//g" |
+cat > ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
+
+#?<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+cat .DAJIN_temp/data/MIDS_"${ont_cont}"_wt |
+    grep -v "IIIIIIIIII" |
+    grep -v "DDDDDDDDDD" |
+    grep -v "SSSSSSSSSS" |
+    head -n 10000 |
+    sed "s/${ont_cont}$/wt_simulated/g" |
+cat >> ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
+#?<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+python ./DAJIN/src/ml_simulated.py \
+    ".DAJIN_temp/data/DAJIN_MIDS_sim.txt" \
     "${mutation_type}" "${threads}"
+
+#===========================================================
+#? Predict labels
+#===========================================================
+
+true > ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
+total_num=$(find .DAJIN_temp/data/MIDS* | grep -v sim | wc -l)
+process_num=1
+
+find .DAJIN_temp/data/MIDS* |
+    grep -v sim |
+    sort |
+while read -r input; do
+    echo "${process_num}"/"${total_num}"
+    python ./DAJIN/src/ml_real.py \
+        "${input}" \
+        "${mutation_type}" "${threads}"
+    process_num=$((process_num+1))
+done
 
 printf "Prediction was finished...\n"
 
 #===========================================================
 #? Filter low-persentage allele
 #===========================================================
+cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
+    sort |
+cat > .DAJIN_temp/tmp_$$
+mv .DAJIN_temp/tmp_$$ .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt
 
 #---------------------------------------
 #* 各サンプルに含まれるアレルの割合を出す
@@ -678,6 +684,7 @@ cat << EOF
 ++++++++++++++++++++++++++++++++++++++++++"
 EOF
 
+# rm -rf .DAJIN_temp/consensus/
 cat .DAJIN_temp/clustering/result_allele_percentage* |
     sed "s/_/ /" |
     awk '{nr[$1]++; print $0, nr[$1]}' |
@@ -690,8 +697,9 @@ cat .DAJIN_temp/clustering/result_allele_percentage* |
         END{print "wait"}' |
 sh -
 
+rm -rf "${output_dir:-DAJIN_results}"/Consensus/
 mkdir -p "${output_dir:-DAJIN_results}"/Consensus/
-cp -r .DAJIN_temp/consensus/* "${output_dir:-DAJIN_results}"/Consensus/
+cp .DAJIN_temp/consensus/* "${output_dir:-DAJIN_results}"/Consensus/ 2>/dev/null
 
 ################################################################################
 #! Summarize to Details.csv

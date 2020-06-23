@@ -53,7 +53,7 @@ tmp_secondary=".DAJIN_temp/tmp_secondary_${suffix}"_$$
 mids_conv(){
     set /dev/stdin
     cat "${1}" |
-        gawk '{id=$1; strand=$3; loc=$4; $0=$5
+        awk '{id=$1; strand=$3; loc=$4; $0=$5
         sub("cs:Z:","",$0)
         gsub(/[ACGT]/, "M", $0)
         gsub(/\*[acgt][acgt]/, " S", $0)
@@ -63,14 +63,16 @@ mids_conv(){
         for(i=1; i<=NF; i++){
             if($i ~ /^\+/){
                 len=length($i)-1
-                str=sprintf("%"len"s","")
-                gsub(/ /,"I",str)
-                $i=str }
+                for(len_=1; len_ <= len; len_++) str = "I" str
+                # str=sprintf("%"len"s","")
+                # gsub(/ /,"I",str)
+                $i=str
+                str=""}
             else if($i ~ "^-"){
                 len=length($i)-1
-                str=sprintf("%"len"s","")
-                gsub(/ /,"D",str)
-                $i=str }
+                for(len_=1; len_ <= len; len_++) str = "D" str
+                $i=str
+                str=""}
             }
         gsub(" ", "", $0)
         print id, loc, $0}' |
@@ -182,8 +184,9 @@ cat "${tmp_primary}" "${tmp_secondary}" |
             if(maxloc<$i) maxloc=$i
         }
         len=maxloc-minloc-len
-        str=sprintf("%"len"s","")
-        gsub(/ /,"D",str) 
+        for(len_=1; len_ <= len; len_++) str = "D" str
+        # str=sprintf("%"len"s","")
+        # gsub(/ /,"D",str) 
         for(key in seq_) seq=seq seq_[key] str
         print id, minloc, seq
         delete seq_
