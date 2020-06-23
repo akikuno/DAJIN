@@ -98,22 +98,22 @@ del Y_test
 model = tf.keras.Sequential()
 model.add(
     Conv1D(
-        filters=16,
-        kernel_size=32,
+        filters=32,
+        kernel_size=128,
         activation="relu",
         input_shape=(X_train.shape[1], X_train.shape[2]),
         name="1st_Conv1D",
     )
 )
 model.add(MaxPooling1D(pool_size=4, name="1st_MaxPooling1D"))
-model.add(Conv1D(filters=32, kernel_size=16, activation="relu", name="2nd_Conv1D"))
+model.add(Conv1D(filters=32, kernel_size=64, activation="relu", name="2nd_Conv1D"))
 model.add(MaxPooling1D(pool_size=4, name="2nd_MaxPooling1D"))
-model.add(Conv1D(filters=64, kernel_size=8, activation="relu", name="3rd_Conv1D"))
+model.add(Conv1D(filters=32, kernel_size=32, activation="relu", name="3rd_Conv1D"))
 model.add(MaxPooling1D(pool_size=4, name="3rd_MaxPooling1D"))
-model.add(Conv1D(filters=128, kernel_size=4, activation="relu", name="4th_Conv1D"))
+model.add(Conv1D(filters=32, kernel_size=16, activation="relu", name="4th_Conv1D"))
 model.add(MaxPooling1D(pool_size=4, name="4th_MaxPooling1D"))
 model.add(Flatten(name="flatten"))
-# model.add(Dense(64, activation='relu', name="1st_FC"))
+model.add(Dense(64, activation="relu", name="1st_FC"))
 alpha = 0.1
 model.add(
     Dense(
@@ -160,7 +160,7 @@ clf = LocalOutlierFactor(
     n_neighbors=20,
     metric="euclidean",
     contamination="auto",
-    leaf_size=30,
+    leaf_size=400,
     novelty=True,
     n_jobs=threads,
 )

@@ -6,8 +6,6 @@ os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
 import sys
 import numpy as np
 import pandas as pd
-import swifter
-import dask.dataframe as dd
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, LabelBinarizer
@@ -50,9 +48,7 @@ if threads == "":
 # ? Input
 # ===========================================================
 
-# df = pd.read_csv(file_name, header=None, sep="\t")
-df = dd.read_csv(file_name, header=None, sep="\t")
-# df = dd.from_pandas(pd.read_csv(file_name, header=None, sep="\t"), npartitions=threads)
+df = pd.read_csv(file_name, header=None, sep="\t")
 df.columns = ["seqID", "seq", "barcodeID"]
 df.seq = "MIDS=" + df.seq
 
@@ -84,15 +80,6 @@ def onehot_encode_seq(seq):
     return onehot_seq
 
 
-# from sklearn.preprocessing import OneHotEncoder
-# def one_hot_encoder(my_array):
-#     integer_encoded = label_encoder.transform(my_array)
-#     onehot_encoder = OneHotEncoder(sparse=False, dtype=int, n_values=5)
-#     integer_encoded = integer_encoded.reshape(len(integer_encoded), 1)
-#     onehot_encoded = onehot_encoder.fit_transform(integer_encoded)
-#     onehot_encoded = np.delete(onehot_encoded, -1, 1)
-#     return onehot_encoded
-
 # ===========================================================
 # ? Train test split
 # ===========================================================
@@ -101,7 +88,7 @@ labels, labels_index = pd.factorize(df_sim.barcodeID)
 labels = tf.keras.utils.to_categorical(labels)
 
 X_train, X_test, Y_train, Y_test = train_test_split(
-    onehot_encode_seq(df_sim.seq.compute()), labels, test_size=0.2, shuffle=True
+    onehot_encode_seq(df_sim["seq"]), labels, test_size=0.2, shuffle=True
 )
 
 del X_test
@@ -110,25 +97,27 @@ del Y_test
 # ===========================================================
 # ? L2-constrained Softmax Loss
 # ===========================================================
+init_kernel_size=512
+
 model = tf.keras.Sequential()
 model.add(
     Conv1D(
-        filters=16,
-        kernel_size=32,
+        filters=32,
+        kernel_size=init_kernel_size,
         activation="relu",
         input_shape=(X_train.shape[1], X_train.shape[2]),
         name="1st_Conv1D",
     )
 )
 model.add(MaxPooling1D(pool_size=4, name="1st_MaxPooling1D"))
-model.add(Conv1D(filters=32, kernel_size=16, activation="relu", name="2nd_Conv1D"))
+model.add(Conv1D(filters=32, kernel_size=init_kernel_size/2, activation="relu", name="2nd_Conv1D"))
 model.add(MaxPooling1D(pool_size=4, name="2nd_MaxPooling1D"))
-model.add(Conv1D(filters=64, kernel_size=8, activation="relu", name="3rd_Conv1D"))
+model.add(Conv1D(filters=32, kernel_size=init_kernel_size/4, activation="relu", name="3rd_Conv1D"))
 model.add(MaxPooling1D(pool_size=4, name="3rd_MaxPooling1D"))
-model.add(Conv1D(filters=128, kernel_size=4, activation="relu", name="4th_Conv1D"))
+model.add(Conv1D(filters=32, kernel_size=init_kernel_size/16, activation="relu", name="4th_Conv1D"))
 model.add(MaxPooling1D(pool_size=4, name="4th_MaxPooling1D"))
 model.add(Flatten(name="flatten"))
-# model.add(Dense(64, activation='relu', name="1st_FC"))
+model.add(Dense(64, activation='relu', name="1st_FC"))
 alpha = 0.1
 model.add(
     Dense(
@@ -163,7 +152,7 @@ model.fit(
 # ===========================================================
 print("Abnormal allele detection...")  # >>>
 
-X_real = onehot_encode_seq(df_real.seq.compute())
+X_real = onehot_encode_seq(df_real.seq)
 
 del df_real["seq"]  # <<<
 
@@ -173,8 +162,6 @@ model_ = Model(model.get_layer(index=0).input, model.get_layer(index=-2).output)
 train_vector = model_.predict(X_train, verbose=0, batch_size=32)
 predict_vector = model_.predict(X_real, verbose=0, batch_size=32)
 
-del X_train  # <<<
-
 # ===========================================================
 # ? LocalOutlierFactor
 # ===========================================================
@@ -183,7 +170,7 @@ clf = LocalOutlierFactor(
     n_neighbors=20,
     metric="euclidean",
     contamination="auto",
-    leaf_size=30,
+    leaf_size=400,
     novelty=True,
     n_jobs=threads,
 )
@@ -192,15 +179,12 @@ clf.fit(train_vector)
 
 outliers = clf.predict(predict_vector)
 outliers = np.where(outliers == 1, "normal", "abnormal")
-pd.Series(outliers).value_counts()
+# pd.Series(outliers).value_counts()
 
 df_real["outliers"] = outliers
 
 df_real.groupby("barcodeID").outliers.value_counts()
-# df_real
-# df_real[df_real.outliers == "abnormal"]
-# df_real[df_real.seqID.str.contains("^977f")]
-# df_real[df_real.seqID.str.contains("^000650e8")]
+
 ################################################################################
 #! Prediction
 ################################################################################

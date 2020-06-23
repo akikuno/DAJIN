@@ -73,8 +73,9 @@ def onehot_encode_seq(seq):
     return onehot_seq
 
 
-X_real = onehot_encode_seq(df.seq)
+X_real = onehot_encode_seq(df["seq"])
 
+del df["seq"]  # <<<
 
 ################################################################################
 #! load trained models
