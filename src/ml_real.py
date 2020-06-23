@@ -27,7 +27,8 @@ from tensorflow.keras.models import Model
 # ? TEST auguments
 # ===========================================================
 
-# file_name = ".DAJIN_temp/data/split/DAJIN_MIDS_aa"
+# file_name = ".DAJIN_temp/data/MIDS_barcode11_wt"
+# file_name = "test.txt"
 # mutation_type = "P"
 # threads = 65
 
@@ -100,11 +101,10 @@ predict_vector = model_.predict(X_real, verbose=0, batch_size=32)
 
 outliers = clf.predict(predict_vector)
 outliers = np.where(outliers == 1, "normal", "abnormal")
-pd.Series(outliers).value_counts()
 
 df["outliers"] = outliers
 
-df.groupby("barcodeID").outliers.value_counts()
+# print(df.groupby("barcodeID").outliers.value_counts()) #!<<<<<
 
 
 ################################################################################

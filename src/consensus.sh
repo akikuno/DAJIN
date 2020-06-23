@@ -7,7 +7,8 @@
 set -u
 umask 0022
 export LC_ALL=C
-type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
+export PATH="$(command -p getconf PATH 2>/dev/null)${PATH+:}${PATH-}"
+case $PATH in :*) PATH=${PATH#?};; esac
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 ################################################################################
@@ -17,11 +18,11 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===========================================================
 #? TEST Auguments
 #===========================================================
-# barcode="barcode12"
+# barcode="barcode11"
 # alleletype="wt"
-# cluster=2
-# percentage=91
-# alleleid=2
+# cluster=1
+# percentage=5
+# alleleid=3
 
 # in_suffix="${barcode}"_"${alleletype}"
 # out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"

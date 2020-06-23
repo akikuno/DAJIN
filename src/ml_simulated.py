@@ -27,9 +27,9 @@ from tensorflow.keras.models import Model
 # ? TEST auguments
 # ===========================================================
 
-file_name = ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
-mutation_type = "P"
-threads = 65
+# file_name = ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
+# mutation_type = "P"
+# threads = 65
 
 # ===========================================================
 # ? Auguments
@@ -95,25 +95,54 @@ del Y_test
 # ===========================================================
 # ? L2-constrained Softmax Loss
 # ===========================================================
+init_kernel_size = int(128)
+
 model = tf.keras.Sequential()
 model.add(
     Conv1D(
         filters=32,
-        kernel_size=128,
+        kernel_size=init_kernel_size,
         activation="relu",
         input_shape=(X_train.shape[1], X_train.shape[2]),
         name="1st_Conv1D",
     )
 )
 model.add(MaxPooling1D(pool_size=4, name="1st_MaxPooling1D"))
-model.add(Conv1D(filters=32, kernel_size=64, activation="relu", name="2nd_Conv1D"))
+
+model.add(
+    Conv1D(
+        filters=32,
+        kernel_size=int(init_kernel_size / 2),
+        activation="relu",
+        name="2nd_Conv1D",
+    )
+)
 model.add(MaxPooling1D(pool_size=4, name="2nd_MaxPooling1D"))
-model.add(Conv1D(filters=32, kernel_size=32, activation="relu", name="3rd_Conv1D"))
+
+model.add(
+    Conv1D(
+        filters=32,
+        kernel_size=int(init_kernel_size / 4),
+        activation="relu",
+        name="3rd_Conv1D",
+    )
+)
 model.add(MaxPooling1D(pool_size=4, name="3rd_MaxPooling1D"))
-model.add(Conv1D(filters=32, kernel_size=16, activation="relu", name="4th_Conv1D"))
+
+model.add(
+    Conv1D(
+        filters=32,
+        kernel_size=int(init_kernel_size / 16),
+        activation="relu",
+        name="4th_Conv1D",
+    )
+)
 model.add(MaxPooling1D(pool_size=4, name="4th_MaxPooling1D"))
+
 model.add(Flatten(name="flatten"))
-model.add(Dense(64, activation="relu", name="1st_FC"))
+
+# model.add(Dense(64, activation="relu", name="1st_FC"))
+
 alpha = 0.1
 model.add(
     Dense(

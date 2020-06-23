@@ -4,10 +4,11 @@
 #! Initialize shell environment
 ################################################################################
 
-set -eu
+set -u
 umask 0022
 export LC_ALL=C
-type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
+export PATH="$(command -p getconf PATH 2>/dev/null)${PATH+:}${PATH-}"
+case $PATH in :*) PATH=${PATH#?};; esac
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 
@@ -46,34 +47,27 @@ allele_percentage=".DAJIN_temp/clustering/result_allele_percentage_${suffix}".tx
 mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
 tmp_allele_percentage=".DAJIN_temp/clustering/temp/allele_percentage_${suffix}".txt
 
-
-
 ################################################################################
-#! Summarize and plot mutation loci
+#! Remove minor allele (< 1%) 
 ################################################################################
 
-#===========================================================
-#? Remove minor allele (< 5%) 
-# 全体の5%以下のアレルは削除する
-#===========================================================
 cat "${hdbscan_id}" |
     awk '{print $NF}' |
     sort |
     uniq -c |
     awk -v per="${original_percentage}" -v nr="$(cat "${hdbscan_id}" | wc -l))" \
     '{allele_per=$1/nr*per
-    if(allele_per>5) {
+    if(allele_per>1) {
         total+=allele_per
         allele[NR]=$2" "allele_per}}
     END{for(key in allele) print allele[key],total, per}' |
     awk '{print $1, NR, int($2/$3*$4+0.5)}' |
 cat > "${tmp_allele_percentage}"
 
-#===========================================================
-#? Report allele mutation info
-# 各リードとクラスターの対応付を行う
-#（次のVCF作製とSequence logo描出のために必要）
-#===========================================================
+################################################################################
+#! Report allele mutation info
+################################################################################
+
 before=$(cat "${tmp_allele_percentage}" | cut -d " " -f 1 | xargs echo)
 after=$(cat "${tmp_allele_percentage}" | cut -d " " -f 2 | xargs echo)
 

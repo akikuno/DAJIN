@@ -198,7 +198,7 @@ if [ "$(conda info -e | cut -d " " -f 1 | grep -c DAJIN$)" -eq 0 ]; then
     conda config --add channels bioconda
     conda config --add channels conda-forge
     conda create -y -n DAJIN python=3.6 \
-        anaconda nodejs wget gawk \
+        anaconda nodejs wget \
         tensorflow tensorflow-gpu swifter \
         samtools minimap2 \
         r-essentials r-base
@@ -208,7 +208,7 @@ fi
 #? Required software
 #===========================================================
 
-# type gzip > /dev/null 2>&1 || error_exit 'Command "gzip" not found'
+type gzip > /dev/null 2>&1 || error_exit 'Command "gzip" not found'
 # type wget > /dev/null 2>&1 || error_exit 'Command "wget" not found'
 # type python > /dev/null 2>&1 || error_exit 'Command "python" not found'
 # type samtools > /dev/null 2>&1 || error_exit 'Command "samtools" not found'
@@ -323,7 +323,7 @@ mutation_type=$(
         cstag=$(NF-1)
         if(cstag ~ "-") print "D"
         else if(cstag ~ "\+") print "I"
-        else if(cstag ~ "\*") print "P"
+        else if(cstag ~ "\*") print "S"
         }' 2>/dev/null
 )
 
@@ -332,7 +332,7 @@ mutation_type=$(
 #* Cas9の切断部に対してgRNA部自体の欠損およびgRNA長分の塩基挿入したものを異常アレルとして作成する
 #---------------------------------------
 
-if [ "_${mutation_type}" = "_P" ]; then
+if [ "_${mutation_type}" = "_S" ]; then
     grna_len=$(awk -v grna="$grna" 'BEGIN{print length(grna)}')
     grna_firsthalf=$(awk -v grna="$grna" 'BEGIN{print substr(grna, 1, int(length(grna)/2))}')
     grna_secondhalf=$(awk -v grna="$grna" 'BEGIN{print substr(grna, int(length(grna)/2)+1, length(grna))}')
@@ -451,7 +451,7 @@ Generate BAM files
 ++++++++++++++++++++++++++++++++++++++++++"
 EOF
 
-if [ "$mutation_type" = "P" ]; then
+if [ "_$mutation_type" = "_S" ]; then
     mv .DAJIN_temp/fasta_ont/wt_ins* .DAJIN_temp/
     mv .DAJIN_temp/fasta_ont/wt_del* .DAJIN_temp/
 fi
@@ -461,7 +461,7 @@ fi
 mkdir -p "${output_dir:-DAJIN_results}"/BAM
 cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM
 
-if [ "$mutation_type" = "P" ]; then
+if [ "_$mutation_type" = "_S" ]; then
     mv .DAJIN_temp/wt_ins* .DAJIN_temp/fasta_ont/
     mv .DAJIN_temp/wt_del* .DAJIN_temp/fasta_ont/
 fi
@@ -499,7 +499,7 @@ find .DAJIN_temp/fasta_ont -type f | sort |
         END{print "wait"}' |
 sh - 2>/dev/null
 
-[ "_${mutation_type}" = "_P" ] && rm .DAJIN_temp/data/MIDS_target*
+[ "_${mutation_type}" = "_S" ] && rm .DAJIN_temp/data/MIDS_target*
 
 printf "MIDS conversion was finished...\n"
 
@@ -558,6 +558,7 @@ done
 
 printf "Prediction was finished...\n"
 
+
 #===========================================================
 #? Filter low-persentage allele
 #===========================================================
@@ -603,7 +604,11 @@ cat .DAJIN_temp/tmp_prediction_proportion |
     # Retain more than 5% of the "non-target" sample and more than 1% of the "target"
     # 「ターゲット以外」のサンプルは5%以上、「ターゲット」は1%以上を残す
     # --------------------------------
-    awk '($2 > 5 && $3 != "target") || ($2 > 1 && $3 == "target")' |
+    if [ "_${mutation_type}" = "_S" ]; then
+        awk '($2 > 5 && $3 != "wt") || ($2 > 1 && $3 == "wt")'
+    else
+        awk '($2 > 5 && $3 != "target") || ($2 > 1 && $3 == "target")'
+    fi |
     awk '{barcode[$1]+=$2
         read_info[$1]=$2"____"$3" "read_info[$1]}
     END{for(key in barcode) print key,barcode[key], read_info[key]}' |
@@ -628,16 +633,19 @@ Allele clustering
 ++++++++++++++++++++++++++++++++++++++++++"
 EOF
 
+rm -rf .DAJIN_temp/clustering 2>/dev/null
+mkdir -p .DAJIN_temp/clustering/temp
+
 #===========================================================
 #? Prepare control score
 #===========================================================
-# rm -rf .DAJIN_temp/clustering
+
 ./DAJIN/src/clustering_prerequisit_re.sh "${ont_cont}" "wt"
 # wc -l .DAJIN_temp/clustering/temp/control_score_*
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt |
     #!--------------------------------------------------------
-    # grep barcode18 | grep target |
+    # grep barcode11 |
     #!--------------------------------------------------------
     awk '{print "./DAJIN/src/clustering_re.sh",$1, $3, "&"}' |
     awk -v th=${threads:-1} '{
@@ -651,7 +659,7 @@ sh -
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt |
     #!--------------------------------------------------------
-    # grep -e barcode18 | grep target |
+    # grep -e barcode11 |
     #!--------------------------------------------------------
     awk '{print "./DAJIN/src/clustering_hdbscan.sh",$1, $3}' |
 sh -
@@ -666,7 +674,7 @@ sh -
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt |
     awk '{print "./DAJIN/src/clustering_allele_percentage.sh",$1, $3, $2}' |
     #!--------------------------------------------------------
-    # grep barcode18 | grep target |
+    # grep barcode11 |
     #!--------------------------------------------------------
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
@@ -684,12 +692,15 @@ cat << EOF
 ++++++++++++++++++++++++++++++++++++++++++"
 EOF
 
-# rm -rf .DAJIN_temp/consensus/
+rm -rf .DAJIN_temp/consensus/ 2>/dev/null
+mkdir -p .DAJIN_temp/consensus/temp
+
 cat .DAJIN_temp/clustering/result_allele_percentage* |
     sed "s/_/ /" |
     awk '{nr[$1]++; print $0, nr[$1]}' |
     #!--------------------------------------------------------
-    # grep barcode18 | grep target |
+    # grep barcode11 |
+    grep -v abnormal |
     #!--------------------------------------------------------
     awk '{print "./DAJIN/src/consensus.sh", $0, "&"}' |
     awk -v th=${threads:-1} '{
@@ -739,6 +750,8 @@ rm .DAJIN_temp/tmp_nameid
 ################################################################################
 #! Generate BAM files on each cluster
 ################################################################################
+rm -rf .DAJIN_temp/bam/ 2>/dev/null
+mkdir -p .DAJIN_temp/bam/temp
 
 cat .DAJIN_temp/clustering/result_allele_percentage* |
     sed "s/_/ /" |
@@ -759,17 +772,17 @@ do
         awk -v cl="${cluster}" '$2==cl' |
         cut -f 1 |
         sort |
-    cat > ".DAJIN_temp/clustering/temp/tmp_id_$$"
+    cat > ".DAJIN_temp/bam/temp/tmp_id_$$"
     #
     samtools view -h "${output_dir:-DAJIN_results}"/BAM/"${barcode}".bam |
         awk '/^@/{print}
             NR==FNR{a[$1];next}
             $1 in a' \
-            ".DAJIN_temp/clustering/temp/tmp_id_$$" - |
+            .DAJIN_temp/bam/temp/tmp_id_$$ - |
         head -n 22 |
         samtools sort -@ "${threads:-1}" 2>/dev/null |
-    cat > "${output_dir:-DAJIN_results}"/BAM/"${output_bam}".bam
-    samtools index "${output_dir:-DAJIN_results}"/BAM/"${output_bam}".bam
+    cat > .DAJIN_temp/bam/"${output_bam}".bam
+    samtools index .DAJIN_temp/bam/"${output_bam}".bam
 done
 
 ################################################################################

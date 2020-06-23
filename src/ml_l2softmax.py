@@ -97,7 +97,7 @@ del Y_test
 # ===========================================================
 # ? L2-constrained Softmax Loss
 # ===========================================================
-init_kernel_size=512
+init_kernel_size=128
 
 model = tf.keras.Sequential()
 model.add(
