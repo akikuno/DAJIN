@@ -4,7 +4,7 @@
 #! Initialize shell environment
 ################################################################################
 
-# set -u
+set -u
 umask 0022
 export LC_ALL=C
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
@@ -140,8 +140,15 @@ error_exit "$genome: No such reference genome"
 #===========================================================
 #? Check grna
 #===========================================================
-[ $(cat "${design}" | grep -c "${grna}") -eq 0 ] &&
-error_exit "No gRNA sites"
+
+set $(echo "${grna}" | sed "s/,/ /g")
+x=1
+while [ "${x}" -le $# ]
+do
+    [ "$(grep -c ${1} ${design})" -eq 0 ] &&
+    error_exit "No gRNA sites"
+    x=$(( "${x}" + 1 ))
+done
 
 #===========================================================
 #? Check output directory name
@@ -155,7 +162,7 @@ mkdir -p "${output_dir:=DAJIN_results}"/BAM "${output_dir}"/Consensus
 #? Define threads
 #===========================================================
 
-expr "$threads" + 1 >/dev/null 2>&1
+expr "${threads}" + 1 >/dev/null 2>&1
 if [ $? -lt 2 ]; then
     :
 else
@@ -177,6 +184,8 @@ fi
 #===========================================================
 #? DAJIN_nanosim
 #===========================================================
+
+type conda > /dev/null 2>&1 || error_exit 'Command "conda" not found'
 
 CONDA_BASE=$(conda info --base)
 source "${CONDA_BASE}/etc/profile.d/conda.sh"
@@ -207,15 +216,16 @@ fi
 #===========================================================
 #? Required software
 #===========================================================
+conda activate DAJIN
 
 type gzip > /dev/null 2>&1 || error_exit 'Command "gzip" not found'
-# type wget > /dev/null 2>&1 || error_exit 'Command "wget" not found'
-# type python > /dev/null 2>&1 || error_exit 'Command "python" not found'
-# type samtools > /dev/null 2>&1 || error_exit 'Command "samtools" not found'
-# type minimap2 > /dev/null 2>&1 || error_exit 'Command "minimap2" not found'
+type wget > /dev/null 2>&1 || error_exit 'Command "wget" not found'
+type python > /dev/null 2>&1 || error_exit 'Command "python" not found'
+type samtools > /dev/null 2>&1 || error_exit 'Command "samtools" not found'
+type minimap2 > /dev/null 2>&1 || error_exit 'Command "minimap2" not found'
 
-# python -c "import tensorflow as tf" > /dev/null 2>&1 ||
-# error_exit '"Tensorflow" not found'
+python -c "import tensorflow as tf" > /dev/null 2>&1 ||
+error_exit '"Tensorflow" not found'
 
 #===========================================================
 #? For WSL (Windows Subsystem for Linux)
@@ -439,15 +449,16 @@ rm -rf DAJIN/utils/NanoSim/src/__pycache__
 
 printf 'Success!!\nSimulation is finished\n'
 
-conda activate DAJIN
-
 ################################################################################
 #! MIDS conversion
 ################################################################################
+
+conda activate DAJIN
+
 cat << EOF
 ++++++++++++++++++++++++++++++++++++++++++
 Converting ACGT into MIDS format
-++++++++++++++++++++++++++++++++++++++++++"
+++++++++++++++++++++++++++++++++++++++++++
 EOF
 
 reference=".DAJIN_temp/fasta_conv/wt.fa"
@@ -482,7 +493,7 @@ printf "MIDS conversion was finished...\n"
 cat << EOF
 ++++++++++++++++++++++++++++++++++++++++++
 Allele prediction
-++++++++++++++++++++++++++++++++++++++++++"
+++++++++++++++++++++++++++++++++++++++++++
 EOF
 
 
@@ -495,7 +506,6 @@ cat .DAJIN_temp/data/MIDS_* |
     sed -e "s/_aligned_reads//g" |
 cat > ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
 
-#?<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 cat .DAJIN_temp/data/MIDS_"${ont_cont}"_wt |
     grep -v "IIIIIIIIII" |
     grep -v "DDDDDDDDDD" |
@@ -503,7 +513,6 @@ cat .DAJIN_temp/data/MIDS_"${ont_cont}"_wt |
     head -n 10000 |
     sed "s/${ont_cont}$/wt_simulated/g" |
 cat >> ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
-#?<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 python ./DAJIN/src/ml_simulated.py \
     ".DAJIN_temp/data/DAJIN_MIDS_sim.txt" \
@@ -514,18 +523,18 @@ python ./DAJIN/src/ml_simulated.py \
 #===========================================================
 
 true > ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
-total_num=$(find .DAJIN_temp/data/MIDS* | grep -v sim | wc -l)
-process_num=1
 
 find .DAJIN_temp/data/MIDS* |
     grep -v sim |
     sort |
 while read -r input; do
-    echo "${process_num}"/"${total_num}"
+    barcode=$(echo $input | cut -d "_" -f 3)
+    echo "${barcode} is now processing..."
+    
     python ./DAJIN/src/ml_real.py \
         "${input}" \
-        "${mutation_type}" "${threads}"
-    process_num=$((process_num+1))
+        "${mutation_type}" "${threads}" ||
+    exit 1
 done
 
 printf "Prediction was finished...\n"
@@ -602,7 +611,7 @@ rm .DAJIN_temp/tmp_*
 cat << EOF
 ++++++++++++++++++++++++++++++++++++++++++
 Allele clustering
-++++++++++++++++++++++++++++++++++++++++++"
+++++++++++++++++++++++++++++++++++++++++++
 EOF
 
 rm -rf .DAJIN_temp/clustering 2>/dev/null
@@ -661,7 +670,7 @@ ls -l .DAJIN_temp/clustering/result_allele_percentage_*
 cat << EOF
 ++++++++++++++++++++++++++++++++++++++++++
 "Report consensus sequence
-++++++++++++++++++++++++++++++++++++++++++"
+++++++++++++++++++++++++++++++++++++++++++
 EOF
 
 rm -rf .DAJIN_temp/consensus/ 2>/dev/null
@@ -729,7 +738,7 @@ mkdir -p .DAJIN_temp/bam/reads20
 cat << EOF
 ++++++++++++++++++++++++++++++++++++++++++
 Generate BAM files
-++++++++++++++++++++++++++++++++++++++++++"
+++++++++++++++++++++++++++++++++++++++++++
 EOF
 
 if [ "_$mutation_type" = "_S" ]; then
