@@ -18,11 +18,11 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===========================================================
 #? TEST Auguments
 #===========================================================
-# barcode="barcode11"
+# barcode="barcode12"
 # alleletype="wt"
 # cluster=1
-# percentage=5
-# alleleid=3
+# percentage=72
+# alleleid=1
 
 # in_suffix="${barcode}"_"${alleletype}"
 # out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
@@ -66,7 +66,7 @@ mkdir -p .DAJIN_temp/consensus/temp
 tmp_allele_id=".DAJIN_temp/consensus/temp/allele_id_${out_suffix}"
 consensus_mutation=".DAJIN_temp/consensus/temp/consensus_${out_suffix}"
 mutation_info=".DAJIN_temp/consensus/temp/mutation_info_${out_suffix}"
-
+tmp_html=.DAJIN_temp/consensus/temp/tmp_html_"${out_suffix}".html
 
 ################################################################################
 #! 変異情報のコンセンサスを得る
@@ -134,7 +134,6 @@ insertion_size=$(echo "$3" | sed "s/_/ /g")
 # echo $mutation_site
 # echo $insertion_size
 
-
 cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
     minimap2 -ax map-ont \
         ".DAJIN_temp/fasta/${mapping_alleletype}.fa" - \
@@ -169,19 +168,19 @@ cat "${allele_id}" |
     for(i in type_){
         $0 = original_seq
         if(type_[i] == "I"){
-            gsub("*[a-z]", " ", $0)
-            gsub("+", " +", $0)
-            gsub("[-|=]", " ", $0)                
+            gsub(/\*[a-z]/, " ", $0)
+            gsub(/\+/, " +", $0)
+            gsub(/[-|=]/, " ", $0)                
             len=0
             for(j = 1; j<=NF; j++){
                 if(len >= site_[i]-1 && length($j) == size_[i] + 1) {print type_[i], len, $j; break}
-                else { if($j !~ /+/) len+=length($j) }
+                else { if($j !~ /\+/) len+=length($j) }
                 }
             }
         else {
-            gsub("*[a-z]", "=", $0)
-            gsub("+[a-z]*", "", $0)
-            gsub("[-=]", "", $0)
+            gsub(/\*[a-z]/, "=", $0)
+            gsub(/\+[a-z]*/, "", $0)
+            gsub(/[-=]/, "", $0)
             print type_[i], site_[i], substr($0, site_[i], 1)
             }
         }
@@ -239,13 +238,6 @@ cat > .DAJIN_temp/consensus/temp/"${out_suffix}"
 
 output_filename="${barcode}_allele${alleleid}"
 
-diff_wt=$(
-    cat .DAJIN_temp/fasta/wt.fa |
-        sed 1d |
-        diff - .DAJIN_temp/consensus/temp/${out_suffix} |
-    wc -l
-    )
-
 diff_target=$(
     cat .DAJIN_temp/fasta/target.fa |
         sed 1d |
@@ -253,10 +245,17 @@ diff_target=$(
     wc -l
     )
 
-if [ "${diff_wt}" -eq 0 ]; then
-    output_filename="${output_filename}_intact_wt"
-elif [ "${diff_target}" -eq 0 ]; then
+diff_wt=$(
+    cat .DAJIN_temp/fasta/wt.fa |
+        sed 1d |
+        diff - .DAJIN_temp/consensus/temp/${out_suffix} |
+    wc -l
+    )
+
+if [ "${diff_target}" -eq 0 ]; then
     output_filename="${output_filename}_intact_target"
+elif [ "${diff_wt}" -eq 0 ]; then
+    output_filename="${output_filename}_intact_wt"
 elif [ "$(grep -c intact $mutation_info)" -eq 1 ]; then
     output_filename="${output_filename}_intact_${alleletype}"
 else
@@ -294,7 +293,7 @@ cat ".DAJIN_temp/fasta/${mapping_alleletype}.fa" |
         }}1' |
     sed -e "s/ //g" -e "s/_/ /g"|
     sed -e "1i >${output_filename}_${percentage}%" |
-cat > .DAJIN_temp/consensus/temp/tmp_html_"${out_suffix}".html
+cat > "${tmp_html}"
 
 cat << EOF > .DAJIN_temp/consensus/"${output_filename}".html
 <!DOCTYPE html>
@@ -332,8 +331,7 @@ p {
 <p>
 EOF
 
-cat .DAJIN_temp/consensus/temp/tmp_html_"${out_suffix}".html |
-cat >> .DAJIN_temp/consensus/"${output_filename}".html
+cat "${tmp_html}" >> .DAJIN_temp/consensus/"${output_filename}".html
 
 cat << EOF >> .DAJIN_temp/consensus/"${output_filename}".html
 </p>
@@ -348,5 +346,6 @@ cat << EOF >> .DAJIN_temp/consensus/"${output_filename}".html
 EOF
 
 # ls -l .DAJIN_temp/consensus/"${output_filename}".fa
+rm "${tmp_allele_id}" "${consensus_mutation}" "${mutation_info}" "${tmp_html}"
 
 # exit 0

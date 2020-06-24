@@ -439,35 +439,7 @@ rm -rf DAJIN/utils/NanoSim/src/__pycache__
 
 printf 'Success!!\nSimulation is finished\n'
 
-################################################################################
-#! Mapping by minimap2 for IGV visualization
-################################################################################
-
 conda activate DAJIN
-
-cat << EOF
-++++++++++++++++++++++++++++++++++++++++++
-Generate BAM files
-++++++++++++++++++++++++++++++++++++++++++"
-EOF
-
-if [ "_$mutation_type" = "_S" ]; then
-    mv .DAJIN_temp/fasta_ont/wt_ins* .DAJIN_temp/
-    mv .DAJIN_temp/fasta_ont/wt_del* .DAJIN_temp/
-fi
-
-./DAJIN/src/igvjs.sh "${genome:-mm10}" "${threads:-1}"
-
-mkdir -p "${output_dir:-DAJIN_results}"/BAM
-cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM
-
-if [ "_$mutation_type" = "_S" ]; then
-    mv .DAJIN_temp/wt_ins* .DAJIN_temp/fasta_ont/
-    mv .DAJIN_temp/wt_del* .DAJIN_temp/fasta_ont/
-fi
-
-printf "BAM files are saved at bam\n"
-printf "Next converting BAM to MIDS format...\n"
 
 ################################################################################
 #! MIDS conversion
@@ -699,7 +671,6 @@ cat .DAJIN_temp/clustering/result_allele_percentage* |
     sed "s/_/ /" |
     awk '{nr[$1]++; print $0, nr[$1]}' |
     #!--------------------------------------------------------
-    # grep barcode11 |
     grep -v abnormal |
     #!--------------------------------------------------------
     awk '{print "./DAJIN/src/consensus.sh", $0, "&"}' |
@@ -735,23 +706,50 @@ cat .DAJIN_temp/clustering/result_allele_percentage* |
     awk '$4=="abnormal" {$5="mutation"}1' |
     awk 'BEGIN{OFS=","}
         {gsub("allele","",$2)
-        
-        if($4 == "abnormal") $6 ="+"
-        else $6 = "-"
+        if($6 == "target") $4 = "target"
+        if($4 == "abnormal") $6 ="+"; else $6 = "-"
         gsub("intact","-", $5)
         gsub("mutation","+", $5)
+
+        if($4 == "target" && $5 == "-" && $6 == "-") $7 = "+"
+        else $7 = "-"
         }1' |
-    sed -e "1i Sample, Allele ID, % of reads, Allele type, indel, large indel" |
+    sed -e "1i Sample, Allele ID, % of reads, Allele type, Indel, Large indel, Design" |
 cat > "${output_dir:-DAJIN_results}"/Details.csv
 
 rm .DAJIN_temp/tmp_nameid
 
-
 ################################################################################
-#! Generate BAM files on each cluster
+#! Mapping by minimap2 for IGV visualization
 ################################################################################
 rm -rf .DAJIN_temp/bam/ 2>/dev/null
 mkdir -p .DAJIN_temp/bam/temp
+mkdir -p .DAJIN_temp/bam/reads20
+
+cat << EOF
+++++++++++++++++++++++++++++++++++++++++++
+Generate BAM files
+++++++++++++++++++++++++++++++++++++++++++"
+EOF
+
+if [ "_$mutation_type" = "_S" ]; then
+    mv .DAJIN_temp/fasta_ont/wt_ins* .DAJIN_temp/
+    mv .DAJIN_temp/fasta_ont/wt_del* .DAJIN_temp/
+fi
+
+./DAJIN/src/mapping.sh "${genome:-mm10}" "${threads:-1}"
+
+# mkdir -p "${output_dir:-DAJIN_results}"/BAM
+# cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM
+
+if [ "_$mutation_type" = "_S" ]; then
+    mv .DAJIN_temp/wt_ins* .DAJIN_temp/fasta_ont/
+    mv .DAJIN_temp/wt_del* .DAJIN_temp/fasta_ont/
+fi
+
+#===========================================================
+#? Generate BAM files on each cluster
+#===========================================================
 
 cat .DAJIN_temp/clustering/result_allele_percentage* |
     sed "s/_/ /" |
@@ -773,17 +771,36 @@ do
         cut -f 1 |
         sort |
     cat > ".DAJIN_temp/bam/temp/tmp_id_$$"
-    #
-    samtools view -h "${output_dir:-DAJIN_results}"/BAM/"${barcode}".bam |
+
+    samtools view -h ".DAJIN_temp/bam/${barcode}".bam |
         awk '/^@/{print}
             NR==FNR{a[$1];next}
             $1 in a' \
             .DAJIN_temp/bam/temp/tmp_id_$$ - |
-        head -n 22 |
         samtools sort -@ "${threads:-1}" 2>/dev/null |
     cat > .DAJIN_temp/bam/"${output_bam}".bam
     samtools index .DAJIN_temp/bam/"${output_bam}".bam
+
+    #---------------------------------------
+    #* reads20
+    #---------------------------------------
+
+    header_num=$(samtools view -H ".DAJIN_temp/bam/${barcode}".bam | wc -l)
+    bam_num=$((20+${header_num}))
+    
+    samtools view -h .DAJIN_temp/bam/"${output_bam}".bam |
+        head -n "${bam_num}" |
+        samtools sort -@ "${threads:-1}" 2>/dev/null |
+    cat > .DAJIN_temp/bam/reads20/"${output_bam}".bam
+    samtools index .DAJIN_temp/bam/reads20/"${output_bam}".bam
 done
+rm -rf .DAJIN_temp/bam/temp 2>/dev/null
+
+
+rm -rf "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
+mkdir -p "${output_dir:-DAJIN_results}"/BAM/
+cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
+
 
 ################################################################################
 #! Alignment viewing

@@ -48,7 +48,7 @@ mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
 tmp_allele_percentage=".DAJIN_temp/clustering/temp/allele_percentage_${suffix}".txt
 
 ################################################################################
-#! Remove minor allele (< 1%) 
+#! Remove minor allele (< 5%) 
 ################################################################################
 
 cat "${hdbscan_id}" |
@@ -57,7 +57,7 @@ cat "${hdbscan_id}" |
     uniq -c |
     awk -v per="${original_percentage}" -v nr="$(cat "${hdbscan_id}" | wc -l))" \
     '{allele_per=$1/nr*per
-    if(allele_per>1) {
+    if(allele_per>5) {
         total+=allele_per
         allele[NR]=$2" "allele_per}}
     END{for(key in allele) print allele[key],total, per}' |
