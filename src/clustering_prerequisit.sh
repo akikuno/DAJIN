@@ -119,8 +119,10 @@ find .DAJIN_temp/fasta/* |
     sed "s/.fa.*$//g" |
 while read -r label; do
     minimap2 -ax map-ont .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/"${label}".fa --cs=long 2>/dev/null |
-    awk '$1 !~ /^@/ {print $(NF-1)}' |
+    grep -v "^@" |
     sed "s/cs:Z://g" |
+    awk 'NR==2{printf tolower($(NF-1)); next} # inversion
+        {printf $(NF-1)}' |
     sed "s/*[acgt]//g" |
     sed "s/[=+]//g" |
     awk -F "" '{

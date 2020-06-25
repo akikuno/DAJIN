@@ -184,7 +184,7 @@ fi
 #===========================================================
 #? DAJIN_nanosim
 #===========================================================
-
+set +u
 type conda > /dev/null 2>&1 || error_exit 'Command "conda" not found'
 
 CONDA_BASE=$(conda info --base)
@@ -198,6 +198,7 @@ if [ "$(conda info -e | grep -c DAJIN_nanosim)" -eq 0 ]; then
     conda install -y -n DAJIN_nanosim --file ./DAJIN/utils/NanoSim/requirements.txt
     conda install -y -n DAJIN_nanosim minimap2
 fi
+
 #===========================================================
 #? DAJIN
 #===========================================================
@@ -212,11 +213,14 @@ if [ "$(conda info -e | cut -d " " -f 1 | grep -c DAJIN$)" -eq 0 ]; then
         samtools minimap2 \
         r-essentials r-base
 fi
+set -u
 
 #===========================================================
 #? Required software
 #===========================================================
+set +u
 conda activate DAJIN
+set -u
 
 type gzip > /dev/null 2>&1 || error_exit 'Command "gzip" not found'
 type wget > /dev/null 2>&1 || error_exit 'Command "wget" not found'
@@ -393,8 +397,9 @@ done
 ################################################################################
 #! NanoSim (v2.5.0)
 ################################################################################
-
+set +u
 conda activate DAJIN_nanosim
+set -u
 
 cat << EOF
 ++++++++++++++++++++++++++++++++++++++++++
@@ -452,8 +457,9 @@ printf 'Success!!\nSimulation is finished\n'
 ################################################################################
 #! MIDS conversion
 ################################################################################
-
+set +u
 conda activate DAJIN
+set -u
 
 cat << EOF
 ++++++++++++++++++++++++++++++++++++++++++
@@ -625,7 +631,7 @@ mkdir -p .DAJIN_temp/clustering/temp
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt |
     #!--------------------------------------------------------
-    grep barcode05 |
+    # grep barcode05 |
     #!--------------------------------------------------------
     awk '{print "./DAJIN/src/clustering.sh",$1, $3, "&"}' |
     awk -v th=${threads:-1} '{
