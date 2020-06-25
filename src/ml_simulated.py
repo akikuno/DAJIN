@@ -28,7 +28,6 @@ from tensorflow.keras.models import Model
 # ===========================================================
 
 # file_name = ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
-# mutation_type = "P"
 # threads = 65
 
 # ===========================================================
@@ -37,14 +36,11 @@ from tensorflow.keras.models import Model
 
 args = sys.argv
 file_name = args[1]
-mutation_type = args[2]
-threads = int(args[3])
-
-if mutation_type == "":
-    raise ValueError("mutation_type is empty")
+threads = int(args[2])
 
 if threads == "":
-    threads = 1
+    import multiprocessing    
+    threads = multiprocessing.cpu_count() // 2
 
 # ===========================================================
 # ? Input

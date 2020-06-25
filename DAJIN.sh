@@ -515,8 +515,7 @@ cat .DAJIN_temp/data/MIDS_"${ont_cont}"_wt |
 cat >> ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
 
 python ./DAJIN/src/ml_simulated.py \
-    ".DAJIN_temp/data/DAJIN_MIDS_sim.txt" \
-    "${mutation_type}" "${threads}"
+    ".DAJIN_temp/data/DAJIN_MIDS_sim.txt" "${threads}"
 
 #===========================================================
 #? Predict labels
@@ -530,7 +529,7 @@ find .DAJIN_temp/data/MIDS* |
 while read -r input; do
     barcode=$(echo $input | cut -d "_" -f 3)
     echo "${barcode} is now processing..."
-    
+
     python ./DAJIN/src/ml_real.py \
         "${input}" \
         "${mutation_type}" "${threads}" ||
@@ -621,14 +620,14 @@ mkdir -p .DAJIN_temp/clustering/temp
 #? Prepare control score
 #===========================================================
 
-./DAJIN/src/clustering_prerequisit_re.sh "${ont_cont}" "wt"
+./DAJIN/src/clustering_prerequisit.sh "${ont_cont}" "wt"
 # wc -l .DAJIN_temp/clustering/temp/control_score_*
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt |
     #!--------------------------------------------------------
-    # grep barcode11 |
+    grep barcode05 |
     #!--------------------------------------------------------
-    awk '{print "./DAJIN/src/clustering_re.sh",$1, $3, "&"}' |
+    awk '{print "./DAJIN/src/clustering.sh",$1, $3, "&"}' |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
@@ -812,17 +811,17 @@ cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 
 
 ################################################################################
-#! Alignment viewing
+#! IGV.js Alignment viewing
 ################################################################################
 
-printf "Visualizing alignment reads...\n"
-printf "Browser will be launched. Click 'igvjs.html'.\n"
-{ npx live-server "${output_dir:-DAJIN_results}"/BAM/igvjs/ & } 1>/dev/null 2>/dev/null
+# printf "Visualizing alignment reads...\n"
+# printf "Browser will be launched. Click 'igvjs.html'.\n"
+# { npx live-server "${output_dir:-DAJIN_results}"/BAM/igvjs/ & } 1>/dev/null 2>/dev/null
 
 # rm -rf .tmp_
 # rm .DAJIN_temp/tmp_* .DAJIN_temp/clustering/tmp_* 2>/dev/null
 
-printf "Completed! \nCheck 'results/figures/' directory.\n"
+printf "Completed! \nCheck ${output_dir:-DAJIN_results} directory.\n"
 
 exit 0
 

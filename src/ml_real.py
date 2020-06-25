@@ -27,9 +27,8 @@ from tensorflow.keras.models import Model
 # ? TEST auguments
 # ===========================================================
 
-# file_name = ".DAJIN_temp/data/MIDS_barcode11_wt"
-# file_name = "test.txt"
-# mutation_type = "P"
+# file_name = ".DAJIN_temp/data/MIDS_barcode21_wt"
+# mutation_type = "I"
 # threads = 65
 
 # ===========================================================
@@ -45,7 +44,9 @@ if mutation_type == "":
     raise ValueError("mutation_type is empty")
 
 if threads == "":
-    threads = 1
+    import multiprocessing    
+    threads = multiprocessing.cpu_count() // 2
+
 
 # ===========================================================
 # ? Input
@@ -104,7 +105,7 @@ outliers = np.where(outliers == 1, "normal", "abnormal")
 
 df["outliers"] = outliers
 
-# print(df.groupby("barcodeID").outliers.value_counts()) #!<<<<<
+df.groupby("barcodeID").outliers.value_counts() #!<<<<<
 
 
 ################################################################################
@@ -128,7 +129,7 @@ for index, label in enumerate(labels_index):
 # ---------------------------------------
 # * In the case of a point mutation, the reads determined to be wt_ins and wt_del should be treated as "abnormal".
 # ---------------------------------------
-if mutation_type == "P":
+if mutation_type == "S":
     df["prediction"].mask(
         df["prediction"].str.contains("wt_"), "abnormal", inplace=True
     )

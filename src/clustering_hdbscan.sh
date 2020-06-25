@@ -1,7 +1,7 @@
 #!/bin/sh
 
 ################################################################################
-# Initialize shell environment
+#! Initialize shell environment
 ################################################################################
 
 set -u
@@ -11,9 +11,13 @@ export PATH="$(command -p getconf PATH 2>/dev/null)${PATH+:}${PATH-}"
 case $PATH in :*) PATH=${PATH#?};; esac
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
+error_exit() {
+    echo "$@" 1>&2
+    exit 1
+}
 
 ################################################################################
-# I/O naming
+#! I/O naming
 ################################################################################
 #===========================================================
 #? TEST Aurguments
@@ -49,14 +53,21 @@ query_label=".DAJIN_temp/clustering/temp/query_labels_${suffix}"
 #===========================================================
 #? Output
 #===========================================================
-mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
+mkdir -p ".DAJIN_temp/clustering/temp/"
 # hdbscan_id=".DAJIN_temp/clustering/temp/hdbscan_${suffix}"
 
 ################################################################################
-# HDBSCAN
+#! HDBSCAN
 ################################################################################
-
-Rscript DAJIN/src/test_clustering.R "${query_score}" "${query_label}" "${control_score}"
+if [ ! -s "${query_score}" ]; then
+        error_exit "${query_score} is empty"
+elif [ ! -s "${query_label}" ]; then
+        error_exit "${query_label} is empty"
+elif [ ! -s "${control_score}" ]; then
+        error_exit "${control_score} is empty"
+else
+    Rscript DAJIN/src/test_clustering.R "${query_score}" "${query_label}" "${control_score}"
+fi
 
 echo "Clustering ${barcode} ${alleletype} was finished..."
 

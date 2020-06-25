@@ -15,6 +15,15 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 ################################################################################
 
 #===========================================================
+#? TEST Auguments
+#===========================================================
+# barcode=barcode32
+# alleletype=wt
+# mapping_alleletype="${alleletype}"
+# [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
+# [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
+
+#===========================================================
 #? Auguments
 #===========================================================
 
@@ -25,124 +34,68 @@ mapping_alleletype="${alleletype}"
 [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
 [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
 
-# ----------------------------------------
-# Output
-# ----------------------------------------
+#===========================================================
+#? Input
+#===========================================================
+
+#===========================================================
+#? Output
+#===========================================================
 mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
-
-# temporal --------------------------------
-MIDS_ref=".DAJIN_temp/clustering/temp/MIDS_${barcode}_${alleletype}"
-
-# result --------------------------------
 control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
 
-# ----------------------------------------------------------
-# Get max sequence length
-# ----------------------------------------------------------
+#===========================================================
+#? Temporal
+#===========================================================
+MIDS_ref=".DAJIN_temp/clustering/temp/MIDS_${barcode}_${alleletype}"
+MIDS_tmp=".DAJIN_temp/clustering/temp/MIDS_tmp_${barcode}_${alleletype}"
+control_tmp=".DAJIN_temp/clustering/temp/control_tmp_${barcode}_${alleletype}"
 
-seq_length=$(
-    cat .DAJIN_temp/fasta/wt.fa |
-    grep -v "^>" |
-    awk '{print length($0)}'
-)
+################################################################################
+#! Control scoring
+################################################################################
 
-# ==============================================================================
-# Generate  "${control_score}"
-# ==============================================================================
+#===========================================================
+#? MIDS conversion
+#===========================================================
 
-# # ----------------------------------------------------------
-# # MIDS conversion
-# # ----------------------------------------------------------
+./DAJIN/src/mids_clustering.sh "${barcode}" "${mapping_alleletype}" > "${MIDS_ref}"
 
-find .DAJIN_temp/fasta_ont/ -type f |
-    grep "${barcode}" |
-    xargs -I @ ./DAJIN/src/mids_convertion.sh @ "${mapping_alleletype}" "control"
-cp ".DAJIN_temp/data/MIDS_${barcode}_${mapping_alleletype}" "${MIDS_ref}"
+#===========================================================
+#? Mutation scoring of control samples
+#===========================================================
 
-# rm .DAJIN_temp/tmp_${barcode}*${alleletype}
-# rm .DAJIN_temp/tmp_${barcode}*${alleletype}
-
-# ----------------------------------------------------------
-# Mutation scoring of control samples
-# ----------------------------------------------------------
-# ----------------------------------------
-# 挿入塩基を1つの挿入塩基数にまとめて配列のズレを無くす
-# ----------------------------------------
 cat "${MIDS_ref}" |
     grep "${barcode}" |
     sort -k 1,1 |
     join - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk -v alelle="$alleletype" '$NF==alelle' |
     cut -d " " -f 2 |
-    # Insertion annotation
+cat > "${MIDS_tmp}"
+
+# ----------------------------------------
+# 行を「リード指向」から「塩基部位指向」に変換する
+# ----------------------------------------
+nr=$(cat "${MIDS_tmp}" | wc -l)
+
+cat "${MIDS_tmp}" | 
+    awk -v nr="${nr}" -F "" \
+    '{for(i=1; i<=NF; i++){
+            row[i]=row[i] $i
+            if(NR==nr) print row[i]
+        }
+    }' | 
+    # cat tmp | head -n 3113 | tail -n 1 |
     awk -F "" '{
-        for(i=1; i<=NF; i++){
-            if($i=="I") num=num+1
-            if($i=="I" && $(i+1)!="I") {
-                # -----------------------------------
-                ### e.g) if num=10, num becomes "a"
-                # -----------------------------------
-                if(num>=10 && num<=35) {num=sprintf("%c", num+87)}
-                else if(num>=36) num="z"
-                ###
-                $(i+1)=num; num=0}
-            }
-        print $0
-        }' |
-    sed -e "s/I//g" -e "s/ //g" |
-    # ----------------------------------------
-    # MIDS変換で末尾がDになった配列を=に変換する
-    # ----------------------------------------
-    sed -e "s/I//g" -e "s/ //g" |
-    sed "s/\(D*$\)/ \1/g" |
-    awk '{
-        for(i=1; i<=NF; i++) if($i~/^D*$/) gsub(/./, "=", $i)
-    }1' |
-    sed "s/ //g" |
-    # ----------------------------------------
-    # 短い配列をPaddingする
-    # ----------------------------------------
-    awk -v seqnum="${seq_length}" \
-        'BEGIN{OFS=""}
-        { if(length($0) < seqnum){
-            seq="="
-            for(i=length($0)+1; i<=seqnum; i++) $i=seq
-            print $0}
-        }' |
-    # ----------------------------------------
-    # 行を「リード指向」から「塩基部位指向」に変換する
-    # 例：
-    # MMM
-    # MII
-    # ↓
-    # MM
-    # MI
-    # MI
-    # ----------------------------------------
-    awk -F "" \
-        '{ for (i=1; i<=NF; i++)  { a[NR,i] = $i } }
-        END {    
-            for(j=1; j<=NF; j++) {
-                str=a[1,j]
-                for(i=2; i<=NR; i++){ str=str""a[i,j] }
-                print str }
-        }' |
-    # ----------------------------------------
-    # シークエンスエラーを描出する
-    # ----------------------------------------
-    awk -F "" '{
-        sum[1]=gsub("=","=",$0)
-        sum[2]=gsub("M","M",$0)
-        sum[3]=gsub(/[1-9]|[a-z]/,"@",$0)
-        sum[4]=gsub("D","D",$0)
-        sum[5]=gsub("S","S",$0)
+        INS=gsub(/[1-9]|[a-z]/,"@",$0)
+        DEL=gsub("D","D",$0)
+        SUB=gsub("S","S",$0)
         # ----------------------------------------
-        ### Controlにおいて系統的な変異が5%を超える部位をシークエンスエラーとする
+        ### Controlにおいて系統的な変異が10%を超える部位をシークエンスエラーとする
         # ----------------------------------------
-        per=5
-        if(sum[3] > NF*per/100) num = 2
-        else if(sum[4] > NF*per/100) num = 2
-        else if(sum[5] > NF*per/100) num = 2
+        per=10
+        # print INS, DEL, SUB, NF*per/100 
+        if(INS > NF*per/100 || DEL > NF*per/100 || SUB > NF*per/100) num = 2
         else num=1
         print num
     }' |
@@ -157,10 +110,11 @@ cat > "${control_score}"
 cat "${control_score}" |
     awk '{print $1,NR}' |
     sort -t " " -k 2,2 |
-cat > .DAJIN_temp/clustering/temp/tmp_control_score
+cat > "${control_tmp}"
 
 find .DAJIN_temp/fasta/* |
     grep -v wt.fa |
+    grep -v fasta.fa |
     sed "s:.*/::g" |
     sed "s/.fa.*$//g" |
 while read -r label; do
@@ -183,12 +137,12 @@ while read -r label; do
             }
         }}' |
     sort -t " " -k 3,3 |
-    join -a 1 -1 3 -2 2 - .DAJIN_temp/clustering/temp/tmp_control_score |
+    join -a 1 -1 3 -2 2 -  "${control_tmp}" |
     sort -k 3,3n |
     awk 'NF==3{$4=1}{print $NF}' |
     cat > ".DAJIN_temp/clustering/temp/control_score_${label}"
 done
 
-rm .DAJIN_temp/clustering/temp/tmp_control_score
+rm "${MIDS_ref}" "${MIDS_tmp}" "${control_tmp}"
 
 exit 0
