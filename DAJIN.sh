@@ -544,10 +544,10 @@ done
 
 printf "Prediction was finished...\n"
 
-
 #===========================================================
 #? Filter low-persentage allele
 #===========================================================
+
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     sort |
 cat > .DAJIN_temp/tmp_$$
