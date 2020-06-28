@@ -66,7 +66,7 @@ elif [ ! -s "${query_label}" ]; then
 elif [ ! -s "${control_score}" ]; then
         error_exit "${control_score} is empty"
 else
-    Rscript DAJIN/src/test_clustering.R "${query_score}" "${query_label}" "${control_score}"
+    Rscript DAJIN/src/test_clustering.R "${query_score}" "${query_label}" "${control_score}" 2>/dev/null
 fi
 
 echo "Clustering ${barcode} ${alleletype} was finished..."

@@ -19,6 +19,7 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===========================================================
 # barcode=barcode32
 # alleletype=wt
+# threads=65
 # mapping_alleletype="${alleletype}"
 # [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
 # [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
@@ -29,7 +30,7 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 barcode="${1}"
 alleletype="${2}"
-
+threads="${3}"
 mapping_alleletype="${alleletype}"
 [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
 [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
@@ -106,7 +107,6 @@ cat > "${control_score}"
 # Generate  "${control_score}"
 # ==============================================================================
 
-
 cat "${control_score}" |
     awk '{print $1,NR}' |
     sort -t " " -k 2,2 |
@@ -118,7 +118,9 @@ find .DAJIN_temp/fasta/* |
     sed "s:.*/::g" |
     sed "s/.fa.*$//g" |
 while read -r label; do
-    minimap2 -ax map-ont .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/"${label}".fa --cs=long 2>/dev/null |
+    minimap2 -t "${threads}" -ax map-ont \
+        .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/"${label}".fa \
+        --cs=long 2>/dev/null |
     grep -v "^@" |
     sed "s/cs:Z://g" |
     awk 'NR==2{printf tolower($(NF-1)); next} # inversion

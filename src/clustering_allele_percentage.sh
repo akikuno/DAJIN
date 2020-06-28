@@ -17,12 +17,16 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 ################################################################################
 
 #===========================================================
+#? TEST Auguments
+#===========================================================
+# barcode="barcode21"
+# alleletype="inversion"
+# original_percentage=0.00465658
+# suffix="${barcode}"_"${alleletype}"
+
+#===========================================================
 #? Auguments
 #===========================================================
-# barcode="barcode32"
-# alleletype="normal"
-# original_percentage=100
-# suffix="${barcode}"_"${alleletype}"
 
 barcode="${1}"
 alleletype="${2}"

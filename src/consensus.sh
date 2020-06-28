@@ -51,7 +51,7 @@ mapping_alleletype="${alleletype}"
 #? Input
 #===========================================================
 control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
-allele_id=".DAJIN_temp/clustering/result_allele_id_${in_suffix}".txt
+allele_id=".DAJIN_temp/clustering/readid_cl_mids_${in_suffix}"
 
 #===========================================================
 #? Output
@@ -69,11 +69,11 @@ mutation_info=".DAJIN_temp/consensus/temp/mutation_info_${out_suffix}"
 tmp_html=.DAJIN_temp/consensus/temp/tmp_html_"${out_suffix}".html
 
 ################################################################################
-#! 変異情報のコンセンサスを得る
+#! Get consensus sequence
 ################################################################################
 
 #===========================================================
-#? 変異部を検出する
+#? Detecting mutation sites
 #===========================================================
 
 cat "${allele_id}" |

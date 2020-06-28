@@ -27,18 +27,20 @@ Input     : Input file should be formatted as below:
             design=DAJIN/example/design.txt
             input_dir=DAJIN/example/demultiplex
             control=barcode01
-            output_dir=Cables2
             genome=mm10
             grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
+            output_dir=DAJIN_cables2
             threads=10
+            filter=on
             ------
             - desing: a multi-FASTA file contains sequences of each genotype. ">wt" and ">target" must be included. 
             - input_dir: a directory contains FASTA or FASTQ files of long-read sequencing
             - control: control barcode ID
-            - output_dir: output directory name. optional. default is DAJIN_results
             - genome: reference genome. e.g. mm10, hg38
             - grna: gRNA sequence(s). multiple gRNA sequences must be deliminated by comma.
-            - threads: optional. default is two-thirds of available CPU threads.
+            - output_dir (optional): output directory name. optional. Default is "DAJIN_results"
+            - threads (optional): Default is two-thirds of available CPU threads.
+            - filter (optional): set filter to remove very minor allele (less than 3%). Default is "on"
 USAGE
 }
 
@@ -78,6 +80,7 @@ do
             grna=$(cat "$2" | grep "grna" | sed -e "s/ //g" -e "s/.*=//g")
             output_dir=$(cat "$2" | grep "output_dir" | sed -e "s/ //g" -e "s/.*=//g")
             threads=$(cat "$2" | grep "threads" | sed -e "s/ //g" -e "s/.*=//g")
+            filter=$(cat "$2" | grep "filter" | sed -e "s/ //g" -e "s/.*=//g")
             ;;
         -* )
         error_exit "Unrecognized option : $1"
@@ -88,6 +91,10 @@ do
     esac
     shift
 done
+
+#===========================================================
+#? Check required arguments
+#===========================================================
 
 if [ -z "$design" ] || [ -z "$ont_dir" ] || [ -z "$ont_cont" ] || [ -z "$genome" ] || [ -z "$grna" ]
 then
@@ -157,6 +164,18 @@ if [ $(echo "$output_dir" | grep  -c -e '\\' -e ':' -e '*' -e '?' -e '"' -e '<' 
     error_exit "$output_dir: invalid directory name"
 fi
 mkdir -p "${output_dir:=DAJIN_results}"/BAM "${output_dir}"/Consensus
+
+
+#===========================================================
+#? Check "filter"
+#===========================================================
+if [ -z "${filter}" ];then
+    filter=on
+elif [ _"${filter}" = _"off" ];then
+    :
+else
+    error_exit "${filter}: invalid filter name (on/off)"
+fi
 
 #===========================================================
 #? Define threads
@@ -542,19 +561,19 @@ while read -r input; do
     exit 1
 done
 
-printf "Prediction was finished...\n"
-
-#===========================================================
-#? Filter low-persentage allele
-#===========================================================
-
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     sort |
 cat > .DAJIN_temp/tmp_$$
 mv .DAJIN_temp/tmp_$$ .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt
 
+printf "Prediction was finished...\n"
+
+# #===========================================================
+# #? Report the percentage of alleles in each sample
+# #===========================================================
+
 #---------------------------------------
-#* 各サンプルに含まれるアレルの割合を出す
+#* Report the percentage of alleles in each sample
 #---------------------------------------
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
@@ -569,46 +588,46 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk '{print $1, $3/$2*100, $4}' |
 cat > ".DAJIN_temp/tmp_prediction_proportion"
 
-#---------------------------------------
-#* コントロールの異常アレルの割合を出す
-#---------------------------------------
+# #---------------------------------------
+# #* コントロールの異常アレルの割合を出す
+# #---------------------------------------
 
-percentage_of_abnormal_in_cont=$(
-    cat ".DAJIN_temp"/tmp_prediction_proportion | 
-    grep "${ont_cont:=barcode32}" | #! define "control" by automate manner
-    grep abnormal |
-    cut -d " " -f 2)
+# percentage_of_abnormal_in_cont=$(
+#     cat ".DAJIN_temp"/tmp_prediction_proportion | 
+#     grep "${ont_cont:=barcode32}" | #! define "control" by automate manner
+#     grep abnormal |
+#     cut -d " " -f 2)
 
-#---------------------------------------
-#* Filter low-percent alleles
-#---------------------------------------
+# #---------------------------------------
+# #* Filter low-percent alleles
+# #---------------------------------------
 
-cat .DAJIN_temp/tmp_prediction_proportion |
-    awk -v refab="${percentage_of_abnormal_in_cont}" \
-        '!($2<refab+3 && $3 == "abnormal")' |
-    # --------------------------------
-    # Retain more than 5% of the "non-target" sample and more than 1% of the "target"
-    # 「ターゲット以外」のサンプルは5%以上、「ターゲット」は1%以上を残す
-    # --------------------------------
-    if [ "_${mutation_type}" = "_S" ]; then
-        awk '($2 > 5 && $3 != "wt") || ($2 > 1 && $3 == "wt")'
-    else
-        awk '($2 > 5 && $3 != "target") || ($2 > 1 && $3 == "target")'
-    fi |
-    awk '{barcode[$1]+=$2
-        read_info[$1]=$2"____"$3" "read_info[$1]}
-    END{for(key in barcode) print key,barcode[key], read_info[key]}' |
-    awk '{for(i=3;i<=NF; i++) print $1,$2,$i}' |
-    sed "s/____/ /g" |
-    # --------------------------------
-    # Interpolate the removed alleles to bring the total to 100%
-    # 除去されたアレル分を補間し、合計を100%にする
-    # --------------------------------
-    awk '{print $1, int($3*100/$2+0.5),$4}' |
-    sort |
-cat > .DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt
+# cat .DAJIN_temp/tmp_prediction_proportion |
+#     awk -v refab="${percentage_of_abnormal_in_cont}" \
+#         '!($2<refab+3 && $3 == "abnormal")' |
+#     # --------------------------------
+#     # Retain more than 5% of the "non-target" sample and more than 1% of the "target"
+#     # 「ターゲット以外」のサンプルは5%以上、「ターゲット」は1%以上を残す
+#     # --------------------------------
+#     if [ "_${mutation_type}" = "_S" ]; then
+#         awk '($2 > 5 && $3 != "wt") || ($2 > 1 && $3 == "wt")'
+#     else
+#         awk '($2 > 5 && $3 != "target") || ($2 > 1 && $3 == "target")'
+#     fi |
+#     awk '{barcode[$1]+=$2
+#         read_info[$1]=$2"____"$3" "read_info[$1]}
+#     END{for(key in barcode) print key,barcode[key], read_info[key]}' |
+#     awk '{for(i=3;i<=NF; i++) print $1,$2,$i}' |
+#     sed "s/____/ /g" |
+#     # --------------------------------
+#     # Interpolate the removed alleles to bring the total to 100%
+#     # 除去されたアレル分を補間し、合計を100%にする
+#     # --------------------------------
+#     awk '{print $1, int($3*100/$2+0.5),$4}' |
+#     sort |
+# cat > .DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt
 
-rm .DAJIN_temp/tmp_*
+# rm .DAJIN_temp/tmp_*
 
 ################################################################################
 #! Clustering
@@ -626,14 +645,20 @@ mkdir -p .DAJIN_temp/clustering/temp
 #? Prepare control score
 #===========================================================
 
-./DAJIN/src/clustering_prerequisit.sh "${ont_cont}" "wt"
+./DAJIN/src/clustering_prerequisit.sh "${ont_cont}" "wt" "${threads}"
 # wc -l .DAJIN_temp/clustering/temp/control_score_*
 
-cat .DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt |
+#===========================================================
+#? Prepare control score
+#===========================================================
+
+cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
+    cut -f 2,3 |
+    sort -u |
     #!--------------------------------------------------------
     # grep barcode05 |
     #!--------------------------------------------------------
-    awk '{print "./DAJIN/src/clustering.sh",$1, $3, "&"}' |
+    awk '{print "./DAJIN/src/clustering.sh",$1, $2, "&"}' |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
@@ -643,11 +668,13 @@ sh -
 #? Clustering by HDBSCAN
 #===========================================================
 
-cat .DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt |
+cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
+    cut -f 2,3 |
+    sort -u |
     #!--------------------------------------------------------
     # grep -e barcode11 |
     #!--------------------------------------------------------
-    awk '{print "./DAJIN/src/clustering_hdbscan.sh",$1, $3}' |
+    awk '{print "./DAJIN/src/clustering_hdbscan.sh",$1, $2}' |
 sh -
 
 # ls -lh .DAJIN_temp/clustering/temp/hdbscan_*
@@ -657,17 +684,21 @@ sh -
 #? Allele percentage
 #===========================================================
 
-cat .DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt |
-    awk '{print "./DAJIN/src/clustering_allele_percentage.sh",$1, $3, $2}' |
+cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
+    cut -f 2 |
+    sort -u |
+    awk -v filter="${filter:-on}" \
+    '{print "./DAJIN/src/clustering_allele_percentage_re.sh", $1, filter}' |
     #!--------------------------------------------------------
-    # grep barcode11 |
+    # grep barcode21 |
     #!--------------------------------------------------------
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
 sh -
 
-ls -l .DAJIN_temp/clustering/result_allele_percentage_*
+ls -l .DAJIN_temp/clustering/read*
+ls -l .DAJIN_temp/clustering/label*
 
 ################################################################################
 #! Get consensus sequence in each cluster
@@ -681,8 +712,7 @@ EOF
 rm -rf .DAJIN_temp/consensus/ 2>/dev/null
 mkdir -p .DAJIN_temp/consensus/temp
 
-cat .DAJIN_temp/clustering/result_allele_percentage* |
-    sed "s/_/ /" |
+cat .DAJIN_temp/clustering/label* |
     awk '{nr[$1]++; print $0, nr[$1]}' |
     #!--------------------------------------------------------
     grep -v abnormal |
@@ -710,8 +740,7 @@ find .DAJIN_temp/consensus/* -type f |
     sort |
 cat > .DAJIN_temp/tmp_nameid
 
-cat .DAJIN_temp/clustering/result_allele_percentage* |
-    sed "s/_/ /" |
+cat .DAJIN_temp/clustering/label* |
     awk '{nr[$1]++; print $0, nr[$1]}' |
     awk '{print $1"_allele"$5, $4, $2}' |
     sort |
@@ -765,8 +794,7 @@ fi
 #? Generate BAM files on each cluster
 #===========================================================
 
-cat .DAJIN_temp/clustering/result_allele_percentage* |
-    sed "s/_/ /" |
+cat .DAJIN_temp/clustering/label* |
     awk '{nr[$1]++; print $0, nr[$1]}' |
 while read -r allele
 do
