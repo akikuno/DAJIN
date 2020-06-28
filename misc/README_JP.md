@@ -1,85 +1,65 @@
-# DAJIN 一網打尽
-A simple, rapid, scalable whole-allelic profile of genome editing aminals using ONT MinION
 
-# インストール (OS別)
-## Linux
-[Anaconda](https://docs.anaconda.com/anaconda/install/)または[Miniconda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)をインストールした後に、下記のコマンドを実行してください。
+<p align="center">
+<img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/DAJIN-logo.png" width="90%">
+</p>
+
+[![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
+
+## 推奨環境
+
+以下の環境で動作確認をしています。
+- Ubuntu 18.04
+- Windows WSL1 (Ubuntu 18.04)
+
+## インストール
+
+必要なソフトウェアは以下の2つです。  
+- [git](https://git-scm.com/book/ja/v2/%E4%BD%BF%E3%81%84%E5%A7%8B%E3%82%81%E3%82%8B-Git%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB)
+- [conda](https://docs.conda.io/en/latest/miniconda.html)
+
+インストール後に、以下のコマンドで
 
 ```
-conda create -y -n DAJIN python=3.6 anaconda git tensorflow-gpu keras tqdm nodejs
-conda install -y -n DAJIN -c bioconda nanosim samtools htslib fasta3 clustalo weblogo
-conda activate DAJIN
 git clone https://github.com/akikuno/DAJIN.git
 ```
 
-## Windows10
-Windows Subsystem for LinuxとAnaconda Promptの設定が必要です。    
+### Windows10
+Windows Subsystem for LinuxとAnaconda Promptの設定が必要です。  
 [こちらのページ](https://github.com/akikuno/DAJIN/blob/master/misc/WindowsOS_Setting_JP.md)をご覧ください。  
 
-## macOS
-macOSはCPUでの実行は出来ますが、計算時間がかかるため推奨できません。
+### macOS
+macOSはCPUでの実行はできますが、計算時間がかかるため推奨できません。
 
-# Usuage
-```
-allele_profiler.sh \
-  -i <FASTA file> (required) \
-  -ont_dir <directory> (required)  \
-  -ont_ref <FASTA|FASTQ file> (required) \
-  -genome <reference genome name> (required) \
-  -o <string> (optional) \
-  -t <integer> (optional)
+## 利用方法
 
-Options :   
--i            Multi-FASTA file. It must include ">target" and ">wt"
--ont_dir      Directory containing ONT demultiplexed reads 
--ont_ref      Reference (= wild-type) reads from ONT MinION
--genome       Reference genome name (e.g. hg38, mm10)
-              See https://gggenome.dbcls.jp/en/help.html#db_list 
--o            Output file name (default = sequence_MIDS)
--t            Number of threads to NanoSim and BAM compression
-              (default =  half of total available thread in CPU)
--h            show the help message
-```
+### 入力ファイルの用意
 
-# Example
+はじめに、以下のようなテキストファイルを作製します。
 
 ```
-./DAJIN/allele_profiler.sh \
-  -i DAJIN/example/cables2_flox.fa \
-  -ont DAJIN/example/demultiplex \
-  -ont_ref DAJIN/example/demultiplex/barcode21.fastq.gz \
-  -genome mm10 \
-  -o test \
-  -t 8
+design=DAJIN/example/design.txt
+input_dir=DAJIN/example/demultiplex
+control=barcode01
+genome=mm10
+grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
+output_dir=DAJIN_cables2
+threads=10
+filter=on
 ```
 
-# Output
-## Whole-allelic profile
-`results` directory contains a figure of whole-allelic profile.  
-This is an example result of three mice.  
+各項目の情報は以下のとおりです。
 
-<img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/sequence_MIDS_prediction_result.png" width="50%">  
+- desing: 考えられる遺伝型の配列を記載したFASTA形式のテキストファイルです。 ">wt"と">target"の2つは含まれている必要があります。
+- input_dir: demultiplex済みのFASTA/FASTQファイルを含むディレクトリです。
+- control: 野生型コントロールのバーコード番号です。
+- genome: `mm10`, `hg38`等の参照ゲノムです。
+- grna: gRNA配列です。2つ以上の配列はコンマ（,）で区切ります。
+- output_dir（オプショナル）: 結果を保存するディレクトリの名前です。デフォルトは`DAJIN_results`です。
+- threads（オプショナル）: DAJINに使用するCPUスレッド数です。デフォルトでは2/3を使用します。
+- filter（オプショナル: on/off）: マイナーアレル（Targetアレルが1%以下、その他のアレルが3%以下）を解析から除きます。デフォルトは"on"です。
 
-Barcode14 and 19 are a founder mice, whose target allele is flox. Barcode21 is a wild-type mice as a control.   
-This result shows ~80% of reads from Barcode14 are labeled as "target" (flox), and indicates Barcode14 is the desired mouse that has homozygous floxed allele.
+### DAJINの実行
 
-## Alignment viewing using IGV.js
-When you want to see the alignment of reads, you can type the following command.  
+```bash
+./DAJIN/DAJIN.sh -f [入力ファイルのPATH]
 ```
-npx live-server results/igvjs/
-```
-The browser will pop-up the following page:  
-
-<img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/igvjs_localhost.png" width="50%">  
-
-Click `igvjs.html` and you can see the alignment views:  
-
-<img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/igvjs_alignment.png" width="50%">
-
-The barcode14 has two purple sites, where **insertion** occurs.
-
-# Contact
-Akihiro Kuno  
-akuno@md.tsukuba.ac.jp
-
-# Reference
