@@ -361,15 +361,15 @@ mutation_type=$(
 )
 
 #---------------------------------------
-#* Targetが一塩基変異の場合: 
-#* Cas9の切断部に対してgRNA部自体の欠損およびgRNA長分の塩基挿入したものを異常アレルとして作成する
+#* In the case of Point mutation: 
+#* Generate randome insertion and deletion at gRNA sites as abnormal alleles
 #---------------------------------------
 
 if [ "_${mutation_type}" = "_S" ]; then
     grna_len=$(awk -v grna="$grna" 'BEGIN{print length(grna)}')
     grna_firsthalf=$(awk -v grna="$grna" 'BEGIN{print substr(grna, 1, int(length(grna)/2))}')
     grna_secondhalf=$(awk -v grna="$grna" 'BEGIN{print substr(grna, int(length(grna)/2)+1, length(grna))}')
-    # ランダム配列の作成
+    # Randome sequence
     ins_seq=$(
         seq_length="$grna_len" &&
         od -A n  -t u4 -N $(($seq_length*100)) /dev/urandom |
@@ -588,47 +588,6 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk '{print $1, $3/$2*100, $4}' |
 cat > ".DAJIN_temp/tmp_prediction_proportion"
 
-# #---------------------------------------
-# #* コントロールの異常アレルの割合を出す
-# #---------------------------------------
-
-# percentage_of_abnormal_in_cont=$(
-#     cat ".DAJIN_temp"/tmp_prediction_proportion | 
-#     grep "${ont_cont:=barcode32}" | #! define "control" by automate manner
-#     grep abnormal |
-#     cut -d " " -f 2)
-
-# #---------------------------------------
-# #* Filter low-percent alleles
-# #---------------------------------------
-
-# cat .DAJIN_temp/tmp_prediction_proportion |
-#     awk -v refab="${percentage_of_abnormal_in_cont}" \
-#         '!($2<refab+3 && $3 == "abnormal")' |
-#     # --------------------------------
-#     # Retain more than 5% of the "non-target" sample and more than 1% of the "target"
-#     # 「ターゲット以外」のサンプルは5%以上、「ターゲット」は1%以上を残す
-#     # --------------------------------
-#     if [ "_${mutation_type}" = "_S" ]; then
-#         awk '($2 > 5 && $3 != "wt") || ($2 > 1 && $3 == "wt")'
-#     else
-#         awk '($2 > 5 && $3 != "target") || ($2 > 1 && $3 == "target")'
-#     fi |
-#     awk '{barcode[$1]+=$2
-#         read_info[$1]=$2"____"$3" "read_info[$1]}
-#     END{for(key in barcode) print key,barcode[key], read_info[key]}' |
-#     awk '{for(i=3;i<=NF; i++) print $1,$2,$i}' |
-#     sed "s/____/ /g" |
-#     # --------------------------------
-#     # Interpolate the removed alleles to bring the total to 100%
-#     # 除去されたアレル分を補間し、合計を100%にする
-#     # --------------------------------
-#     awk '{print $1, int($3*100/$2+0.5),$4}' |
-#     sort |
-# cat > .DAJIN_temp/data/DAJIN_MIDS_prediction_filterd.txt
-
-# rm .DAJIN_temp/tmp_*
-
 ################################################################################
 #! Clustering
 ################################################################################
@@ -696,9 +655,6 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
 sh -
-
-ls -l .DAJIN_temp/clustering/read*
-ls -l .DAJIN_temp/clustering/label*
 
 ################################################################################
 #! Get consensus sequence in each cluster
@@ -828,7 +784,7 @@ do
     #---------------------------------------
 
     header_num=$(samtools view -H ".DAJIN_temp/bam/${barcode}".bam | wc -l)
-    bam_num=$((20+${header_num}))
+    bam_num=$((20 + "${header_num}"))
     
     samtools view -h .DAJIN_temp/bam/"${output_bam}".bam |
         head -n "${bam_num}" |
@@ -838,11 +794,9 @@ do
 done
 rm -rf .DAJIN_temp/bam/temp 2>/dev/null
 
-
 rm -rf "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 mkdir -p "${output_dir:-DAJIN_results}"/BAM/
 cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
-
 
 ################################################################################
 #! IGV.js Alignment viewing
@@ -852,23 +806,8 @@ cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 # printf "Browser will be launched. Click 'igvjs.html'.\n"
 # { npx live-server "${output_dir:-DAJIN_results}"/BAM/igvjs/ & } 1>/dev/null 2>/dev/null
 
-# rm -rf .tmp_
-# rm .DAJIN_temp/tmp_* .DAJIN_temp/clustering/tmp_* 2>/dev/null
+# rm -rf .DAJIN_temp 2>/dev/null
 
 printf "Completed! \nCheck ${output_dir:-DAJIN_results} directory.\n"
 
 exit 0
-
-
-# ----------------------------------------------------------------
-# 2-cut deletionの場合は、大丈夫そうなabnormalを検出する
-# ----------------------------------------------------------------
-
-# if [ "$mutation_type" = "D" ]; then
-#     ./DAJIN/src/anomaly_exondeletion.sh ${genome} ${threads}
-# else
-#     cp .DAJIN_temp/anomaly_classification.txt .DAJIN_temp/anomaly_classification_revised.txt
-# fi
-#
-# cp .DAJIN_temp/anomaly_classification.txt .DAJIN_temp/anomaly_classification_revised.txt
-#
