@@ -303,7 +303,7 @@ cat ${design_LF} |
 
 #===========================================================
 #? Reverse complement if the mutation sites are closer
-#? to right flanking than left flanking 
+#? to right flanking than left flanking
 #===========================================================
 
 wt_seqlen=$(awk '!/[>|@]/ {print length($0)}' .DAJIN_temp/fasta/wt.fa)
@@ -361,7 +361,7 @@ mutation_type=$(
 )
 
 #---------------------------------------
-#* In the case of Point mutation: 
+#* In the case of Point mutation:
 #* Generate randome insertion and deletion at gRNA sites as abnormal alleles
 #---------------------------------------
 
@@ -392,9 +392,9 @@ if [ "_${mutation_type}" = "_S" ]; then
     cat > .DAJIN_temp/fasta_conv/wt_del.fa
 fi
 
-#---------------------------------------
-#* Format ONT reads into FASTA file
-#---------------------------------------
+#===========================================================
+#? Format ONT reads into FASTA file
+#===========================================================
 
 for input in ${ont_dir}/* ; do
     output=$(
