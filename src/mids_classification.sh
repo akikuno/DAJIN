@@ -172,7 +172,6 @@ cat "${tmp_primary}" "${tmp_secondary}" |
     sort -t " " -k 2,2n |
     awk '{seq_[$1]=seq_[$1]" "$2" "$3" "$4}
         END{for(key in seq_) print key,seq_[key]}' |
-    # grep inversion_100_aligned_7213_F_54_2709_73 |
     awk 'NF==3
     #---------------------------------------
     #* Flox deletion
@@ -185,8 +184,6 @@ cat "${tmp_primary}" "${tmp_secondary}" |
         }
         len=maxloc-minloc-len
         for(len_=1; len_ <= len; len_++) str = "D" str
-        # str=sprintf("%"len"s","")
-        # gsub(/ /,"D",str) 
         for(key in seq_) seq=seq seq_[key] str
         print id, minloc, seq
         delete seq_
@@ -196,12 +193,13 @@ cat "${tmp_primary}" "${tmp_secondary}" |
     #---------------------------------------
     NF==7{id=$1; minloc=$2; maxloc=$2 ; seq=""; len=0; str=""
         for(i=2; i<=NF; i=i+2){
-            if(minloc>$i){ minloc=$i; len=length($(i+1))}
+            if(minloc>$i){minloc=$i; len=length($(i+1))}
             if(maxloc<$i) maxloc=$i
         }
         len=length($5)
-        str=sprintf("%"len"s","")
-        gsub(/ /,"=",str) 
+        for(len_=1; len_ <= len; len_++) str = "=" str
+        # str=sprintf("%"len"s","")
+        # gsub(/ /,"=",str)
         $5=str
         print id, minloc, $3 $5 $7
     }' |
