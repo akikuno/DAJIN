@@ -88,15 +88,15 @@ cat > "${tmp_allele_id}"
 Rscript DAJIN/src/consensus.R "${tmp_allele_id}" "${control_score}" "${cluster}"
 
 #===========================================================
-#? クラスタ番号、塩基番号、変異の種類、Insertion数の4つをレポートする
+#? Report (1) Cluster ID, (2) Base loc (3) Mutation type (4) Ins num
 #===========================================================
 
 if [ -s ".DAJIN_temp/consensus/temp/mutation_${out_suffix}" ]; then
 cat ".DAJIN_temp/consensus/temp/mutation_${out_suffix}" |
     sed "s/^/${cluster} /g" |
-    # ----------------------------------------------------------
-    # 挿入塩基数が10以上の場合に数値情報に逆変換する
-    # ----------------------------------------------------------
+    #----------------------------------------------------------
+    #* Converte Insertion character to number
+    #----------------------------------------------------------
     awk '{
         if($4 ~ /[a-z]/) {
             for (i=10; i<=36; i++) {
@@ -106,7 +106,7 @@ cat ".DAJIN_temp/consensus/temp/mutation_${out_suffix}" |
             }
         }
         print $0}' |
-    sed "s/35$/>35/g" |    
+    sed "s/35$/>35/g" |
 cat > "${consensus_mutation}"
 
 else
@@ -115,8 +115,7 @@ fi
 
 
 ################################################################################
-#! 変異塩基の同定
-# Variant call
+#! Variant call
 ################################################################################
 
 if [ "$(grep -c intact ${consensus_mutation})" -eq 0 ]; then
@@ -153,9 +152,9 @@ cat "${allele_id}" |
         padding=$1-1
         for(i=1; i<=padding; i++) seq=seq"-"
         print seq""$2}' |
-    # -------------------------------------
-    # 変異塩基の入手
-    # -------------------------------------
+    #-------------------------------------
+    #* Obtain mutation nucreotides
+    #-------------------------------------
     awk -v type="${mutation_type}" \
         -v site="${mutation_site}" \
         -v size="${insertion_size}" \
@@ -170,11 +169,15 @@ cat "${allele_id}" |
         if(type_[i] == "I"){
             gsub(/\*[a-z]/, " ", $0)
             gsub(/\+/, " +", $0)
-            gsub(/[-|=]/, " ", $0)                
+            gsub(/[-|=]/, " ", $0)
             len=0
             for(j = 1; j<=NF; j++){
-                if(len >= site_[i]-1 && length($j) == size_[i] + 1) {print type_[i], len, $j; break}
-                else { if($j !~ /\+/) len+=length($j) }
+                if(len >= site_[i]-1 && length($j) == size_[i] + 1) {
+                    print type_[i], len, $j; break
+                    }
+                else {
+                    if($j !~ /\+/) len+=length($j)
+                    }
                 }
             }
         else {
@@ -198,7 +201,7 @@ fi
 # cat "${mutation_info}" #<<<<<
 
 ################################################################################
-#! コンセンサス配列の作製
+#! Report consensus sequence
 ################################################################################
 
 mutation_type=$(cut -d " " -f 1 "${mutation_info}" | xargs echo)
@@ -233,7 +236,7 @@ cat .DAJIN_temp/fasta/${mapping_alleletype}.fa |
 cat > .DAJIN_temp/consensus/temp/"${out_suffix}"
 
 #===========================================================
-#? 変異情報をもとにOutput file nameをフォーマットする
+#? Format output file name
 #===========================================================
 
 output_filename="${barcode}_allele${alleleid}"
@@ -302,24 +305,24 @@ cat << EOF > .DAJIN_temp/consensus/"${output_filename}".html
 <style>
 p {
     font-family: Consolas, monaco, "Courier New", Courier, monospace;
-    color: #585858; 
+    color: #585858;
     width: 50%;
     word-wrap: break-word;
 }
 .Ins {
-    color: white; 
+    color: white;
     background-color: #e2041b;
     font-weight: bold;
     font-size: 1.0em;
 }
 .Del {
-    color: black; 
+    color: black;
     background-color: #66FFFF;
     font-weight: bold;
     font-size: 1.0em;
 }
 .Sub {
-    color: white; 
+    color: white;
     background-color: #007b43;
     font-weight: bold;
     font-size: 1.0em;
@@ -337,8 +340,7 @@ cat << EOF >> .DAJIN_temp/consensus/"${output_filename}".html
 </p>
 <hr>
 <p>
-<span class="Ins">Insertion</span> <span class="Del">Deletion</span>
- <span class="Sub">Substitution</span>
+<span class="Ins">Insertion</span> <span class="Del">Deletion</span><span class="Sub">Substitution</span>
 </p>
 
 </body>
