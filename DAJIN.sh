@@ -647,7 +647,7 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     cut -f 2 |
     sort -u |
     awk -v filter="${filter:-on}" \
-    '{print "./DAJIN/src/clustering_allele_percentage_re.sh", $1, filter}' |
+    '{print "./DAJIN/src/clustering_allele_percentage.sh", $1, filter}' |
     #!--------------------------------------------------------
     # grep barcode21 |
     #!--------------------------------------------------------

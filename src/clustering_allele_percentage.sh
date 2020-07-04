@@ -19,76 +19,136 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===========================================================
 #? TEST Auguments
 #===========================================================
-# barcode="barcode21"
-# alleletype="inversion"
-# original_percentage=0.00465658
-# suffix="${barcode}"_"${alleletype}"
+
+# barcode=barcode05
+# filter=on
 
 #===========================================================
 #? Auguments
 #===========================================================
 
 barcode="${1}"
-alleletype="${2}"
-original_percentage="${3}"
-suffix="${barcode}"_"${alleletype}"
+filter="${2}"
 
 #===========================================================
 #? Input
 #===========================================================
-query_seq=".DAJIN_temp/clustering/temp/query_seq_${suffix}"
-hdbscan_id=".DAJIN_temp/clustering/temp/hdbscan_${suffix}"
+# query_seq
+# hdbscan_id
 
 #===========================================================
 #? Output
 #===========================================================
-allele_id=".DAJIN_temp/clustering/result_allele_id_${suffix}".txt
-allele_percentage=".DAJIN_temp/clustering/result_allele_percentage_${suffix}".txt
+mkdir -p ".DAJIN_temp/clustering/temp/"
+
+# allele_id=.DAJIN_temp/clustering/readid_cl_mids_
+allele_percentage=.DAJIN_temp/clustering/label_cl_percentage_"${barcode}"
 
 #===========================================================
 #? Temporal
 #===========================================================
-mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
-tmp_allele_percentage=".DAJIN_temp/clustering/temp/allele_percentage_${suffix}".txt
+tmp_clusterid=.DAJIN_temp/clustering/temp/clusterid_"${barcode}"
+tmp_alleleper_before=.DAJIN_temp/clustering/temp/alleleper_before_"${barcode}"
+tmp_alleleper_after=.DAJIN_temp/clustering/temp/alleleper_after_"${barcode}"
 
 ################################################################################
-#! Remove minor allele (< 5%) 
+#! Retain Target > 1%; others > 3 % (if filter=on)
 ################################################################################
 
-cat "${hdbscan_id}" |
-    awk '{print $NF}' |
+true > "${tmp_clusterid}"
+
+find .DAJIN_temp/clustering/temp/hdbscan_* |
+    grep "${barcode}" |
+while read -r input; do
+    label=$(echo $input | sed "s/.*hdbscan_//g")
+    #
+    cat "${input}" |
+    sed "s/^/${label}\t/g" |
+    cat >> "${tmp_clusterid}"
+done
+
+total_reads=$(
+    cat "${tmp_clusterid}" |
+    cut -f 1,3 |
     sort |
     uniq -c |
-    awk -v per="${original_percentage}" -v nr="$(cat "${hdbscan_id}" | wc -l))" \
-    '{allele_per=$1/nr*per
-    if(allele_per>5) {
-        total+=allele_per
-        allele[NR]=$2" "allele_per}}
-    END{for(key in allele) print allele[key],total, per}' |
-    awk '{print $1, NR, int($2/$3*$4+0.5)}' |
-cat > "${tmp_allele_percentage}"
+    awk '{sum+=$1} END{print sum}'
+)
 
-################################################################################
-#! Report allele mutation info
-################################################################################
-
-before=$(cat "${tmp_allele_percentage}" | cut -d " " -f 1 | xargs echo)
-after=$(cat "${tmp_allele_percentage}" | cut -d " " -f 2 | xargs echo)
-
-paste "${hdbscan_id}" "${query_seq}" |
-    awk -v bf="${before}" -v af="${after}" \
-    'BEGIN{OFS="\t"
-        split(bf,bf_," ")
-        split(af,af_," ")}
-    {for(i in bf_){if($2==bf_[i]){$2=af_[i]; print}}
-    }' |
-    sed "s/ /\t/g" |
+cat "${tmp_clusterid}" |
+    cut -f 1,3 |
     sort |
-cat > "${allele_id}"
-
-cat "${tmp_allele_percentage}" |
+    uniq -c |
+    sed "s/$/\t${total_reads}/g" |
+    awk '{$NF=$1/$NF*100}1' |
+    if [ "_${filter}" = "_on" ]; then
+        awk '($2!~"target" && $NF > 3) ||
+        ($2~"target" && $NF > 1)'
+    else
+        cat -
+    fi |
     cut -d " " -f 2- |
-    sed "s/^/${suffix} /g" |
+    awk '{nr[$1]++; print $1, $2, nr[$1], $3}' |
+cat > "${tmp_alleleper_before}"
+
+total_percentage=$(
+    cat "${tmp_alleleper_before}" |
+    awk '{sum+=$4} END{print sum}'
+)
+
+cat "${tmp_alleleper_before}" |
+    sed "s/$/ ${total_percentage}/g" |
+    if [ "_${filter}" = "_on" ]; then
+        awk '{$4=int( ($4+0.5) * 100/$5)
+            print $1,$2,$3,$4}'
+    else
+        awk '{printf $1" "$2" "$3" "; printf "%.3f\n", $4}'
+    fi |
+cat > "${tmp_alleleper_after}"
+
+################################################################################
+#! Filter reads
+################################################################################
+
+rm .DAJIN_temp/clustering/readid_cl_mids_"${barcode}"* 2>/dev/null
+
+cat "${tmp_alleleper_after}" |
+while read -r input; do
+
+    id=$(echo "${input}" | cut -d " " -f 1 | xargs echo)
+    before=$(echo "${input}" | cut -d " " -f 2 | xargs echo)
+    after=$(echo "${input}" | cut -d " " -f 3 | xargs echo)
+
+    hdbscan_id=.DAJIN_temp/clustering/temp/hdbscan_"${id}"
+    query_seq=.DAJIN_temp/clustering/temp/query_seq_"${id}"
+    allele_id=.DAJIN_temp/clustering/readid_cl_mids_"${id}"
+
+    paste "${hdbscan_id}" "${query_seq}" |
+        awk -v bf="${before}" -v af="${after}" \
+        'BEGIN{OFS="\t"
+            split(bf,bf_," ")
+            split(af,af_," ")}
+        {for(i in bf_){if($2==bf_[i]){$2=af_[i]; print}}
+        }' |
+        sed "s/ /\t/g" |
+        sort |
+    cat >> "${allele_id}"
+done
+
+################################################################################
+#! Report cluster number and percentage after filtration
+################################################################################
+
+cat "${tmp_alleleper_after}" |
+    awk '{print $1,$3,$4}' |
+    sed "s/_/ /" |
 cat > "${allele_percentage}"
+
+
+################################################################################
+#! remove temporal files
+################################################################################
+
+rm "${tmp_clusterid}" "${tmp_alleleper_before}" "${tmp_alleleper_after}"
 
 exit 0
