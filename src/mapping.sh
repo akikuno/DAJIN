@@ -42,12 +42,11 @@ threads=${2}
 #===============================================================================
 #? Output
 #===============================================================================
-gggenome_location=.DAJIN_temp/data/gggenome_location 
+gggenome_location=.DAJIN_temp/data/gggenome_location
 ref_fa=.DAJIN_temp/data/ref.fa
 
 bam_all=.DAJIN_temp/bam/
-bam_100=.DAJIN_temp/bam/reads100
-mkdir -p "${bam_100}"
+mkdir -p "${bam_all}"
 
 #===============================================================================
 #? Temporal
@@ -183,6 +182,7 @@ error_exit 1 'Invalid reference genome.'
 #===============================================================================
 #? Mapping all reads
 #===============================================================================
+
 reference="${ref_fa}"
 for input in .DAJIN_temp/fasta_ont/*; do
     output=$(echo "${input}" |
@@ -200,22 +200,22 @@ for input in .DAJIN_temp/fasta_ont/*; do
     samtools index -@ ${threads:-1} "${output}"
 done
 
-#===============================================================================
-#? 100 reads
-#===============================================================================
-for input in .DAJIN_temp/bam/*.bam; do
-    output=$(echo "${input}" |
-        sed "s#.DAJIN_temp/bam#.DAJIN_temp/bam/reads100#g")
-    # echo "${output} is now generating..."
+# #===============================================================================
+# #? 100 reads
+# #===============================================================================
+# for input in .DAJIN_temp/bam/*.bam; do
+#     output=$(echo "${input}" |
+#         sed "s#.DAJIN_temp/bam#.DAJIN_temp/bam/reads100#g")
+#     # echo "${output} is now generating..."
 
-    header_num=$(samtools view -H -@ ${threads} ${input} | wc -l)
-    bam_num=$((100+${header_num}))
+#     header_num=$(samtools view -H -@ ${threads} ${input} | wc -l)
+#     bam_num=$((100+${header_num}))
 
-    samtools view -h -@ ${threads} ${input} |
-        head -n "${bam_num}" |
-    samtools sort -@ ${threads} > "${output}"
-    samtools index -@ "${threads}" "${output}"
-done
+#     samtools view -h -@ ${threads} ${input} |
+#         head -n "${bam_num}" |
+#     samtools sort -@ ${threads} > "${output}"
+#     samtools index -@ "${threads}" "${output}"
+# done
 
 # # ============================================================================
 # # IGV.JS
