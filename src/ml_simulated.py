@@ -38,16 +38,19 @@ from tensorflow.keras.models import Model
 args = sys.argv
 file_cont = args[1]
 file_ab = args[2]
-L2 = args[3]
-threads = int(args[2])
+threads = int(args[3])
+L2 = args[4]
 
 if threads == "":
     import multiprocessing
     threads = multiprocessing.cpu_count() // 2
 
-if L2 is not ("on" or "off"):
-    raise ValueError("Invalid parameter in L2")
+print(args)
 
+if L2 == "on" or L2 == "off":
+    pass
+else:
+    raise ValueError("Invalid parameter in L2")
 
 #==========================================================
 #? Input
@@ -157,7 +160,7 @@ model.add(Flatten(name="flatten"))
 
 # model.add(Dense(64, activation="relu", name="1st_FC"))
 
-if L2 is "on":
+if L2 == "on":
     alpha = 0.1
     model.add(
         Dense(
@@ -252,12 +255,34 @@ predict_vector = model_.predict(X_real, verbose=0, batch_size=32)
 # ===========================================================
 
 outliers = clf.predict(predict_vector)
-outliers = np.where(outliers == 1, "normal", "abnormal")
+outliers = np.where(outliers == 1, 1, 0)
 
-df_ab["outliers"] = outliers
+df_ab["pred"] = outliers
 
-df_ab.groupby("barcodeID").outliers.value_counts()
+df_ab.groupby("barcodeID").pred.value_counts()
 
+df_ab["true"] = np.where(df_ab.barcodeID.str.contains("nega"), 1, 0)
+
+################################################################################
+#! Evaluation
+################################################################################
+
+from sklearn.metrics import accuracy_score
+# from sklearn.metrics import precision_score, recall_score, f1_score
+
+df_report = pd.DataFrame(df_ab.groupby("barcodeID").apply(lambda x: accuracy_score(x.true, x.pred)))
+df_report.columns = ["value"]
+df_report["model"] = L2
+
+if "MIDS" in file_ab:
+    df_report["convertion"] = "MIDS"
+else:
+    df_report["convertion"] = "ACGT"
+
+df_report.to_csv("accuracy_anomaly_detection.csv", mode='a', header=False)
+# print(df_ab.groupby("barcodeID").apply(lambda x: precision_score(x.true, x.pred)))
+# print(df_ab.groupby("barcodeID").apply(lambda x: recall_score(x.true, x.pred)))
+# print(df_ab.groupby("barcodeID").apply(lambda x: f1_score(x.true, x.pred)))
 
 ################################################################################
 #! Save models

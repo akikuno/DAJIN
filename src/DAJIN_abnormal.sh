@@ -428,65 +428,43 @@ cat .DAJIN_temp/data/ACGT_* |
 cat > ".DAJIN_temp/data/DAJIN_ACGT_sim.txt"
 
 #===========================================================
-#? Train model
+#? Report accuracy
 #===========================================================
 
 #---------------------------------------
 #* MIDS
 #---------------------------------------
 
+iter=20
+cat << EOF |
 python ./DAJIN/src/ml_simulated.py \
-    ".DAJIN_temp/data/DAJIN_MIDS_sim.txt" "${threads}"
+    ".DAJIN_temp/data/DAJIN_MIDS_sim.txt" \
+    ".DAJIN_temp/data/DAJIN_MIDS_ab.txt" \
+    "${threads}"
+EOF
+awk -v iter="${iter}" '{while(i<iter){
+        i++
+        print $0,"on", i
+        print $0,"off", i
+        }}' |
+sh -
 
 #---------------------------------------
 #* ACGT
 #---------------------------------------
 
-#===========================================================
-#? Predict labels
-#===========================================================
-
-true > ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
-
-find .DAJIN_temp/data/MIDS* |
-    grep -v sim |
-    sort |
-while read -r input; do
-    barcode=$(echo $input | cut -d "_" -f 3)
-    echo "${barcode} is now processing..."
-
-    python ./DAJIN/src/ml_real.py \
-        "${input}" \
-        "${mutation_type}" "${threads}" ||
-    exit 1
-done
-
-cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    sort |
-cat > .DAJIN_temp/tmp_$$
-mv .DAJIN_temp/tmp_$$ .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt
-
-printf "Prediction was finished...\n"
-
-# #===========================================================
-# #? Report the percentage of alleles in each sample
-# #===========================================================
-
-#---------------------------------------
-#* Report the percentage of alleles in each sample
-#---------------------------------------
-
-cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    cut -f 2,3 |
-    sort |
-    uniq -c |
-    awk '{barcode[$2]+=$1
-        read_info[$2]=$1"____"$3" "read_info[$2]}
-    END{for(key in barcode) print key,barcode[key], read_info[key]}' |
-    awk '{for(i=3;i<=NF; i++) print $1,$2,$i}' |
-    sed "s/____/ /g" |
-    awk '{print $1, $3/$2*100, $4}' |
-cat > ".DAJIN_temp/tmp_prediction_proportion"
-
+iter=20
+cat << EOF |
+python ./DAJIN/src/ml_simulated.py \
+    ".DAJIN_temp/data/DAJIN_ACGT_sim.txt" \
+    ".DAJIN_temp/data/DAJIN_ACGT_ab.txt" \
+    "${threads}"
+EOF
+awk -v iter="${iter}" '{while(i<iter){
+        i++
+        print $0,"on", i
+        print $0,"off", i
+        }}' |
+sh -
 
 exit 0
