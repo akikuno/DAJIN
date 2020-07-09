@@ -9,6 +9,10 @@ umask 0022
 export LC_ALL=C
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
+error_exit() {
+    echo "$@" 1>&2
+    exit 1
+}
 
 ################################################################################
 #! I/O settings
@@ -70,9 +74,9 @@ if [ "$(conda info -e | cut -d " " -f 1 | grep -c DAJIN$)" -eq 0 ]; then
     conda config --add channels defaults
     conda config --add channels bioconda
     conda config --add channels conda-forge
-    conda create -y -n DAJIN python=3.6 \
+    conda create -y -n DAJIN python=3.7 \
         anaconda nodejs wget \
-        tensorflow tensorflow-gpu swifter \
+        tensorflow tensorflow-gpu \
         samtools minimap2 \
         r-essentials r-base
 fi
@@ -131,7 +135,10 @@ cat > .DAJIN_temp/fasta/fasta.fa
 
 design_LF=".DAJIN_temp/fasta/fasta.fa"
 
-# Separate multiple-FASTA into FASTA files
+#---------------------------------------
+#* Separate multiple-FASTA into FASTA files
+#---------------------------------------
+
 cat ${design_LF} |
     sed "s/^/@/g" |
     tr -d "\n" |
@@ -154,14 +161,16 @@ wt_seqlen=$(awk '!/[>|@]/ {print length($0)}' .DAJIN_temp/fasta/wt.fa)
 
 convert_revcomp=$(
     minimap2 -ax splice \
-    .DAJIN_temp/fasta/wt.fa \
-    .DAJIN_temp/fasta/target.fa --cs 2>/dev/null |
-    awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
+        .DAJIN_temp/fasta/wt.fa \
+        .DAJIN_temp/fasta/target.fa --cs 2>/dev/null |
+    awk '{print $(NF-1)}' |
     sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
     tr -d "\~\*\-\+atgc" |
-    awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
+    awk '{$NF=0
+        for(i=1;i<=NF;i++) sum+=$i
+        }END{print $1,sum}' |
     awk -v wt_seqlen="$wt_seqlen" \
-    '{if(wt_seqlen-$2>$1) print 0; else print 1}'
+        '{if(wt_seqlen-$2>$1) print 0; else print 1}'
     )
 
 if [ "$convert_revcomp" -eq 1 ] ; then
@@ -174,6 +183,7 @@ fi
 #---------------------------------------
 #* Separate multiple-FASTA into FASTA files
 #---------------------------------------
+
 cat ${design_LF} |
     sed "s/^/@/g" |
     tr -d "\n" |
@@ -190,6 +200,7 @@ cat ${design_LF} |
 #---------------------------------------
 #* Define mutation type
 #---------------------------------------
+
 mutation_type=$(
     minimap2 -ax map-ont \
         .DAJIN_temp/fasta/wt.fa \
@@ -386,8 +397,12 @@ EOF
 
 
 #===========================================================
-#? Train models
+#? Prepare simulation data
 #===========================================================
+
+#---------------------------------------
+#* MIDS
+#---------------------------------------
 
 cat .DAJIN_temp/data/MIDS_* |
     grep "_sim" |
@@ -403,8 +418,38 @@ cat .DAJIN_temp/data/MIDS_"${ont_cont}"_wt |
     sed "s/${ont_cont}$/wt_simulated/g" |
 cat >> ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
 
+#---------------------------------------
+#* ACGT
+#---------------------------------------
+
+cat .DAJIN_temp/data/ACGT_* |
+    grep "_sim" |
+    grep -v "^ab_" |
+    sed -e "s/_aligned_reads//g" |
+cat > ".DAJIN_temp/data/DAJIN_ACGT_sim.txt"
+
+cat .DAJIN_temp/data/ACGT_"${ont_cont}"_wt |
+    grep -v "IIIIIIIIII" |
+    grep -v "DDDDDDDDDD" |
+    grep -v "SSSSSSSSSS" |
+    head -n 10000 |
+    sed "s/${ont_cont}$/wt_simulated/g" |
+cat >> ".DAJIN_temp/data/DAJIN_ACGT_sim.txt"
+
+#===========================================================
+#? Train model
+#===========================================================
+
+#---------------------------------------
+#* MIDS
+#---------------------------------------
+
 python ./DAJIN/src/ml_simulated.py \
     ".DAJIN_temp/data/DAJIN_MIDS_sim.txt" "${threads}"
+
+#---------------------------------------
+#* ACGT
+#---------------------------------------
 
 #===========================================================
 #? Predict labels

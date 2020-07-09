@@ -200,20 +200,21 @@ fi
 #! Setting Conda environment
 ################################################################################
 
-#===========================================================
-#? DAJIN_nanosim
-#===========================================================
 set +u
 type conda > /dev/null 2>&1 || error_exit 'Command "conda" not found'
 
 CONDA_BASE=$(conda info --base)
-source "${CONDA_BASE}/etc/profile.d/conda.sh"
+. "${CONDA_BASE}/etc/profile.d/conda.sh"
+
+#===========================================================
+#? DAJIN_nanosim
+#===========================================================
 
 if [ "$(conda info -e | grep -c DAJIN_nanosim)" -eq 0 ]; then
     conda config --add channels defaults
     conda config --add channels bioconda
     conda config --add channels conda-forge
-    conda create -y -n DAJIN_nanosim python=3.6
+    conda create -y -n DAJIN_nanosim python=3.7
     conda install -y -n DAJIN_nanosim --file ./DAJIN/utils/NanoSim/requirements.txt
     conda install -y -n DAJIN_nanosim minimap2
 fi
@@ -226,9 +227,9 @@ if [ "$(conda info -e | cut -d " " -f 1 | grep -c DAJIN$)" -eq 0 ]; then
     conda config --add channels defaults
     conda config --add channels bioconda
     conda config --add channels conda-forge
-    conda create -y -n DAJIN python=3.6 \
+    conda create -y -n DAJIN python=3.7 \
         anaconda nodejs wget \
-        tensorflow tensorflow-gpu swifter \
+        tensorflow tensorflow-gpu \
         samtools minimap2 \
         r-essentials r-base
 fi
@@ -237,6 +238,7 @@ set -u
 #===========================================================
 #? Required software
 #===========================================================
+
 set +u
 conda activate DAJIN
 set -u
@@ -254,7 +256,7 @@ error_exit '"Tensorflow" not found'
 #? For WSL (Windows Subsystem for Linux)
 #===========================================================
 
-uname -a | 
+uname -a |
 grep Microsoft 1>/dev/null 2>/dev/null &&
 alias python="python.exe"
 
