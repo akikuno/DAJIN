@@ -195,7 +195,7 @@ cat "${tmp_primary}" "${tmp_secondary}" |
     #* Complement seqences to match sequence length (insert "=")
     #---------------------------------------
     ## start
-    awk '{start=""; for(i=1; i < $2; i++) start=start"M"; print $1,$2,start""$3}' |
+    awk '{start=""; for(i=1; i < $2; i++) start=start"="; print $1,$2,start""$3}' |
     ## end
     awk -v reflen="${reflength}" '{
         seqlen=length($3);

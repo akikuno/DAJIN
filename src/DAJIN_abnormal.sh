@@ -358,6 +358,7 @@ cat > .DAJIN_temp/data/mutation_points
 #===========================================================
 
 find .DAJIN_temp/fasta_ont -type f | sort |
+    grep -e "${ont_cont}" -e sim |
     awk '{print "./DAJIN/src/mids_classification.sh", $0, "wt", "&"}' |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)
@@ -374,6 +375,7 @@ printf "MIDS conversion was finished...\n"
 #===========================================================
 
 find .DAJIN_temp/fasta_ont -type f | sort |
+    grep -e "${ont_cont}" -e sim |
     awk '{print "./DAJIN/src/acgt_classification.sh", $0, "wt", "&"}' |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)
@@ -389,15 +391,8 @@ printf "ACGT conversion was finished...\n"
 #! Prediction
 ################################################################################
 
-cat << EOF
-++++++++++++++++++++++++++++++++++++++++++
-Allele prediction
-++++++++++++++++++++++++++++++++++++++++++
-EOF
-
-
 #===========================================================
-#? Prepare simulation data
+#? Prepare data
 #===========================================================
 
 #---------------------------------------
@@ -406,17 +401,15 @@ EOF
 
 cat .DAJIN_temp/data/MIDS_* |
     grep "_sim" |
-    grep -v "^ab_" |
+    grep -v "^ab" |
     sed -e "s/_aligned_reads//g" |
 cat > ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
 
-cat .DAJIN_temp/data/MIDS_"${ont_cont}"_wt |
-    grep -v "IIIIIIIIII" |
-    grep -v "DDDDDDDDDD" |
-    grep -v "SSSSSSSSSS" |
-    head -n 10000 |
-    sed "s/${ont_cont}$/wt_simulated/g" |
-cat >> ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
+cat .DAJIN_temp/data/MIDS_* |
+    grep "_sim" |
+    grep "^ab" |
+    sed -e "s/_aligned_reads//g" |
+cat > ".DAJIN_temp/data/DAJIN_MIDS_ab.txt"
 
 #---------------------------------------
 #* ACGT
@@ -424,17 +417,15 @@ cat >> ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
 
 cat .DAJIN_temp/data/ACGT_* |
     grep "_sim" |
-    grep -v "^ab_" |
+    grep -v "^ab" |
     sed -e "s/_aligned_reads//g" |
 cat > ".DAJIN_temp/data/DAJIN_ACGT_sim.txt"
 
-cat .DAJIN_temp/data/ACGT_"${ont_cont}"_wt |
-    grep -v "IIIIIIIIII" |
-    grep -v "DDDDDDDDDD" |
-    grep -v "SSSSSSSSSS" |
-    head -n 10000 |
-    sed "s/${ont_cont}$/wt_simulated/g" |
-cat >> ".DAJIN_temp/data/DAJIN_ACGT_sim.txt"
+cat .DAJIN_temp/data/ACGT_* |
+    grep "_sim" |
+    grep "^ab" |
+    sed -e "s/_aligned_reads//g" |
+cat > ".DAJIN_temp/data/DAJIN_ACGT_sim.txt"
 
 #===========================================================
 #? Train model
