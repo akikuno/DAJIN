@@ -38,12 +38,14 @@ from tensorflow.keras.models import Model
 args = sys.argv
 file_cont = args[1]
 file_ab = args[2]
-threads = int(args[3])
-L2 = args[4]
 
-if threads == "":
+if args[3] == "":
     import multiprocessing
     threads = multiprocessing.cpu_count() // 2
+else:
+    threads = int(args[3])
+
+L2 = args[4]
 
 print(args)
 
@@ -191,7 +193,7 @@ model.fit(
     X_train,
     Y_train,
     epochs=20,
-    verbose=1,
+    verbose=0,
     batch_size=32,
     validation_split=0.2,
     shuffle=True,

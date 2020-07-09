@@ -425,7 +425,7 @@ cat .DAJIN_temp/data/ACGT_* |
     grep "_sim" |
     grep "^ab" |
     sed -e "s/_aligned_reads//g" |
-cat > ".DAJIN_temp/data/DAJIN_ACGT_sim.txt"
+cat > ".DAJIN_temp/data/DAJIN_ACGT_ab.txt"
 
 #===========================================================
 #? Report accuracy
