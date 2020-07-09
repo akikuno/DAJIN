@@ -113,77 +113,130 @@ del Y_test
 #==========================================================
 #? L2-constrained Softmax Loss
 #==========================================================
+from tensorflow.keras.layers import Input, Dense
+from tensorflow.keras.models import Model
 
+inputs = Input(shape = (X_train.shape[1], X_train.shape[2]))
 init_kernel_size = int(128)
 
-model = tf.keras.Sequential()
-model.add(
-    Conv1D(
+x = Conv1D(
         filters=32,
         kernel_size=init_kernel_size,
         activation="relu",
-        input_shape=(X_train.shape[1], X_train.shape[2]),
         name="1st_Conv1D",
-    )
-)
-model.add(MaxPooling1D(pool_size=4, name="1st_MaxPooling1D"))
+    )(inputs)
+x = MaxPooling1D(pool_size=4, name="1st_MaxPooling1D")(x)
 
-model.add(
-    Conv1D(
+x = Conv1D(
         filters=32,
         kernel_size=int(init_kernel_size / 2),
         activation="relu",
         name="2nd_Conv1D",
-    )
-)
-model.add(MaxPooling1D(pool_size=4, name="2nd_MaxPooling1D"))
+    )(x)
+x = MaxPooling1D(pool_size=4, name="2nd_MaxPooling1D")(x)
 
-model.add(
-    Conv1D(
+x = Conv1D(
         filters=32,
         kernel_size=int(init_kernel_size / 4),
         activation="relu",
         name="3rd_Conv1D",
-    )
-)
-model.add(MaxPooling1D(pool_size=4, name="3rd_MaxPooling1D"))
+    )(x)
+x = MaxPooling1D(pool_size=4, name="3rd_MaxPooling1D")(x)
 
-model.add(
-    Conv1D(
+x = Conv1D(
         filters=32,
         kernel_size=int(init_kernel_size / 16),
         activation="relu",
         name="4th_Conv1D",
-    )
-)
-model.add(MaxPooling1D(pool_size=4, name="4th_MaxPooling1D"))
+    )(x)
+x = MaxPooling1D(pool_size=4, name="4th_MaxPooling1D")(x)
 
-model.add(Flatten(name="flatten"))
+x = Flatten(name="flatten")(x)
 
-# model.add(Dense(64, activation="relu", name="1st_FC"))
+x = Dense(64, activation="relu", name="1st_FC")(x)
 
 if L2 == "on":
     alpha = 0.1
-    model.add(
-        Dense(
-            32,
-            activation="linear",
-            activity_regularizer=regularizers.l2(alpha),
-            name="L2",
-        )
-    )
+    x = alpha * tf.divide(x, tf.norm(x, ord='euclidean'))
 else:
-    model.add(
-        Dense(
-            32,
-            activation="linear",
-            name="linear",
-        )
-    )
+    pass
 
-model.add(Dense(len(labels_index), activation="softmax", name="softmax"))
+predictions = Dense(len(labels_index), activation="softmax", name="softmax")(x)
+
+model = Model(inputs = inputs, outputs = predictions)
+
 model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
 model.summary()
+
+# #! <<<<<<<<<<<<<<<<
+# model = tf.keras.Sequential()
+# model.add(
+#     Conv1D(
+#         filters=32,
+#         kernel_size=init_kernel_size,
+#         activation="relu",
+#         input_shape=(X_train.shape[1], X_train.shape[2]),
+#         name="1st_Conv1D",
+#     )
+# )
+# model.add(MaxPooling1D(pool_size=4, name="1st_MaxPooling1D"))
+
+# model.add(
+#     Conv1D(
+#         filters=32,
+#         kernel_size=int(init_kernel_size / 2),
+#         activation="relu",
+#         name="2nd_Conv1D",
+#     )
+# )
+# model.add(MaxPooling1D(pool_size=4, name="2nd_MaxPooling1D"))
+
+# model.add(
+#     Conv1D(
+#         filters=32,
+#         kernel_size=int(init_kernel_size / 4),
+#         activation="relu",
+#         name="3rd_Conv1D",
+#     )
+# )
+# model.add(MaxPooling1D(pool_size=4, name="3rd_MaxPooling1D"))
+
+# model.add(
+#     Conv1D(
+#         filters=32,
+#         kernel_size=int(init_kernel_size / 16),
+#         activation="relu",
+#         name="4th_Conv1D",
+#     )
+# )
+# model.add(MaxPooling1D(pool_size=4, name="4th_MaxPooling1D"))
+
+# model.add(Flatten(name="flatten"))
+
+# # model.add(Dense(64, activation="relu", name="1st_FC"))
+
+# if L2 == "on":
+#     alpha = 0.1
+#     model.add(
+#         Dense(
+#             32,
+#             activation="linear",
+#             activity_regularizer=regularizers.l2(alpha),
+#             name="L2",
+#         )
+#     )
+# else:
+#     model.add(
+#         Dense(
+#             32,
+#             activation="linear",
+#             name="linear",
+#         )
+#     )
+
+# model.add(Dense(len(labels_index), activation="softmax", name="softmax"))
+# model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
+# model.summary()
 
 #==========================================================
 #? Training
@@ -193,7 +246,7 @@ model.fit(
     X_train,
     Y_train,
     epochs=20,
-    verbose=0,
+    verbose=1,
     batch_size=32,
     validation_split=0.2,
     shuffle=True,
@@ -263,14 +316,14 @@ df_ab["pred"] = outliers
 
 df_ab.groupby("barcodeID").pred.value_counts()
 
-df_ab["true"] = np.where(df_ab.barcodeID.str.contains("nega"), 1, 0)
-
 ################################################################################
 #! Evaluation
 ################################################################################
 
 from sklearn.metrics import accuracy_score
 # from sklearn.metrics import precision_score, recall_score, f1_score
+
+df_ab["true"] = np.where(df_ab.barcodeID.str.contains("nega"), 1, 0)
 
 df_report = pd.DataFrame(df_ab.groupby("barcodeID").apply(lambda x: accuracy_score(x.true, x.pred)))
 df_report.columns = ["value"]
