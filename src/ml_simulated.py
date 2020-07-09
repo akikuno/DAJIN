@@ -16,48 +16,64 @@ from sklearn.neighbors import LocalOutlierFactor
 import tensorflow as tf
 from tensorflow.keras import regularizers
 from tensorflow.keras.layers import Conv1D, Dense, Flatten, MaxPooling1D
-from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.models import Model
 
 ################################################################################
 #! I/O naming
 ################################################################################
 
-# ===========================================================
-# ? TEST auguments
-# ===========================================================
+#==========================================================
+#? TEST auguments
+#==========================================================
 
-# file_name = ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
-# threads = 65
+# file_cont = ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
+# file_ab = ".DAJIN_temp/data/DAJIN_MIDS_ab.txt"
+# threads = 12
+# L2="on"
 
-# ===========================================================
-# ? Auguments
-# ===========================================================
+#==========================================================
+#? Auguments
+#==========================================================
 
 args = sys.argv
-file_name = args[1]
+file_cont = args[1]
+file_ab = args[2]
+L2 = args[3]
 threads = int(args[2])
 
 if threads == "":
-    import multiprocessing    
+    import multiprocessing
     threads = multiprocessing.cpu_count() // 2
 
-# ===========================================================
-# ? Input
-# ===========================================================
+if L2 is not ("on" or "off"):
+    raise ValueError("Invalid parameter in L2")
 
-df_sim = pd.read_csv(file_name, header=None, sep="\t")
+
+#==========================================================
+#? Input
+#==========================================================
+
+df_sim = pd.read_csv(file_cont, header=None, sep="\t")
 df_sim.columns = ["seqID", "seq", "barcodeID"]
-df_sim.seq = "MIDS=" + df_sim.seq
+
+if "MIDS" in file_cont:
+    df_sim.seq = "MIDS=" + df_sim.seq
+else:
+    df_sim.seq = "ACGT=" + df_sim.seq
+
+#==========================================================
+#? Output
+#==========================================================
+
 
 
 ################################################################################
 #! Training model
 ################################################################################
 
-# ===========================================================
-# ? Encording Function
-# ===========================================================
+#==========================================================
+#? Encording Function
+#==========================================================
 
 
 def label_encorde_seq(seq):
@@ -74,9 +90,9 @@ def onehot_encode_seq(seq):
     return onehot_seq
 
 
-# ===========================================================
-# ? Train test split
-# ===========================================================
+#==========================================================
+#? Train test split
+#==========================================================
 
 labels, labels_index = pd.factorize(df_sim.barcodeID)
 labels = tf.keras.utils.to_categorical(labels)
@@ -85,12 +101,14 @@ X_train, X_test, Y_train, Y_test = train_test_split(
     onehot_encode_seq(df_sim.seq), labels, test_size=0.2, shuffle=True
 )
 
+del df_sim
 del X_test
 del Y_test
 
-# ===========================================================
-# ? L2-constrained Softmax Loss
-# ===========================================================
+#==========================================================
+#? L2-constrained Softmax Loss
+#==========================================================
+
 init_kernel_size = int(128)
 
 model = tf.keras.Sequential()
@@ -139,21 +157,32 @@ model.add(Flatten(name="flatten"))
 
 # model.add(Dense(64, activation="relu", name="1st_FC"))
 
-alpha = 0.1
-model.add(
-    Dense(
-        32,
-        activation="linear",
-        activity_regularizer=regularizers.l2(alpha),
-        name="L2-softmax",
+if L2 is "on":
+    alpha = 0.1
+    model.add(
+        Dense(
+            32,
+            activation="linear",
+            activity_regularizer=regularizers.l2(alpha),
+            name="L2",
+        )
     )
-)
-model.add(Dense(len(labels_index), activation="softmax", name="final_layer"))
-model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
+else:
+    model.add(
+        Dense(
+            32,
+            activation="linear",
+            name="linear",
+        )
+    )
 
-# ===========================================================
-# ? Training
-# ===========================================================
+model.add(Dense(len(labels_index), activation="softmax", name="softmax"))
+model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
+model.summary()
+
+#==========================================================
+#? Training
+#==========================================================
 
 model.fit(
     X_train,
@@ -168,18 +197,19 @@ model.fit(
 ################################################################################
 #! Novelity (Anomaly) detection
 ################################################################################
-# ===========================================================
-# ? L2 layer
-# ===========================================================
+
+#==========================================================
+#? L2 layer
+#==========================================================
 
 model_ = Model(model.get_layer(index=0).input, model.get_layer(index=-2).output)
 train_vector = model_.predict(X_train, verbose=0, batch_size=32)
 
 del X_train  # <<<
 
-# ===========================================================
-# ? LocalOutlierFactor
-# ===========================================================
+#==========================================================
+#? LocalOutlierFactor
+#==========================================================
 
 clf = LocalOutlierFactor(
     n_neighbors=20,
@@ -192,12 +222,49 @@ clf = LocalOutlierFactor(
 
 clf.fit(train_vector)
 
+
+################################################################################
+#! Import abnormal reads
+################################################################################
+
+df_ab = pd.read_csv(file_ab, header=None, sep="\t")
+df_ab.columns = ["seqID", "seq", "barcodeID"]
+
+if "MIDS" in file_ab:
+    df_ab.seq = "MIDS=" + df_ab.seq
+else:
+    df_ab.seq = "ACGT=" + df_ab.seq
+
+X_real = onehot_encode_seq(df_ab.seq)
+
+################################################################################
+#! Novelity (Anomaly) detection
+################################################################################
+
+# ===========================================================
+# ? L2 layer
+# ===========================================================
+
+predict_vector = model_.predict(X_real, verbose=0, batch_size=32)
+
+# ===========================================================
+# ? LocalOutlierFactor
+# ===========================================================
+
+outliers = clf.predict(predict_vector)
+outliers = np.where(outliers == 1, "normal", "abnormal")
+
+df_ab["outliers"] = outliers
+
+df_ab.groupby("barcodeID").outliers.value_counts()
+
+
 ################################################################################
 #! Save models
 ################################################################################
-np.save(".DAJIN_temp/data/labels_index.npy", labels_index)
+# np.save(".DAJIN_temp/data/labels_index.npy", labels_index)
 
-model.save(".DAJIN_temp/data/model_l2.h5")
+# model.save(".DAJIN_temp/data/model_l2.h5")
 
-pickle.dump(clf, open(".DAJIN_temp/data/model_lof.sav", "wb"))
+# pickle.dump(clf, open(".DAJIN_temp/data/model_lof.sav", "wb"))
 
