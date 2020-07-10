@@ -435,6 +435,8 @@ cat > ".DAJIN_temp/data/DAJIN_ACGT_ab.txt"
 #* MIDS
 #---------------------------------------
 
+: > accuracy_anomaly_detection.csv
+
 iter=20
 cat << EOF |
 python ./DAJIN/src/ml_simulated.py \
