@@ -403,7 +403,7 @@ cat .DAJIN_temp/data/MIDS_* |
     grep "_sim" |
     grep -v "^ab" |
     sed -e "s/_aligned_reads//g" |
-cat > ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
+cat > ".DAJIN_temp/data/DAJIN_MIDS_train.txt"
 
 head -n 1000 .DAJIN_temp/data/MIDS_* |
     grep -e negacon -e del |
@@ -411,7 +411,7 @@ head -n 1000 .DAJIN_temp/data/MIDS_* |
     grep -v "^$" |
     grep "^ab" |
     sed -e "s/_aligned_reads//g" |
-cat > ".DAJIN_temp/data/DAJIN_MIDS_ab.txt"
+cat > ".DAJIN_temp/data/DAJIN_MIDS_test.txt"
 
 #---------------------------------------
 #* ACGT
@@ -421,7 +421,7 @@ cat .DAJIN_temp/data/ACGT_* |
     grep "_sim" |
     grep -v "^ab" |
     sed -e "s/_aligned_reads//g" |
-cat > ".DAJIN_temp/data/DAJIN_ACGT_sim.txt"
+cat > ".DAJIN_temp/data/DAJIN_ACGT_train.txt"
 
 head -n 1000 .DAJIN_temp/data/ACGT_* |
     grep -e negacon -e del |
@@ -429,7 +429,7 @@ head -n 1000 .DAJIN_temp/data/ACGT_* |
     grep -v "^$" |
     grep "^ab" |
     sed -e "s/_aligned_reads//g" |
-cat > ".DAJIN_temp/data/DAJIN_ACGT_ab.txt"
+cat > ".DAJIN_temp/data/DAJIN_ACGT_test.txt"
 
 #===========================================================
 #? Report accuracy
@@ -444,8 +444,8 @@ cat > ".DAJIN_temp/data/DAJIN_ACGT_ab.txt"
 iter=20
 cat << EOF |
 python ./DAJIN/src/ml_simulated.py \
-    ".DAJIN_temp/data/DAJIN_MIDS_sim.txt" \
-    ".DAJIN_temp/data/DAJIN_MIDS_ab.txt" \
+    ".DAJIN_temp/data/DAJIN_MIDS_train.txt" \
+    ".DAJIN_temp/data/DAJIN_MIDS_test.txt" \
     "${threads}"
 EOF
 awk -v iter="${iter}" '{while(i<iter){
@@ -462,8 +462,8 @@ sh -
 iter=20
 cat << EOF |
 python ./DAJIN/src/ml_simulated.py \
-    ".DAJIN_temp/data/DAJIN_ACGT_sim.txt" \
-    ".DAJIN_temp/data/DAJIN_ACGT_ab.txt" \
+    ".DAJIN_temp/data/DAJIN_ACGT_train.txt" \
+    ".DAJIN_temp/data/DAJIN_ACGT_test.txt" \
     "${threads}"
 EOF
 awk -v iter="${iter}" '{while(i<iter){
