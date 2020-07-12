@@ -24,7 +24,7 @@ import umap
 #==========================================================
 #? Arguments
 #==========================================================
-key = "MIDS"
+key = "ACGT"
 
 file_train = f".DAJIN_temp/data/DAJIN_{key}_train.txt"
 file_test = f".DAJIN_temp/data/DAJIN_{key}_test.txt"
@@ -206,14 +206,17 @@ umap_after = umap.UMAP().fit_transform(predict_vector)
 df_umap_before = pd.DataFrame(umap_before)
 df_umap_after = pd.DataFrame(umap_after)
 
-df_umap_before["id"] = "before"
-df_umap_after["id"] = "after"
 df_umap_before["label"] = df_test.barcodeID
 df_umap_after["label"] = df_test.barcodeID
 df_umap_before["convertion"] = key
 df_umap_after["convertion"] = key
+df_umap_before["id"] = "before"
+df_umap_after["id"] = "after"
 
-df_umap = pd.concat([df_umap_test_before, df_umap_test_after], axis=0)
+df_umap = pd.concat([df_umap_before, df_umap_after], axis=0)
 
 
 df_umap.to_csv(f"{key}_umap.csv")
+
+
+# cat *_umap.csv | grep -v convertion | cut -d "," -f 2- > compare_acgt_mids.csv
