@@ -405,8 +405,10 @@ cat .DAJIN_temp/data/MIDS_* |
     sed -e "s/_aligned_reads//g" |
 cat > ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
 
-cat .DAJIN_temp/data/MIDS_* |
-    grep "_sim" |
+head -n 1000 .DAJIN_temp/data/MIDS_* |
+    grep -e negacon -e del |
+    grep -v DAJIN_temp |
+    grep -v "^$" |
     grep "^ab" |
     sed -e "s/_aligned_reads//g" |
 cat > ".DAJIN_temp/data/DAJIN_MIDS_ab.txt"
@@ -421,8 +423,10 @@ cat .DAJIN_temp/data/ACGT_* |
     sed -e "s/_aligned_reads//g" |
 cat > ".DAJIN_temp/data/DAJIN_ACGT_sim.txt"
 
-cat .DAJIN_temp/data/ACGT_* |
-    grep "_sim" |
+head -n 1000 .DAJIN_temp/data/ACGT_* |
+    grep -e negacon -e del |
+    grep -v DAJIN_temp |
+    grep -v "^$" |
     grep "^ab" |
     sed -e "s/_aligned_reads//g" |
 cat > ".DAJIN_temp/data/DAJIN_ACGT_ab.txt"
@@ -469,4 +473,6 @@ awk -v iter="${iter}" '{while(i<iter){
         }}' |
 sh -
 
-exit 0
+
+
+# exit 0
