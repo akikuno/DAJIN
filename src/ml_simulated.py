@@ -146,7 +146,7 @@ model.fit(
     X_train,
     Y_train,
     epochs=100,
-    verbose=1,
+    verbose=0,
     batch_size=32,
     validation_split=0.2,
     shuffle=True,
