@@ -311,7 +311,7 @@ p {
 }
 .Ins {
     color: white;
-    background-color: #e2041b;
+    background-color: #FF4B00;
     font-weight: bold;
     font-size: 1.0em;
 }
@@ -323,7 +323,7 @@ p {
 }
 .Sub {
     color: white;
-    background-color: #007b43;
+    background-color: #03af7a;
     font-weight: bold;
     font-size: 1.0em;
 }
@@ -340,7 +340,7 @@ cat << EOF >> .DAJIN_temp/consensus/"${output_filename}".html
 </p>
 <hr>
 <p>
-<span class="Ins">Insertion</span> <span class="Del">Deletion</span><span class="Sub">Substitution</span>
+<span class="Ins">Insertion</span> <span class="Del">Deletion</span> <span class="Sub">Substitution</span>
 </p>
 
 </body>
