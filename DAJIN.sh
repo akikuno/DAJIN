@@ -74,8 +74,8 @@ do
                 error_exit "$2: No such file"
             fi
             design=$(cat "$2" | grep "design" | sed -e "s/ //g" -e "s/.*=//g")
-            ont_dir=$(cat "$2" | grep "input_dir" | sed -e "s/ //g" -e "s/.*=//g")
-            ont_cont=$(cat "$2" | grep "control" | sed -e "s/ //g" -e "s/.*=//g")
+            input_dir=$(cat "$2" | grep "input_dir" | sed -e "s/ //g" -e "s/.*=//g")
+            control=$(cat "$2" | grep "control" | sed -e "s/ //g" -e "s/.*=//g")
             genome=$(cat "$2" | grep "genome" | sed -e "s/ //g" -e "s/.*=//g")
             grna=$(cat "$2" | grep "grna" | sed -e "s/ //g" -e "s/.*=//g")
             output_dir=$(cat "$2" | grep "output_dir" | sed -e "s/ //g" -e "s/.*=//g")
@@ -96,7 +96,7 @@ done
 #? Check required arguments
 #===========================================================
 
-if [ -z "$design" ] || [ -z "$ont_dir" ] || [ -z "$ont_cont" ] || [ -z "$genome" ] || [ -z "$grna" ]
+if [ -z "$design" ] || [ -z "$input_dir" ] || [ -z "$control" ] || [ -z "$genome" ] || [ -z "$grna" ]
 then
     error_exit "Required arguments are not specified"
 fi
@@ -117,20 +117,20 @@ fi
 #? Check directory
 #===========================================================
 
-if ! [ -d "${ont_dir}" ]; then
-    error_exit "$ont_dir: No such directory"
+if ! [ -d "${input_dir}" ]; then
+    error_exit "$input_dir: No such directory"
 fi
 
-if [ -z "$(ls $ont_dir)" ]; then
-    error_exit "$ont_dir: Empty directory"
+if [ -z "$(ls $input_dir)" ]; then
+    error_exit "$input_dir: Empty directory"
 fi
 
 #===========================================================
 #? Check control
 #===========================================================
 
-[ -z "$(find ${ont_dir}/ -name ${ont_cont}.f*)" ] &&
-error_exit "$ont_cont: No control file in ${ont_dir}"
+[ -z "$(find ${input_dir}/ -name ${control}.f*)" ] &&
+error_exit "$control: No control file in ${input_dir}"
 
 #===========================================================
 #? Check genome
@@ -396,7 +396,7 @@ fi
 #? Format ONT reads into FASTA file
 #===========================================================
 
-for input in ${ont_dir}/* ; do
+for input in ${input_dir}/* ; do
     output=$(
         echo "${input}" |
         sed -e "s#.*/#.DAJIN_temp/fasta_ont/#g" \
@@ -432,7 +432,7 @@ EOF
 
 printf "Read analysis...\n"
 ./DAJIN/utils/NanoSim/src/read_analysis.py genome \
-    -i ".DAJIN_temp/fasta_ont/${ont_cont}.fa" \
+    -i ".DAJIN_temp/fasta_ont/${control}.fa" \
     -rg .DAJIN_temp/fasta_conv/wt.fa \
     -t ${threads:-1} \
     -o .DAJIN_temp/NanoSim/training
@@ -531,12 +531,12 @@ cat .DAJIN_temp/data/MIDS_* |
     sed -e "s/_aligned_reads//g" |
 cat > ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
 
-cat .DAJIN_temp/data/MIDS_"${ont_cont}"_wt |
+cat .DAJIN_temp/data/MIDS_"${control}"_wt |
     grep -v "IIIIIIIIII" |
     grep -v "DDDDDDDDDD" |
     grep -v "SSSSSSSSSS" |
     head -n 10000 |
-    sed "s/${ont_cont}$/wt_simulated/g" |
+    sed "s/${control}$/wt_simulated/g" |
 cat >> ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
 
 python ./DAJIN/src/ml_simulated.py \
@@ -604,7 +604,7 @@ mkdir -p .DAJIN_temp/clustering/temp
 #? Prepare control score
 #===========================================================
 
-./DAJIN/src/clustering_prerequisit.sh "${ont_cont}" "wt" "${threads}"
+./DAJIN/src/clustering_prerequisit.sh "${control}" "wt" "${threads}"
 # wc -l .DAJIN_temp/clustering/temp/control_score_*
 
 #===========================================================
