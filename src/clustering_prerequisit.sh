@@ -103,9 +103,9 @@ cat "${MIDS_tmp}" |
 cat > "${control_score}"
 
 
-# ==============================================================================
-# Generate  "${control_score}"
-# ==============================================================================
+################################################################################
+#! Generate scores of other possible alleles
+################################################################################
 
 cat "${control_score}" |
     awk '{print $1,NR}' |
@@ -131,19 +131,28 @@ while read -r label; do
         refnr=0
         if($0 !~ "-"){
             for(i=1; i<=NF; i++){
-                if($i ~ /[A|C|G|T]/){refnr++; $i="ref"; print $i, refnr, i}
-                else {$i="mut"; print $i, "empty", i}
-                }}
+                if($i ~ /[A|C|G|T]/){
+                    refnr++
+                    $i="ref"
+                    print $i, refnr, i
+                }
+                else {
+                $i="mut"
+                print $i, "NA", i
+                }
+            }
+        }
         else{
             gsub("-","",$0)
             for(i=1; i<=NF; i++){
                 if($i ~ /[A|C|G|T]/){refnr++; $i="ref"; print $i, refnr, i}
             }
         }}' |
-    sort -t " " -k 3,3 |
-    join -a 1 -1 3 -2 2 -  "${control_tmp}" |
+    sort -t " " -k 2,2 |
+    join -a 1 -1 2 -2 2 - "${control_tmp}" |
+    awk 'NF==3{$4=1}{print $0}' |
     sort -k 3,3n |
-    awk 'NF==3{$4=1}{print $NF}' |
+    awk '{print $NF}' |
     cat > ".DAJIN_temp/clustering/temp/control_score_${label}"
 done
 
