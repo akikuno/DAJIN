@@ -254,7 +254,7 @@ error_exit '"Tensorflow" not found'
 #? For WSL (Windows Subsystem for Linux)
 #===========================================================
 
-uname -a | 
+uname -a |
 grep Microsoft 1>/dev/null 2>/dev/null &&
 alias python="python.exe"
 
@@ -287,7 +287,10 @@ cat > .DAJIN_temp/fasta/fasta.fa
 
 design_LF=".DAJIN_temp/fasta/fasta.fa"
 
-# Separate multiple-FASTA into FASTA files
+#---------------------------------------
+#* Separate multiple-FASTA into FASTA files
+#---------------------------------------
+
 cat ${design_LF} |
     sed "s/^/@/g" |
     tr -d "\n" |
@@ -421,9 +424,10 @@ conda activate DAJIN_nanosim
 set -u
 
 cat << EOF
-++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 NanoSim read simulation
-++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 EOF
 
 #===========================================================
@@ -481,15 +485,19 @@ conda activate DAJIN
 set -u
 
 cat << EOF
-++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 Converting ACGT into MIDS format
-++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 EOF
 
 reference=".DAJIN_temp/fasta_conv/wt.fa"
 query=".DAJIN_temp/fasta_conv/target.fa"
 
-# Get mutation loci...
+#===========================================================
+#? Get mutation loci...
+#===========================================================
+
 cat "${reference}" |
     minimap2 -ax splice - "${query}" --cs 2>/dev/null |
     awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
@@ -498,7 +506,10 @@ cat "${reference}" |
     awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
 cat > .DAJIN_temp/data/mutation_points
 
-# MIDS conversion...
+#===========================================================
+#? MIDS conversion...
+#===========================================================
+
 find .DAJIN_temp/fasta_ont -type f | sort |
     awk '{print "./DAJIN/src/mids_classification.sh", $0, "wt", "&"}' |
     awk -v th=${threads:-1} '{
@@ -516,11 +527,11 @@ printf "MIDS conversion was finished...\n"
 ################################################################################
 
 cat << EOF
-++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 Allele prediction
-++++++++++++++++++++++++++++++++++++++++++
-EOF
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+EOF
 
 #===========================================================
 #? Train models
@@ -591,10 +602,12 @@ cat > ".DAJIN_temp/tmp_prediction_proportion"
 ################################################################################
 #! Clustering
 ################################################################################
+
 cat << EOF
-++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 Allele clustering
-++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 EOF
 
 rm -rf .DAJIN_temp/clustering 2>/dev/null
@@ -604,7 +617,7 @@ mkdir -p .DAJIN_temp/clustering/temp
 #? Prepare control score
 #===========================================================
 
-./DAJIN/src/clustering_prerequisit.sh "${control}" "wt" "${threads}"
+./DAJIN/src/clustering_prerequisit.sh "${control}" "wt" "${threads}" 2>/dev/null
 # wc -l .DAJIN_temp/clustering/temp/control_score_*
 
 #===========================================================
@@ -614,9 +627,6 @@ mkdir -p .DAJIN_temp/clustering/temp
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     cut -f 2,3 |
     sort -u |
-    #!--------------------------------------------------------
-    # grep barcode05 |
-    #!--------------------------------------------------------
     awk '{print "./DAJIN/src/clustering.sh",$1, $2, "&"}' |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
@@ -630,9 +640,6 @@ sh -
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     cut -f 2,3 |
     sort -u |
-    #!--------------------------------------------------------
-    # grep -e barcode11 |
-    #!--------------------------------------------------------
     awk '{print "./DAJIN/src/clustering_hdbscan.sh",$1, $2}' |
 sh -
 
@@ -648,40 +655,146 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     sort -u |
     awk -v filter="${filter:-on}" \
     '{print "./DAJIN/src/clustering_allele_percentage.sh", $1, filter}' |
-    #!--------------------------------------------------------
-    # grep barcode21 |
-    #!--------------------------------------------------------
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
-sh -
+sh - 2>/dev/null
 
 ################################################################################
 #! Get consensus sequence in each cluster
 ################################################################################
+
 cat << EOF
-++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 "Report consensus sequence
-++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 EOF
 
+#===========================================================
+#? directory
+#===========================================================
 rm -rf .DAJIN_temp/consensus/ 2>/dev/null
 mkdir -p .DAJIN_temp/consensus/temp
 
+#===========================================================
+#? main
+#===========================================================
 cat .DAJIN_temp/clustering/label* |
     awk '{nr[$1]++; print $0, nr[$1]}' |
-    #!--------------------------------------------------------
-    grep -v abnormal |
-    #!--------------------------------------------------------
+    grep -v abnormal |  #TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     awk '{print "./DAJIN/src/consensus.sh", $0, "&"}' |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
-sh -
+sh - 2>/dev/null
 
+#===========================================================
+#? move output files
+#===========================================================
 rm -rf "${output_dir:-DAJIN_results}"/Consensus/
 mkdir -p "${output_dir:-DAJIN_results}"/Consensus/
 cp .DAJIN_temp/consensus/* "${output_dir:-DAJIN_results}"/Consensus/ 2>/dev/null
+
+################################################################################
+#! Mapping by minimap2 for IGV visualization
+################################################################################
+cat << EOF
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Generate BAM files
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+EOF
+
+#===========================================================
+#? directory
+#===========================================================
+
+rm -rf .DAJIN_temp/bam/ 2>/dev/null
+mkdir -p .DAJIN_temp/bam/temp .DAJIN_temp/bam/reads20
+
+#===========================================================
+#? Generate BAM files
+#===========================================================
+
+if [ "_$mutation_type" = "_S" ]; then
+    mv .DAJIN_temp/fasta_ont/wt_ins* .DAJIN_temp/
+    mv .DAJIN_temp/fasta_ont/wt_del* .DAJIN_temp/
+fi
+
+./DAJIN/src/mapping.sh "${genome:-mm10}" "${threads:-1}"
+
+if [ "_$mutation_type" = "_S" ]; then
+    mv .DAJIN_temp/wt_ins* .DAJIN_temp/fasta_ont/
+    mv .DAJIN_temp/wt_del* .DAJIN_temp/fasta_ont/
+fi
+
+#===========================================================
+#? Generate BAM files on each cluster
+#===========================================================
+
+
+cat .DAJIN_temp/clustering/label* |
+    awk '{nr[$1]++; print $0, nr[$1]}' |
+while read -r allele
+do
+    barcode=$(echo ${allele} | cut -d " " -f 1)
+    alleletype=$(echo ${allele} | cut -d " " -f 2)
+    cluster=$(echo ${allele} | cut -d " " -f 3)
+    alleleid=$(echo ${allele} | cut -d " " -f 5)
+    #
+    input_bam="${barcode}_${alleletype}"
+    output_bam="${barcode}_allele${alleleid}"
+    #
+    find .DAJIN_temp/clustering/readid_cl_mids* |
+        grep "${input_bam}" |
+        xargs cat |
+        awk -v cl="${cluster}" '$2==cl' |
+        cut -f 1 |
+        sort |
+    cat > ".DAJIN_temp/bam/temp/tmp_id_$$"
+
+    samtools view -h ".DAJIN_temp/bam/${barcode}".bam |
+        awk '/^@/{print}
+            NR==FNR{a[$1];next}
+            $1 in a' \
+            .DAJIN_temp/bam/temp/tmp_id_$$ - |
+        samtools sort -@ "${threads:-1}" 2>/dev/null |
+    cat > .DAJIN_temp/bam/"${output_bam}".bam
+    samtools index .DAJIN_temp/bam/"${output_bam}".bam
+
+    #---------------------------------------
+    #* reads20
+    #---------------------------------------
+
+    header_num=$(samtools view -H ".DAJIN_temp/bam/${barcode}".bam | wc -l)
+    bam_num=$((20 + "${header_num}"))
+
+    samtools view -h .DAJIN_temp/bam/"${output_bam}".bam |
+        head -n "${bam_num}" |
+        samtools sort -@ "${threads:-1}" 2>/dev/null |
+    cat > .DAJIN_temp/bam/reads20/"${output_bam}".bam
+    samtools index .DAJIN_temp/bam/reads20/"${output_bam}".bam
+done
+
+#===========================================================
+#? move output files
+#===========================================================
+
+rm -rf "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
+mkdir -p "${output_dir:-DAJIN_results}"/BAM/
+cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
+
+################################################################################
+#! IGV.js Alignment viewing
+################################################################################
+
+# printf "Visualizing alignment reads...\n"
+# printf "Browser will be launched. Click 'igvjs.html'.\n"
+# { npx live-server "${output_dir:-DAJIN_results}"/BAM/igvjs/ & } 1>/dev/null 2>/dev/null
+
+# rm -rf .DAJIN_temp 2>/dev/null
+
 
 ################################################################################
 #! Summarize to Details.csv
@@ -719,95 +832,15 @@ cat > "${output_dir:-DAJIN_results}"/Details.csv
 rm .DAJIN_temp/tmp_nameid
 
 ################################################################################
-#! Mapping by minimap2 for IGV visualization
+#! Finish call
 ################################################################################
-rm -rf .DAJIN_temp/bam/ 2>/dev/null
-mkdir -p .DAJIN_temp/bam/temp
-mkdir -p .DAJIN_temp/bam/reads20
 
 cat << EOF
-++++++++++++++++++++++++++++++++++++++++++
-Generate BAM files
-++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Completed!
+Check ${output_dir:-DAJIN_results} directory
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 EOF
-
-if [ "_$mutation_type" = "_S" ]; then
-    mv .DAJIN_temp/fasta_ont/wt_ins* .DAJIN_temp/
-    mv .DAJIN_temp/fasta_ont/wt_del* .DAJIN_temp/
-fi
-
-./DAJIN/src/mapping.sh "${genome:-mm10}" "${threads:-1}"
-
-# mkdir -p "${output_dir:-DAJIN_results}"/BAM
-# cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM
-
-if [ "_$mutation_type" = "_S" ]; then
-    mv .DAJIN_temp/wt_ins* .DAJIN_temp/fasta_ont/
-    mv .DAJIN_temp/wt_del* .DAJIN_temp/fasta_ont/
-fi
-
-#===========================================================
-#? Generate BAM files on each cluster
-#===========================================================
-
-cat .DAJIN_temp/clustering/label* |
-    awk '{nr[$1]++; print $0, nr[$1]}' |
-while read -r allele
-do
-    barcode=$(echo ${allele} | cut -d " " -f 1)
-    alleletype=$(echo ${allele} | cut -d " " -f 2)
-    cluster=$(echo ${allele} | cut -d " " -f 3)
-    alleleid=$(echo ${allele} | cut -d " " -f 5)
-    #
-    input_bam="${barcode}_${alleletype}"
-    output_bam="${barcode}_allele${alleleid}"
-    #
-    find .DAJIN_temp/clustering/result_allele_id* |
-        grep "${input_bam}" |
-        xargs cat |
-        awk -v cl="${cluster}" '$2==cl' |
-        cut -f 1 |
-        sort |
-    cat > ".DAJIN_temp/bam/temp/tmp_id_$$"
-
-    samtools view -h ".DAJIN_temp/bam/${barcode}".bam |
-        awk '/^@/{print}
-            NR==FNR{a[$1];next}
-            $1 in a' \
-            .DAJIN_temp/bam/temp/tmp_id_$$ - |
-        samtools sort -@ "${threads:-1}" 2>/dev/null |
-    cat > .DAJIN_temp/bam/"${output_bam}".bam
-    samtools index .DAJIN_temp/bam/"${output_bam}".bam
-
-    #---------------------------------------
-    #* reads20
-    #---------------------------------------
-
-    header_num=$(samtools view -H ".DAJIN_temp/bam/${barcode}".bam | wc -l)
-    bam_num=$((20 + "${header_num}"))
-    
-    samtools view -h .DAJIN_temp/bam/"${output_bam}".bam |
-        head -n "${bam_num}" |
-        samtools sort -@ "${threads:-1}" 2>/dev/null |
-    cat > .DAJIN_temp/bam/reads20/"${output_bam}".bam
-    samtools index .DAJIN_temp/bam/reads20/"${output_bam}".bam
-done
-rm -rf .DAJIN_temp/bam/temp 2>/dev/null
-
-rm -rf "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
-mkdir -p "${output_dir:-DAJIN_results}"/BAM/
-cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
-
-################################################################################
-#! IGV.js Alignment viewing
-################################################################################
-
-# printf "Visualizing alignment reads...\n"
-# printf "Browser will be launched. Click 'igvjs.html'.\n"
-# { npx live-server "${output_dir:-DAJIN_results}"/BAM/igvjs/ & } 1>/dev/null 2>/dev/null
-
-# rm -rf .DAJIN_temp 2>/dev/null
-
-printf "Completed! \nCheck ${output_dir:-DAJIN_results} directory.\n"
 
 exit 0

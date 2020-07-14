@@ -17,9 +17,9 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===========================================================
 #? TEST Auguments
 #===========================================================
-# barcode=barcode32
+# barcode=barcode21
 # alleletype=wt
-# threads=65
+# threads=12
 # mapping_alleletype="${alleletype}"
 # [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
 # [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
