@@ -520,7 +520,6 @@ sh - 2>/dev/null
 
 [ "_${mutation_type}" = "_S" ] && rm .DAJIN_temp/data/MIDS_target*
 
-printf "MIDS conversion was finished...\n"
 
 ################################################################################
 #! Prediction
@@ -577,8 +576,6 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
 cat > .DAJIN_temp/tmp_$$
 mv .DAJIN_temp/tmp_$$ .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt
 
-printf "Prediction was finished...\n"
-
 # #===========================================================
 # #? Report the percentage of alleles in each sample
 # #===========================================================
@@ -614,14 +611,14 @@ rm -rf .DAJIN_temp/clustering 2>/dev/null
 mkdir -p .DAJIN_temp/clustering/temp
 
 #===========================================================
-#? Prepare control score
+#? Prepare control's score
 #===========================================================
 
 ./DAJIN/src/clustering_prerequisit.sh "${control}" "wt" "${threads}" 2>/dev/null
 # wc -l .DAJIN_temp/clustering/temp/control_score_*
 
 #===========================================================
-#? Prepare control score
+#? Prepare samples' score
 #===========================================================
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
@@ -631,7 +628,7 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
-sh -
+sh - 2>/dev/null
 
 #===========================================================
 #? Clustering by HDBSCAN
@@ -641,7 +638,7 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     cut -f 2,3 |
     sort -u |
     awk '{print "./DAJIN/src/clustering_hdbscan.sh",$1, $2}' |
-sh -
+sh - 2>/dev/null
 
 # ls -lh .DAJIN_temp/clustering/temp/hdbscan_*
 # rm .DAJIN_temp/tmp_*
