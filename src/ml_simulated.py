@@ -14,9 +14,7 @@ from sklearn.preprocessing import LabelEncoder, LabelBinarizer
 from sklearn.neighbors import LocalOutlierFactor
 
 import tensorflow as tf
-from tensorflow.keras import regularizers
-from tensorflow.keras.layers import Conv1D, Dense, Flatten, MaxPooling1D
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.layers import Input, Conv1D, Dense, Flatten, MaxPooling1D
 from tensorflow.keras.models import Model
 
 ################################################################################
@@ -91,64 +89,53 @@ del Y_test
 # ===========================================================
 # ? L2-constrained Softmax Loss
 # ===========================================================
+#==========================================================
+#? CNN
+#==========================================================
+
+inputs = Input(shape = (X_train.shape[1], X_train.shape[2]))
 init_kernel_size = int(128)
 
-model = tf.keras.Sequential()
-model.add(
-    Conv1D(
+x = Conv1D(
         filters=32,
         kernel_size=init_kernel_size,
         activation="relu",
-        input_shape=(X_train.shape[1], X_train.shape[2]),
         name="1st_Conv1D",
-    )
-)
-model.add(MaxPooling1D(pool_size=4, name="1st_MaxPooling1D"))
+    )(inputs)
+x = MaxPooling1D(pool_size=4, name="1st_MaxPooling1D")(x)
 
-model.add(
-    Conv1D(
+x = Conv1D(
         filters=32,
         kernel_size=int(init_kernel_size / 2),
         activation="relu",
         name="2nd_Conv1D",
-    )
-)
-model.add(MaxPooling1D(pool_size=4, name="2nd_MaxPooling1D"))
+    )(x)
+x = MaxPooling1D(pool_size=4, name="2nd_MaxPooling1D")(x)
 
-model.add(
-    Conv1D(
+x = Conv1D(
         filters=32,
         kernel_size=int(init_kernel_size / 4),
         activation="relu",
         name="3rd_Conv1D",
-    )
-)
-model.add(MaxPooling1D(pool_size=4, name="3rd_MaxPooling1D"))
+    )(x)
+x = MaxPooling1D(pool_size=4, name="3rd_MaxPooling1D")(x)
 
-model.add(
-    Conv1D(
+x = Conv1D(
         filters=32,
         kernel_size=int(init_kernel_size / 16),
         activation="relu",
         name="4th_Conv1D",
-    )
-)
-model.add(MaxPooling1D(pool_size=4, name="4th_MaxPooling1D"))
+    )(x)
+x = MaxPooling1D(pool_size=4, name="4th_MaxPooling1D")(x)
 
-model.add(Flatten(name="flatten"))
+x = Flatten(name="flatten")(x)
 
-# model.add(Dense(64, activation="relu", name="1st_FC"))
+x = Dense(64, activation="relu", name="1st_FC")(x)
 
-alpha = 0.1
-model.add(
-    Dense(
-        32,
-        activation="linear",
-        activity_regularizer=regularizers.l2(alpha),
-        name="L2-softmax",
-    )
-)
-model.add(Dense(len(labels_index), activation="softmax", name="final_layer"))
+predictions = Dense(len(labels_index), activation="softmax", name="softmax")(x)
+
+model = Model(inputs = inputs, outputs = predictions)
+
 model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
 
 # ===========================================================
