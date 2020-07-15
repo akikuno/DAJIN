@@ -96,41 +96,37 @@ done
 #? Check required arguments
 #===========================================================
 
-if [ -z "$design" ] || [ -z "$input_dir" ] || [ -z "$control" ] || [ -z "$genome" ] || [ -z "$grna" ]
-then
-    error_exit "Required arguments are not specified"
-fi
+[ -z "$design" ] && error_exit "design argument is not specified"
+[ -z "$input_dir" ] && error_exit "input_dir argument is not specified"
+[ -z "$control" ] && error_exit "control argument is not specified"
+[ -z "$genome" ] && error_exit "genome argument is not specified"
+[ -z "$grna" ] && error_exit "grna argument is not specified"
 
 #===========================================================
 #? Check fasta file
 #===========================================================
 
-if ! [ -e "$design" ]; then
-    error_exit "$design: No such file"
-fi
+[ -e "$design" ] || error_exit "$design: No such file"
 
-if [ "$(grep -c '>target' ${design})" -eq 0 ] || [ "$(grep -c '>wt' ${design})" -eq 0 ]; then
-    error_exit "$design: design must include \">target\" and \">wt\". "
-fi
+[ "$(grep -c -e '>wt' -e '>target' ${design})" -ne 2 ] &&
+    error_exit "$design: design must include '>target' and '>wt'. "
 
 #===========================================================
 #? Check directory
 #===========================================================
 
-if ! [ -d "${input_dir}" ]; then
+[ -d "${input_dir}" ] ||
     error_exit "$input_dir: No such directory"
-fi
 
-if [ -z "$(ls $input_dir)" ]; then
+[ -z "$(ls $input_dir)" ] &&
     error_exit "$input_dir: Empty directory"
-fi
 
 #===========================================================
 #? Check control
 #===========================================================
 
 [ -z "$(find ${input_dir}/ -name ${control}.f*)" ] &&
-error_exit "$control: No control file in ${input_dir}"
+    error_exit "$control: No control file in ${input_dir}"
 
 #===========================================================
 #? Check genome
@@ -142,7 +138,7 @@ genome_check=$(
     grep -c "/${genome:-XXX}/")
 
 [ "$genome_check" -eq 0 ] &&
-error_exit "$genome: No such reference genome"
+    error_exit "$genome: No such reference genome"
 
 #===========================================================
 #? Check grna
@@ -153,16 +149,16 @@ x=1
 while [ "${x}" -le $# ]
 do
     [ "$(grep -c ${1} ${design})" -eq 0 ] &&
-    error_exit "No gRNA sites"
+        error_exit "No gRNA sites"
     x=$(( "${x}" + 1 ))
 done
 
 #===========================================================
 #? Check output directory name
 #===========================================================
-if [ $(echo "$output_dir" | grep  -c -e '\\' -e ':' -e '*' -e '?' -e '"' -e '<' -e '>' -e '|') -eq 1 ]; then
+[ $(echo "$output_dir" | grep  -c -e '\\' -e ':' -e '*' -e '?' -e '"' -e '<' -e '>' -e '|') -ne 0 ] &&
     error_exit "$output_dir: invalid directory name"
-fi
+
 mkdir -p "${output_dir:=DAJIN_results}"/BAM "${output_dir}"/Consensus
 
 
