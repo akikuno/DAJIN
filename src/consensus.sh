@@ -16,11 +16,11 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===========================================================
 #? TEST Auguments
 #===========================================================
-# barcode="barcode12"
-# alleletype="wt"
+# barcode="barcode42"
+# alleletype="target"
 # cluster=1
-# percentage=67
-# alleleid=1
+# percentage=28
+# alleleid=3
 
 # in_suffix="${barcode}"_"${alleletype}"
 # out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
@@ -190,8 +190,10 @@ cat "${allele_id}" |
     sort |
     uniq -c |
     sed "s/+//g" |
-    awk '{if(max[$2] < $1) {max[$2] = $1; out[$2]=$3" "$4}}
-        END{for(key in out) print key, out[key]}' |
+    awk '{key=$2"_"$3
+        if(max[key] < $1) {max[key] = $1; out[key]=$4}}
+        END{for(i in out) print i, out[i]}' |
+    sed "s/_/ /g" |
 cat > "${mutation_info}"
 else
     echo "intact 0 0" > "${mutation_info}"
