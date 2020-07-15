@@ -7,13 +7,11 @@
 set -u
 umask 0022
 export LC_ALL=C
-export PATH="$(command -p getconf PATH 2>/dev/null)${PATH+:}${PATH-}"
-case $PATH in :*) PATH=${PATH#?};; esac
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 error_exit() {
-    echo "$@" 1>&2
-    exit 1
+        echo "$@" 1>&2
+        exit 1
 }
 
 ################################################################################

@@ -676,6 +676,7 @@ mkdir -p .DAJIN_temp/consensus/temp
 cat .DAJIN_temp/clustering/label* |
     awk '{nr[$1]++; print $0, nr[$1]}' |
     grep -v abnormal |  #TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    grep barcode12 | #!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     awk '{print "./DAJIN/src/consensus.sh", $0, "&"}' |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
@@ -773,7 +774,7 @@ done
 #===========================================================
 #? move output files
 #===========================================================
-
+rm -rf .DAJIN_temp/bam/temp 2>/dev/null
 rm -rf "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 mkdir -p "${output_dir:-DAJIN_results}"/BAM/
 cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null

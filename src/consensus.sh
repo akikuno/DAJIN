@@ -7,8 +7,6 @@
 set -u
 umask 0022
 export LC_ALL=C
-export PATH="$(command -p getconf PATH 2>/dev/null)${PATH+:}${PATH-}"
-case $PATH in :*) PATH=${PATH#?};; esac
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 ################################################################################
@@ -21,7 +19,7 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # barcode="barcode12"
 # alleletype="wt"
 # cluster=1
-# percentage=72
+# percentage=67
 # alleleid=1
 
 # in_suffix="${barcode}"_"${alleletype}"
@@ -45,7 +43,6 @@ out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
 mapping_alleletype="${alleletype}"
 [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
 [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
-
 
 #===========================================================
 #? Input
@@ -119,14 +116,16 @@ fi
 ################################################################################
 
 if [ "$(grep -c intact ${consensus_mutation})" -eq 0 ]; then
-set $(cat "${consensus_mutation}" |
+set $(
+    cat "${consensus_mutation}" |
     awk -v cl="${cluster}" '$1==cl {
-    type=type$3"_"
-    site=site$2"_"
-    size=size$4"_"
-    }
-    END{print type, site, size}')
-mutation_type=$(echo "$1" | sed "s/_/ /g") 
+        type=type$3"_"
+        site=site$2"_"
+        size=size$4"_"
+        }
+    END{print type, site, size}'
+    )
+mutation_type=$(echo "$1" | sed "s/_/ /g")
 mutation_site=$(echo "$2" | sed "s/_/ /g")
 insertion_size=$(echo "$3" | sed "s/_/ /g")
 # echo $mutation_type
