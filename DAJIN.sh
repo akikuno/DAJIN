@@ -572,25 +572,6 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
 cat > .DAJIN_temp/tmp_$$
 mv .DAJIN_temp/tmp_$$ .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt
 
-# #===========================================================
-# #? Report the percentage of alleles in each sample
-# #===========================================================
-
-#---------------------------------------
-#* Report the percentage of alleles in each sample
-#---------------------------------------
-
-cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    cut -f 2,3 |
-    sort |
-    uniq -c |
-    awk '{barcode[$2]+=$1
-        read_info[$2]=$1"____"$3" "read_info[$2]}
-    END{for(key in barcode) print key,barcode[key], read_info[key]}' |
-    awk '{for(i=3;i<=NF; i++) print $1,$2,$i}' |
-    sed "s/____/ /g" |
-    awk '{print $1, $3/$2*100, $4}' |
-cat > ".DAJIN_temp/tmp_prediction_proportion"
 
 ################################################################################
 #! Clustering
