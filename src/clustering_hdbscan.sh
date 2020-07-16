@@ -17,11 +17,13 @@ error_exit() {
 ################################################################################
 #! I/O naming
 ################################################################################
+
 #===========================================================
 #? TEST Aurguments
 #===========================================================
-# barcode="barcode12"
-# alleletype="wt"
+
+# barcode="barcode42"
+# alleletype="target"
 # suffix="${barcode}"_"${alleletype}"
 
 # mapping_alleletype="${alleletype}"
@@ -36,7 +38,6 @@ barcode="${1}"
 alleletype="${2}"
 suffix="${barcode}"_"${alleletype}"
 
-# mapping_alleletype="wt"
 mapping_alleletype="${alleletype}"
 [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
 [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
@@ -44,6 +45,7 @@ mapping_alleletype="${alleletype}"
 #===========================================================
 #? Input
 #===========================================================
+
 control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
 query_score=".DAJIN_temp/clustering/temp/query_score_${suffix}"
 query_label=".DAJIN_temp/clustering/temp/query_labels_${suffix}"
@@ -51,6 +53,7 @@ query_label=".DAJIN_temp/clustering/temp/query_labels_${suffix}"
 #===========================================================
 #? Output
 #===========================================================
+
 mkdir -p ".DAJIN_temp/clustering/temp/"
 # hdbscan_id=".DAJIN_temp/clustering/temp/hdbscan_${suffix}"
 

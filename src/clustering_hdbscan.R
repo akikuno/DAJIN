@@ -1,20 +1,50 @@
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# Install required packages
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+################################################################################
+#! Install required packages
+################################################################################
+
 options(repos = "https://cloud.r-project.org/")
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
 pacman::p_load(tidyverse, dbscan)
 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# Import data
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+################################################################################
+#! I/O naming
+################################################################################
+
+#===========================================================
+#? TEST Auguments
+#===========================================================
+
+file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode42_target"
+file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode42_target"
+file_control <- ".DAJIN_temp/clustering/temp/control_score_target"
+
+#===========================================================
+#? Auguments
+#===========================================================
 
 args <- commandArgs(trailingOnly = TRUE)
-df_que <- read_csv(args[1], col_names = FALSE, col_types = cols())
-df_label <- read_csv(args[2], col_names = c("id", "label"), col_types = cols())
-control <- read_csv(args[3], col_names = FALSE, col_types = cols())
+file_que <- args[1]
+file_label <- args[2]
+file_control <- args[3]
 
-output_suffix <- args[2] %>% str_remove(".*labels_")
+#===========================================================
+#? Inputs
+#===========================================================
+
+df_que <- read_csv(file_que, col_names = FALSE, col_types = cols())
+df_label <- read_csv(file_label, col_names = c("id", "label"), col_types = cols())
+df_control <- read_csv(file_control, col_names = FALSE, col_types = cols())
+
+#===========================================================
+#? Outputs
+#===========================================================
+
+output_suffix <- file_label %>% str_remove(".*labels_")
+
+################################################################################
+#! Pre-processing
+################################################################################
 
 mids_score <- matrix(NA, 4, ncol(df_que))
 rownames(mids_score) <- c("M", "I", "D", "S")
@@ -27,6 +57,7 @@ for (row in 1:4) {
             sum()
     }
 }
+
 mids_score[1, ] <- 0
 mids_score["D", ] <- mids_score["D", ] * -1
 
@@ -35,16 +66,15 @@ for (col in 1:ncol(df_que)) {
     df_que[, col] <- pull(df_que[, col]) %>% res[.]
 }
 
-df_que[, pull(control) == 2] <- 0
+df_que[, pull(df_control) == 2] <- 0
 df_que <- df_que[, colSums(df_que) != 0]
 
-rm(mids_score, control)
+rm(mids_score, df_control)
 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# PCA
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# input: df_que
-# --------------------------------------------------
+################################################################################
+#! PCA
+################################################################################
+
 pca_res <- prcomp(df_que, scale. = F)
 
 components <- 1:10
@@ -55,9 +85,9 @@ for (i in components) {
 }
 rm(pca_res)
 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# HDBSCAN
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+################################################################################
+#! HDBSCAN
+################################################################################
 
 if (nrow(output_pca) < 250) {
     cl_sizes <- seq(10, nrow(output_pca), length = 10)
@@ -90,15 +120,14 @@ cl_num_opt <- which(cl_nums == cl_num_opt) %>% max()
 cl <- hdbscan(output_pca, minPts = cl_sizes[cl_num_opt])
 hdbscan_cl <- cl$cluster + 1
 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# Extract feature nucleotide position
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# input: df_que, hdbscan_cl
-# --------------------------------------------------
+################################################################################
+#! Extract mutation frequency scores in each cluster
+################################################################################
 
 zero_to_one <- function(x) (x - min(x)) / (max(x) - min(x))
 
 df_cluster <- tibble(loc = integer(), cluster = integer(), score = double())
+
 for (i in unique(hdbscan_cl)) {
     tmp_score <- df_que[hdbscan_cl == i, ] %>%
         colSums() %>%
@@ -113,53 +142,53 @@ for (i in unique(hdbscan_cl)) {
 }
 rm(df_que)
 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# Cosine similarity to merge similar clusters
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+################################################################################
+#! Cosine similarity to merge similar clusters
+################################################################################
 # input: df_cluster, hdbscan_cl
 output_cl <- hdbscan_cl
 # --------------------------------------------------
-cosine_sim <- function(a, b) crossprod(a, b) / sqrt(crossprod(a) * crossprod(b))
 
-cluster <- df_cluster %>%
-    group_by(cluster) %>%
-    count() %>%
-    pull(cluster)
+calc_cosine_sim <- function(a, b) crossprod(a, b) / sqrt(crossprod(a) * crossprod(b))
+
+cluster <- df_cluster$cluster %>%
+    unique()
 
 if (length(cluster) > 1) {
     cl_combn <- combn(cluster, 2)
     df_cossim <- NULL
+
     i <- 1
     for (i in seq(ncol(cl_combn))) {
-        df_1 <- df_cluster %>%
+        score_1 <- df_cluster %>%
             filter(cluster == cl_combn[1, i]) %>%
             pull(score)
         #
-        df_2 <- df_cluster %>%
+        score_2 <- df_cluster %>%
             filter(cluster == cl_combn[2, i]) %>%
             pull(score)
+
+        cos_sim <- calc_cosine_sim(score_1, score_2)
 
         df_ <- tibble(
             one = cl_combn[1, i],
             two = cl_combn[2, i],
-            score = cosine_sim(df_1, df_2)
+            score = cos_sim
         )
         df_cossim <- bind_rows(df_cossim, df_)
     }
-    df_cossim_filtered <- df_cossim %>% filter(score > 0.95)
-    #
-    if (nrow(df_cossim_filtered) != 0) {
-        for (i in seq_len(nrow(df_cossim_filtered))) {
-            pattern_ <- df_cossim_filtered[i, ]$one
-            query_ <- df_cossim_filtered[i, ]$two
+
+    df_cossim_extracted <- df_cossim %>% filter(score > 0.80)
+
+    if (nrow(df_cossim_extracted) != 0) {
+        for (i in seq_len(nrow(df_cossim_extracted))) {
+            pattern_ <- df_cossim_extracted[i, ]$one
+            query_ <- df_cossim_extracted[i, ]$two
             output_cl[output_cl == pattern_] <- query_
         }
     }
 }
 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# Output results
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 pattern_ <- output_cl %>%
     unique() %>%
     sort()
@@ -172,7 +201,12 @@ for (i in seq_along(pattern_)) {
     output_cl[output_cl == pattern_[i]] <- query_[i]
 }
 
+################################################################################
+#! Output results
+################################################################################
+
 result <- tibble(read_id = df_label$id, output_cl)
+
 write_tsv(result,
     sprintf(".DAJIN_temp/clustering/temp/hdbscan_%s", output_suffix),
     col_names = F
