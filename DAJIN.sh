@@ -595,7 +595,7 @@ mkdir -p .DAJIN_temp/clustering/temp
 # wc -l .DAJIN_temp/clustering/temp/control_score_*
 
 #===========================================================
-#? Prepare samples' score
+#? Calculate samples' score
 #===========================================================
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
@@ -654,6 +654,7 @@ mkdir -p .DAJIN_temp/consensus/temp
 #===========================================================
 #? main
 #===========================================================
+
 cat .DAJIN_temp/clustering/label* |
     awk '{nr[$1]++; print $0, nr[$1]}' |
     grep -v abnormal |  #TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
