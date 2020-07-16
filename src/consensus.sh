@@ -16,11 +16,11 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===========================================================
 #? TEST Auguments
 #===========================================================
-# barcode="barcode42"
+# barcode="barcode34"
 # alleletype="target"
 # cluster=1
-# percentage=28
-# alleleid=3
+# percentage=50
+# alleleid=2
 
 # in_suffix="${barcode}"_"${alleletype}"
 # out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
@@ -47,12 +47,14 @@ mapping_alleletype="${alleletype}"
 #===========================================================
 #? Input
 #===========================================================
+
 control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
 allele_id=".DAJIN_temp/clustering/readid_cl_mids_${in_suffix}"
 
 #===========================================================
 #? Output
 #===========================================================
+
 mkdir -p .DAJIN_temp/consensus/temp
 # .DAJIN_temp/consensus/"${output_filename}".fa
 # .DAJIN_temp/consensus/"${output_filename}".html
@@ -60,6 +62,7 @@ mkdir -p .DAJIN_temp/consensus/temp
 #===========================================================
 #? Temporal
 #===========================================================
+
 tmp_allele_id=".DAJIN_temp/consensus/temp/allele_id_${out_suffix}"
 consensus_mutation=".DAJIN_temp/consensus/temp/consensus_${out_suffix}"
 mutation_info=".DAJIN_temp/consensus/temp/mutation_info_${out_suffix}"
@@ -172,7 +175,8 @@ cat "${allele_id}" |
             len=0
             for(j = 1; j<=NF; j++){
                 if(len >= site_[i]-1 && length($j) == size_[i] + 1) {
-                    print type_[i], len, $j; break
+                    print type_[i], len, $j, i
+                    break
                     }
                 else {
                     if($j !~ /\+/) len+=length($j)
@@ -183,17 +187,18 @@ cat "${allele_id}" |
             gsub(/\*[a-z]/, "=", $0)
             gsub(/\+[a-z]*/, "", $0)
             gsub(/[-=]/, "", $0)
-            print type_[i], site_[i], substr($0, site_[i], 1)
+            print type_[i], site_[i], substr($0, site_[i], 1), i
             }
         }
     }' |
     sort |
     uniq -c |
     sed "s/+//g" |
-    awk '{key=$2"_"$3
-        if(max[key] < $1) {max[key] = $1; out[key]=$4}}
-        END{for(i in out) print i, out[i]}' |
-    sed "s/_/ /g" |
+    awk 'NF==5{
+        key=$2"_"$5
+        if(max[key] < $1) {max[key] = $1; out[key]=$2" "$3" "$4}}
+        END{for(i in out) print out[i]
+        }' |
 cat > "${mutation_info}"
 else
     echo "intact 0 0" > "${mutation_info}"
