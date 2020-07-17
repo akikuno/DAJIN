@@ -25,7 +25,7 @@ Input     : Input file should be formatted as below:
             # Example
             ------
             design=DAJIN/example/design.txt
-            input_dir=DAJIN/example/demultiplex
+            input_dir=DAJIN/example/fastq
             control=barcode01
             genome=mm10
             grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
