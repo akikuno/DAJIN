@@ -708,7 +708,6 @@ fi
 #? Generate BAM files on each cluster
 #===========================================================
 
-
 cat .DAJIN_temp/clustering/label* |
     awk '{nr[$1]++; print $0, nr[$1]}' |
 while read -r allele
@@ -738,18 +737,29 @@ do
     cat > .DAJIN_temp/bam/"${output_bam}".bam
     samtools index .DAJIN_temp/bam/"${output_bam}".bam
 
-    #---------------------------------------
-    #* reads20
-    #---------------------------------------
+done
 
-    header_num=$(samtools view -H ".DAJIN_temp/bam/${barcode}".bam | wc -l)
+#===========================================================
+#? Generate BAM files with 20 reads
+#===========================================================
+
+find .DAJIN_temp/bam/ -name "*bam" -type f |
+grep -v "reads20" |
+while read -r input_bam; do
+
+    output_bam=$(
+        echo "${input_bam}" |
+        sed "s%.DAJIN_temp/bam/%.DAJIN_temp/bam/reads20/%g"
+        )
+
+    header_num=$(samtools view -H "${input_bam}" | wc -l)
     bam_num=$((20 + "${header_num}"))
 
-    samtools view -h .DAJIN_temp/bam/"${output_bam}".bam |
+    samtools view -h "${input_bam}" |
         head -n "${bam_num}" |
         samtools sort -@ "${threads:-1}" 2>/dev/null |
-    cat > .DAJIN_temp/bam/reads20/"${output_bam}".bam
-    samtools index .DAJIN_temp/bam/reads20/"${output_bam}".bam
+    cat > "${output_bam}"
+    samtools index "${output_bam}"
 done
 
 #===========================================================
