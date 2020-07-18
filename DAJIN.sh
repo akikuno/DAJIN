@@ -646,13 +646,13 @@ cat << EOF
 EOF
 
 #===========================================================
-#? directory
+#? Setting directory
 #===========================================================
 rm -rf .DAJIN_temp/consensus/ 2>/dev/null
 mkdir -p .DAJIN_temp/consensus/temp
 
 #===========================================================
-#? main
+#? Execute consensus.sh
 #===========================================================
 
 cat .DAJIN_temp/clustering/label* |
@@ -665,7 +665,7 @@ cat .DAJIN_temp/clustering/label* |
 sh - 2>/dev/null
 
 #===========================================================
-#? move output files
+#? Move output files
 #===========================================================
 rm -rf "${output_dir:-DAJIN_results}"/Consensus/
 mkdir -p "${output_dir:-DAJIN_results}"/Consensus/
@@ -682,7 +682,7 @@ Generate BAM files
 EOF
 
 #===========================================================
-#? directory
+#? Setting directory
 #===========================================================
 
 rm -rf .DAJIN_temp/bam/ 2>/dev/null
@@ -763,8 +763,9 @@ while read -r input_bam; do
 done
 
 #===========================================================
-#? move output files
+#? Move output files
 #===========================================================
+
 rm -rf .DAJIN_temp/bam/temp 2>/dev/null
 rm -rf "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 mkdir -p "${output_dir:-DAJIN_results}"/BAM/
@@ -786,6 +787,10 @@ cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 ################################################################################
 
 mkdir .DAJIN_temp/details
+
+#===========================================================
+#? Generate Details.csv
+#===========================================================
 
 find .DAJIN_temp/consensus/* -type f |
     grep html |
@@ -816,8 +821,19 @@ cat .DAJIN_temp/clustering/label* |
     sed -e "1i Sample, Allele ID, % of reads, Allele type, Indel, Large indel, Design" |
 cat > .DAJIN_temp/details/Details.csv
 
-cp .DAJIN_temp/details/Details.csv "${output_dir:-DAJIN_results}"/
 rm .DAJIN_temp/details/tmp_nameid
+
+#===========================================================
+#? Plot details.csv
+#===========================================================
+
+Rscript DAJIN/src/details_plot.R
+
+#===========================================================
+#? Move output files
+#===========================================================
+
+cp .DAJIN_temp/details/* "${output_dir:-DAJIN_results}"/
 
 ################################################################################
 #! Finish call
