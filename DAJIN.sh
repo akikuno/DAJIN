@@ -786,7 +786,7 @@ cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 #! Summarize to Details.csv
 ################################################################################
 
-mkdir .DAJIN_temp/details
+mkdir -p .DAJIN_temp/details
 
 #===========================================================
 #? Generate Details.csv
