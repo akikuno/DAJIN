@@ -16,7 +16,7 @@ df <- df %>%
     mutate(
         Allele_type = case_when(
             Design == "+" ~ "intact target",
-            Allele_type == "wt" && Indel == "-" ~ "intact wt",
+            Allele_type == "wt" & Indel == "-" ~ "intact wt",
             TRUE ~ as.character(Allele_type)
         )
     )
