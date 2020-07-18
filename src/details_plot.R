@@ -4,7 +4,7 @@
 
 options(repos = 'https://cloud.r-project.org/')
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
-pacman::p_load(tidyverse)
+pacman::p_load(tidyverse,purrr, RColorBrewer)
 
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 #! Format
@@ -21,21 +21,49 @@ df <- df %>%
         )
     )
 
+
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 #! Plot
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+#==========================================================
+#? Color setting
+#==========================================================
+
+color <- c(
+        "abnormal" = "#C0C0C0",
+        "intact wt" = "#3CB371",
+        "wt" = "#77D9A8",
+        "intact target" = "#ff4b00",
+        "target" = "#F6AA00"
+        )
+
+color_names <- df$Allele_type %>%
+    str_remove("abnormal|wt|target") %>%
+    str_remove("intact ") %>%
+    unique() %>%
+    .[-1] %>%
+    length() %>%
+    brewer.pal("Pastel2")
+
+color_others <- df$Allele_type %>%
+    str_remove("abnormal|wt|target") %>%
+    str_remove("intact ") %>%
+    unique() %>%
+    .[-1] %>%
+    set_names(color_names, .)
+
+color_all <- c(color, color_others)
+
+#==========================================================
+#? Plot
+#==========================================================
 
 p <- ggplot(df, aes(x = Sample, y = `%_of_reads`, fill = Allele_type)) +
     geom_col(position = position_stack()) +
     scale_fill_manual(
         name = "Allele type",
-        values = c(
-            "abnormal" = "#C0C0C0",
-            "intact wt" = "#3CB371",
-            "wt" = "#96DBB4",
-            "intact target" = "#FB6E52",
-            "target" = "#FDB8AB"
-            )) +
+        values = color_all) +
     labs(x = NULL, y = "% of reads") +
     theme_bw(base_size = 20) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
