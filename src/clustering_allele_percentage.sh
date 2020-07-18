@@ -18,7 +18,7 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #? TEST Auguments
 #===========================================================
 
-# barcode=barcode05
+# barcode=barcode01
 # filter=on
 
 #===========================================================
@@ -97,7 +97,7 @@ total_percentage=$(
 cat "${tmp_alleleper_before}" |
     sed "s/$/ ${total_percentage}/g" |
     if [ "_${filter}" = "_on" ]; then
-        awk '{$4=int( ($4+0.5) * 100/$5)
+        awk '{$4=sprintf("%.1f", $4*100/$5)
             print $1,$2,$3,$4}'
     else
         awk '{printf $1" "$2" "$3" "; printf "%.3f\n", $4}'
@@ -105,7 +105,7 @@ cat "${tmp_alleleper_before}" |
 cat > "${tmp_alleleper_after}"
 
 ################################################################################
-#! Filter reads
+#! Extract reads
 ################################################################################
 
 rm .DAJIN_temp/clustering/readid_cl_mids_"${barcode}"* 2>/dev/null
