@@ -44,4 +44,4 @@ p <- ggplot(df, aes(x = Sample, y = `%_of_reads`, fill = Allele_type)) +
 #! Save figure
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-ggsave(p, filename = ".DAJIN_temp/details/Details.pdf",width = 12, height = 7)
+ggsave(p, filename = ".DAJIN_temp/details/Details.pdf",width = 15, height = 7)
