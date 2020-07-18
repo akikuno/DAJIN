@@ -33,7 +33,7 @@ Input     : Input file should be formatted as below:
             threads=10
             filter=on
             ------
-            - desing: a multi-FASTA file contains sequences of each genotype. ">wt" and ">target" must be included. 
+            - design: a multi-FASTA file contains sequences of each genotype. ">wt" and ">target" must be included. 
             - input_dir: a directory contains FASTA or FASTQ files of long-read sequencing
             - control: control barcode ID
             - genome: reference genome. e.g. mm10, hg38
@@ -785,6 +785,8 @@ cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 #! Summarize to Details.csv
 ################################################################################
 
+mkdir .DAJIN_temp/details
+
 find .DAJIN_temp/consensus/* -type f |
     grep html |
     sed "s:.*/::g" |
@@ -792,13 +794,13 @@ find .DAJIN_temp/consensus/* -type f |
     sed "s/_/ /g" |
     awk '{print $1"_"$2,$3,$4}' |
     sort |
-cat > .DAJIN_temp/tmp_nameid
+cat > .DAJIN_temp/details/tmp_nameid
 
 cat .DAJIN_temp/clustering/label* |
     awk '{nr[$1]++; print $0, nr[$1]}' |
     awk '{print $1"_allele"$5, $4, $2}' |
     sort |
-    join -a 1 - .DAJIN_temp/tmp_nameid |
+    join -a 1 - .DAJIN_temp/details/tmp_nameid |
     sed "s/_/ /" |
     awk '$4=="abnormal" {$5="mutation"}1' |
     awk 'BEGIN{OFS=","}
@@ -812,9 +814,10 @@ cat .DAJIN_temp/clustering/label* |
         else $7 = "-"
         }1' |
     sed -e "1i Sample, Allele ID, % of reads, Allele type, Indel, Large indel, Design" |
-cat > "${output_dir:-DAJIN_results}"/Details.csv
+cat > .DAJIN_temp/details/Details.csv
 
-rm .DAJIN_temp/tmp_nameid
+cp .DAJIN_temp/details/Details.csv "${output_dir:-DAJIN_results}"/
+rm .DAJIN_temp/details/tmp_nameid
 
 ################################################################################
 #! Finish call
