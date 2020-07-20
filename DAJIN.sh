@@ -628,7 +628,7 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     cut -f 2 |
     sort -u |
     awk -v filter="${filter:-on}" \
-    '{print "./DAJIN/src/clustering_allele_percentage.sh", $1, filter}' |
+    '{print "./DAJIN/src/clustering_allele_percentage.sh", $1, filter, "&"}' |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
