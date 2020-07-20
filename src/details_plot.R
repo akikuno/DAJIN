@@ -38,22 +38,23 @@ color <- c(
         "target" = "#F6AA00"
         )
 
-color_names <- df$Allele_type %>%
-    str_remove("abnormal|wt|target") %>%
-    str_remove("intact ") %>%
-    unique() %>%
-    .[-1] %>%
-    length() %>%
-    brewer.pal("Pastel2")
+allele_others <- df$Allele_type %>%
+        str_remove("abnormal|wt|target") %>%
+        str_remove("intact ") %>%
+        unique() %>%
+        .[-1] 
 
-color_others <- df$Allele_type %>%
-    str_remove("abnormal|wt|target") %>%
-    str_remove("intact ") %>%
-    unique() %>%
-    .[-1] %>%
-    set_names(color_names, .)
+if (length(allele_others) > 0){
 
-color_all <- c(color, color_others)
+    color_names <- allele_others %>%
+        length() %>%
+        brewer.pal("Pastel2")
+
+    color_others <- allele_others %>%
+        set_names(color_names, .)
+
+    color <- c(color, color_others)
+}
 
 #==========================================================
 #? Plot
@@ -63,7 +64,7 @@ p <- ggplot(df, aes(x = Sample, y = `%_of_reads`, fill = Allele_type)) +
     geom_col(position = position_stack()) +
     scale_fill_manual(
         name = "Allele type",
-        values = color_all) +
+        values = color) +
     labs(x = NULL, y = "% of reads") +
     theme_bw(base_size = 20) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
