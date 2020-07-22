@@ -26,7 +26,7 @@ from tensorflow.keras.models import Model
 # ===========================================================
 
 # file_name = ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
-# threads = 65
+# threads = 12
 
 # ===========================================================
 # ? Auguments
@@ -79,12 +79,9 @@ def onehot_encode_seq(seq):
 labels, labels_index = pd.factorize(df_sim.barcodeID)
 labels = tf.keras.utils.to_categorical(labels)
 
-X_train, X_test, Y_train, Y_test = train_test_split(
+X_train, X_val, Y_train, Y_val = train_test_split(
     onehot_encode_seq(df_sim.seq), labels, test_size=0.2, shuffle=True
 )
-
-del X_test
-del Y_test
 
 # ===========================================================
 # ? L2-constrained Softmax Loss
@@ -94,7 +91,7 @@ del Y_test
 #==========================================================
 
 inputs = Input(shape = (X_train.shape[1], X_train.shape[2]))
-init_kernel_size = int(128)
+init_kernel_size = int(512)
 
 x = Conv1D(
         filters=32,
@@ -102,7 +99,7 @@ x = Conv1D(
         activation="relu",
         name="1st_Conv1D",
     )(inputs)
-x = MaxPooling1D(pool_size=4, name="1st_MaxPooling1D")(x)
+x = MaxPooling1D(pool_size=16, name="1st_MaxPooling1D")(x)
 
 x = Conv1D(
         filters=32,
@@ -110,7 +107,7 @@ x = Conv1D(
         activation="relu",
         name="2nd_Conv1D",
     )(x)
-x = MaxPooling1D(pool_size=4, name="2nd_MaxPooling1D")(x)
+x = MaxPooling1D(pool_size=8, name="2nd_MaxPooling1D")(x)
 
 x = Conv1D(
         filters=32,
@@ -120,17 +117,17 @@ x = Conv1D(
     )(x)
 x = MaxPooling1D(pool_size=4, name="3rd_MaxPooling1D")(x)
 
-x = Conv1D(
-        filters=32,
-        kernel_size=int(init_kernel_size / 16),
-        activation="relu",
-        name="4th_Conv1D",
-    )(x)
-x = MaxPooling1D(pool_size=4, name="4th_MaxPooling1D")(x)
+# x = Conv1D(
+#         filters=32,
+#         kernel_size=int(init_kernel_size / 16),
+#         activation="relu",
+#         name="4th_Conv1D",
+#     )(x)
+# x = MaxPooling1D(pool_size=4, name="4th_MaxPooling1D")(x)
 
 x = Flatten(name="flatten")(x)
 
-x = Dense(64, activation="relu", name="1st_FC")(x)
+x = Dense(32, activation="relu", name="1st_FC")(x)
 
 predictions = Dense(len(labels_index), activation="softmax", name="softmax")(x)
 
@@ -148,7 +145,7 @@ model.fit(
     epochs=100,
     verbose=0,
     batch_size=32,
-    validation_split=0.2,
+    validation_data=(X_val, Y_val),
     shuffle=True,
 )
 
@@ -162,7 +159,7 @@ model.fit(
 model_ = Model(model.get_layer(index=0).input, model.get_layer(index=-2).output)
 train_vector = model_.predict(X_train, verbose=0, batch_size=32)
 
-del X_train  # <<<
+# del X_train  # <<<
 
 # ===========================================================
 # ? LocalOutlierFactor
@@ -184,7 +181,7 @@ clf.fit(train_vector)
 ################################################################################
 np.save(".DAJIN_temp/data/labels_index.npy", labels_index)
 
-model.save(".DAJIN_temp/data/model_l2.h5")
+model.save(".DAJIN_temp/data/model.h5")
 
 pickle.dump(clf, open(".DAJIN_temp/data/model_lof.sav", "wb"))
 
