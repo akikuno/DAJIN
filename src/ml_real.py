@@ -9,14 +9,9 @@ import pandas as pd
 
 import pickle
 
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, LabelBinarizer
-from sklearn.neighbors import LocalOutlierFactor
 
 import tensorflow as tf
-from tensorflow.keras import regularizers
-from tensorflow.keras.layers import Conv1D, Dense, Flatten, MaxPooling1D
-from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.models import Model
 
 ################################################################################
@@ -27,9 +22,9 @@ from tensorflow.keras.models import Model
 # ? TEST auguments
 # ===========================================================
 
-# file_name = ".DAJIN_temp/data/MIDS_barcode21_wt"
-# mutation_type = "I"
-# threads = 65
+# file_name = ".DAJIN_temp/data/MIDS_barcode23_wt"
+# mutation_type = "D"
+# threads = 12
 
 # ===========================================================
 # ? Auguments
@@ -82,8 +77,9 @@ del df["seq"]  # <<<
 ################################################################################
 #! load trained models
 ################################################################################
+
 labels_index = np.load(".DAJIN_temp/data/labels_index.npy", allow_pickle=True)
-model = tf.keras.models.load_model(".DAJIN_temp/data/model_l2.h5")
+model = tf.keras.models.load_model(".DAJIN_temp/data/model.h5")
 clf = pickle.load(open(".DAJIN_temp/data/model_lof.sav", "rb"))
 
 ################################################################################
@@ -134,7 +130,11 @@ if mutation_type == "S":
         df["prediction"].str.contains("wt_"), "abnormal", inplace=True
     )
 
-df.groupby("barcodeID").prediction.value_counts()
+df.groupby("barcodeID").prediction.value_counts() #!<<<<<
+
+################################################################################
+#! Save file
+################################################################################
 
 df.to_csv(
     ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt",
