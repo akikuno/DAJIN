@@ -756,6 +756,7 @@ while read -r input_bam; do
     bam_num=$((20 + "${header_num}"))
 
     samtools view -h "${input_bam}" |
+        awk '$1 ~ /^@/ || $6 != "*"' |
         head -n "${bam_num}" |
         samtools sort -@ "${threads:-1}" 2>/dev/null |
     cat > "${output_bam}"
