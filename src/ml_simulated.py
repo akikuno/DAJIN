@@ -91,7 +91,7 @@ X_train, X_val, Y_train, Y_val = train_test_split(
 #==========================================================
 
 inputs = Input(shape = (X_train.shape[1], X_train.shape[2]))
-init_kernel_size = int(512)
+init_kernel_size = int(256)
 
 x = Conv1D(
         filters=32,
@@ -99,7 +99,7 @@ x = Conv1D(
         activation="relu",
         name="1st_Conv1D",
     )(inputs)
-x = MaxPooling1D(pool_size=16, name="1st_MaxPooling1D")(x)
+x = MaxPooling1D(pool_size=4, name="1st_MaxPooling1D")(x)
 
 x = Conv1D(
         filters=32,
@@ -107,7 +107,7 @@ x = Conv1D(
         activation="relu",
         name="2nd_Conv1D",
     )(x)
-x = MaxPooling1D(pool_size=8, name="2nd_MaxPooling1D")(x)
+x = MaxPooling1D(pool_size=4, name="2nd_MaxPooling1D")(x)
 
 x = Conv1D(
         filters=32,
