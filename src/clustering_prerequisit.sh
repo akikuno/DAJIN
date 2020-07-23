@@ -17,7 +17,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===========================================================
 #? TEST Auguments
 #===========================================================
-# barcode=barcode21
+
+# barcode=barcode26
 # alleletype=wt
 # threads=12
 # mapping_alleletype="${alleletype}"
@@ -42,7 +43,7 @@ mapping_alleletype="${alleletype}"
 #===========================================================
 #? Output
 #===========================================================
-mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
+mkdir -p ".DAJIN_temp/clustering/temp/"
 control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
 
 #===========================================================
@@ -75,27 +76,28 @@ cat "${MIDS_ref}" |
 cat > "${MIDS_tmp}"
 
 # ----------------------------------------
-# 行を「リード指向」から「塩基部位指向」に変換する
+# Transpose matrix
 # ----------------------------------------
 nr=$(cat "${MIDS_tmp}" | wc -l)
 
-cat "${MIDS_tmp}" | 
+cat "${MIDS_tmp}" |
     awk -v nr="${nr}" -F "" \
     '{for(i=1; i<=NF; i++){
             row[i]=row[i] $i
             if(NR==nr) print row[i]
         }
-    }' | 
+    }' |
     # cat tmp | head -n 3113 | tail -n 1 |
+    # head -n 3208 tmp | tail |
     awk -F "" '{
         INS=gsub(/[1-9]|[a-z]/,"@",$0)
         DEL=gsub("D","D",$0)
         SUB=gsub("S","S",$0)
         # ----------------------------------------
-        ### Controlにおいて系統的な変異が10%を超える部位をシークエンスエラーとする
+        #* Define sequence error when control sample has more than 5% mutations
         # ----------------------------------------
-        per=10
-        # print INS, DEL, SUB, NF*per/100 
+        per=5
+        # print INS, DEL, SUB, NF*per/100 #!<<<<
         if(INS > NF*per/100 || DEL > NF*per/100 || SUB > NF*per/100) num = 2
         else num=1
         print num
