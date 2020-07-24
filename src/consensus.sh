@@ -16,11 +16,12 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===========================================================
 #? TEST Auguments
 #===========================================================
-# barcode="barcode34"
-# alleletype="target"
-# cluster=1
-# percentage=50
-# alleleid=2
+# barcode="barcode12"
+# alleletype="wt"
+# cluster=2
+# percentage=47.0
+# alleleid=3
+# mutation_design="S"
 
 # in_suffix="${barcode}"_"${alleletype}"
 # out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
@@ -37,6 +38,7 @@ alleletype="${2}"
 cluster="${3}"
 percentage="${4}"
 alleleid="${5}"
+mutation_design="${6}"
 
 in_suffix="${barcode}"_"${alleletype}"
 out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
@@ -64,8 +66,8 @@ mkdir -p .DAJIN_temp/consensus/temp
 #===========================================================
 
 tmp_allele_id=".DAJIN_temp/consensus/temp/allele_id_${out_suffix}"
-consensus_mutation=".DAJIN_temp/consensus/temp/consensus_${out_suffix}"
-mutation_info=".DAJIN_temp/consensus/temp/mutation_info_${out_suffix}"
+mutation_id_loc_type_insnum=".DAJIN_temp/consensus/temp/consensus_${out_suffix}"
+mutation_type_site_nuc=".DAJIN_temp/consensus/temp/mutation_type_site_nuc_${out_suffix}"
 tmp_html=.DAJIN_temp/consensus/temp/tmp_html_"${out_suffix}".html
 
 ################################################################################
@@ -107,10 +109,9 @@ cat ".DAJIN_temp/consensus/temp/mutation_${out_suffix}" |
         }
         print $0}' |
     sed "s/35$/>35/g" |
-cat > "${consensus_mutation}"
-
+cat > "${mutation_id_loc_type_insnum}"
 else
-    echo "${cluster} 0 intact 0" > "${consensus_mutation}"
+    echo "${cluster} 0 intact 0" > "${mutation_id_loc_type_insnum}"
 fi
 
 
@@ -118,9 +119,9 @@ fi
 #! Variant call
 ################################################################################
 
-if [ "$(grep -c intact ${consensus_mutation})" -eq 0 ]; then
+if [ "$(grep -c intact ${mutation_id_loc_type_insnum})" -eq 0 ]; then
 set $(
-    cat "${consensus_mutation}" |
+    cat "${mutation_id_loc_type_insnum}" |
     awk -v cl="${cluster}" '$1==cl {
         type=type$3"_"
         site=site$2"_"
@@ -128,6 +129,7 @@ set $(
         }
     END{print type, site, size}'
     )
+
 mutation_type=$(echo "$1" | sed "s/_/ /g")
 mutation_site=$(echo "$2" | sed "s/_/ /g")
 insertion_size=$(echo "$3" | sed "s/_/ /g")
@@ -199,20 +201,20 @@ cat "${allele_id}" |
         if(max[key] < $1) {max[key] = $1; out[key]=$2" "$3" "$4}}
         END{for(i in out) print out[i]
         }' |
-cat > "${mutation_info}"
+cat > "${mutation_type_site_nuc}"
 else
-    echo "intact 0 0" > "${mutation_info}"
+    echo "intact 0 0" > "${mutation_type_site_nuc}"
 fi
 
-# cat "${mutation_info}" #<<<<<
+# cat "${mutation_type_site_nuc}" #<<<<<
 
 ################################################################################
 #! Report consensus sequence
 ################################################################################
 
-mutation_type=$(cut -d " " -f 1 "${mutation_info}" | xargs echo)
-mutation_site=$(cut -d " " -f 2 "${mutation_info}" | xargs echo)
-mutation_nuc=$(cut -d " " -f 3 "${mutation_info}" | xargs echo)
+mutation_type=$(cut -d " " -f 1 "${mutation_type_site_nuc}" | xargs echo)
+mutation_site=$(cut -d " " -f 2 "${mutation_type_site_nuc}" | xargs echo)
+mutation_nuc=$(cut -d " " -f 3 "${mutation_type_site_nuc}" | xargs echo)
 
 #===========================================================
 #? FASTA file
@@ -261,11 +263,30 @@ diff_wt=$(
     wc -l
     )
 
+#-------------------------------------
+#* Annotate "target" when including targetted point mutation
+#-------------------------------------
+
+if [ "_${mutation_design}" = "_S" ]; then
+    mutation_point=$(cut -d " " -f 1 .DAJIN_temp/data/mutation_points)
+
+    contaion_target=$(
+        cat "${mutation_type_site_nuc}" |
+        cut -d " " -f 2 |
+        awk '{print $0-1}' |
+        grep -c ${mutation_point} -
+        )
+else
+    contaion_target=0
+fi
+
 if [ "${diff_target}" -eq 0 ]; then
     output_filename="${output_filename}_intact_target"
 elif [ "${diff_wt}" -eq 0 ]; then
     output_filename="${output_filename}_intact_wt"
-elif [ "$(grep -c intact $mutation_info)" -eq 1 ]; then
+elif [ "${contaion_target}" -ne 0 ]; then
+    output_filename="${output_filename}_mutation_target"
+elif [ "$(grep -c intact $mutation_type_site_nuc)" -eq 1 ]; then
     output_filename="${output_filename}_intact_${alleletype}"
 else
     output_filename="${output_filename}_mutation_${alleletype}"
@@ -354,6 +375,6 @@ cat << EOF >> .DAJIN_temp/consensus/"${output_filename}".html
 EOF
 
 # ls -l .DAJIN_temp/consensus/"${output_filename}".fa
-rm "${tmp_allele_id}" "${consensus_mutation}" "${mutation_info}" "${tmp_html}"
+rm "${tmp_allele_id}" "${mutation_id_loc_type_insnum}" "${mutation_type_site_nuc}" "${tmp_html}"
 
 # exit 0
