@@ -342,9 +342,10 @@ cat ${design_LF} |
         print $1"\n"toupper($2) > output
     }'
 
-#---------------------------------------
-#* Define mutation type
-#---------------------------------------
+#===========================================================
+#? Define mutation type
+#? Insertion = I; Deletion = D; Substitution = S
+#===========================================================
 mutation_type=$(
     minimap2 -ax map-ont \
         .DAJIN_temp/fasta/wt.fa \
@@ -545,6 +546,7 @@ cat .DAJIN_temp/data/MIDS_"${control}"_wt |
     sed "s/${control}$/wt_simulated/g" |
 cat >> ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
 
+
 python ./DAJIN/src/ml_simulated.py \
     ".DAJIN_temp/data/DAJIN_MIDS_sim.txt" "${threads}"
 
@@ -559,7 +561,7 @@ find .DAJIN_temp/data/MIDS* |
     sort |
 while read -r input; do
     barcode=$(echo $input | cut -d "_" -f 3)
-    echo "${barcode} is now processing..."
+    echo "Prediction of ${barcode} is now processing..."
 
     python ./DAJIN/src/ml_real.py \
         "${input}" \
@@ -658,7 +660,7 @@ mkdir -p .DAJIN_temp/consensus/temp
 cat .DAJIN_temp/clustering/label* |
     awk '{nr[$1]++; print $0, nr[$1]}' |
     grep -v abnormal |  #TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    awk '{print "./DAJIN/src/consensus.sh", $0, "&"}' |
+    awk -v mut="${mutation_type}" '{print "./DAJIN/src/consensus.sh", $0, mut, "&"}' |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
