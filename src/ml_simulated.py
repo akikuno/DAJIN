@@ -142,7 +142,7 @@ model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accur
 model.fit(
     X_train,
     Y_train,
-    epochs=100,
+    epochs=20,
     verbose=0,
     batch_size=32,
     validation_data=(X_val, Y_val),
@@ -152,18 +152,19 @@ model.fit(
 ################################################################################
 #! Novelity (Anomaly) detection
 ################################################################################
-# ===========================================================
-# ? L2 layer
-# ===========================================================
+#===========================================================
+#? Extract layer
+#===========================================================
 
 model_ = Model(model.get_layer(index=0).input, model.get_layer(index=-2).output)
+# model_.summary()
 train_vector = model_.predict(X_train, verbose=0, batch_size=32)
 
 # del X_train  # <<<
 
-# ===========================================================
-# ? LocalOutlierFactor
-# ===========================================================
+#===========================================================
+#? LocalOutlierFactor
+#===========================================================
 
 clf = LocalOutlierFactor(
     n_neighbors=20,
