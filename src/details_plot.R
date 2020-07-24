@@ -66,8 +66,9 @@ p <- ggplot(df, aes(x = Sample, y = `%_of_reads`, fill = Allele_type)) +
         name = "Allele type",
         values = color) +
     labs(x = NULL, y = "% of reads") +
-    theme_bw(base_size = 20) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    theme_bw(base_size = 30) +
+    theme(axis.text.x = element_text(angle = 45, size = 20, hjust = 1),
+        axis.text.y = element_text(size = 20))
 
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 #! Save figure
