@@ -21,7 +21,6 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # cluster=2
 # percentage=47.0
 # alleleid=3
-# mutation_design="S"
 
 # in_suffix="${barcode}"_"${alleletype}"
 # out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
@@ -38,7 +37,6 @@ alleletype="${2}"
 cluster="${3}"
 percentage="${4}"
 alleleid="${5}"
-mutation_design="${6}"
 
 in_suffix="${barcode}"_"${alleletype}"
 out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
@@ -69,6 +67,20 @@ tmp_allele_id=".DAJIN_temp/consensus/temp/allele_id_${out_suffix}"
 mutation_id_loc_type_insnum=".DAJIN_temp/consensus/temp/consensus_${out_suffix}"
 mutation_type_site_nuc=".DAJIN_temp/consensus/temp/mutation_type_site_nuc_${out_suffix}"
 tmp_html=.DAJIN_temp/consensus/temp/tmp_html_"${out_suffix}".html
+
+mutation_design=$(
+    minimap2 -ax map-ont \
+        .DAJIN_temp/fasta/wt.fa \
+        .DAJIN_temp/fasta/target.fa \
+        --cs 2>/dev/null |
+    grep -v "^@" |
+    awk '{
+        cstag=$(NF-1)
+        if(cstag ~ "-") print "D"
+        else if(cstag ~ "\+") print "I"
+        else if(cstag ~ "\*") print "S"
+        }' 2>/dev/null
+)
 
 ################################################################################
 #! Get consensus sequence
