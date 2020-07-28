@@ -18,8 +18,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #? TEST Auguments
 #===========================================================
 
-# barcode=barcode26
-# alleletype=wt
+# barcode=barcode34
+# alleletype=flox_deletion
 # threads=12
 # mapping_alleletype="${alleletype}"
 # [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
@@ -52,6 +52,7 @@ control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
 MIDS_ref=".DAJIN_temp/clustering/temp/MIDS_${barcode}_${alleletype}"
 MIDS_tmp=".DAJIN_temp/clustering/temp/MIDS_tmp_${barcode}_${alleletype}"
 control_tmp=".DAJIN_temp/clustering/temp/control_tmp_${barcode}_${alleletype}"
+label_nuc_tmp=".DAJIN_temp/clustering/temp/label_nuc_tmp_${barcode}_${alleletype}"
 
 ################################################################################
 #! Control scoring
@@ -123,10 +124,31 @@ while read -r label; do
     minimap2 -t "${threads}" -ax map-ont \
         .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/"${label}".fa \
         --cs=long 2>/dev/null |
-    grep -v "^@" |
-    sed "s/cs:Z://g" |
-    awk 'NR==2{printf tolower($(NF-1)); next} # inversion
-        {printf $(NF-1)}' |
+        grep -v "^@" |
+        awk '{print $4, $(NF-1)}' |
+        sed "s/cs:Z://g" |
+        sed "s/=//g" |
+        sort -t " " -k 1,1n |
+        cut -d " " -f 2 |
+    cat > "${label_nuc_tmp}"
+    #
+    if [ "$(cat "${label_nuc_tmp}" | wc -l)" -eq 3 ]; then # inversion
+        cat "${label_nuc_tmp}" |
+            awk 'NR==2{printf tolower($1); next} {printf $1}'
+    elif [ "$(cat "${label_nuc_tmp}" | wc -l)" -eq 2 ]; then # flox deletion
+        wt_length=$(sed 1d .DAJIN_temp/fasta/wt.fa | awk '{print length}')
+        que_length=$(sed 1d .DAJIN_temp/fasta/"${label}".fa | awk '{print length}')
+        del_length=$((${wt_length}-${que_length}+1))
+
+        cat "${label_nuc_tmp}" |
+            awk -v del_len="${del_length}" 'NR==2{
+                seq=""
+                for(i=1;i<del_len;i++){seq=seq "a"}
+                $0=substr($0,2)
+                printf seq, $0}{printf $0}'
+    else
+        cat "${label_nuc_tmp}"
+    fi |
     sed "s/*[acgt]//g" |
     sed "s/[=+]//g" |
     awk -F "" '{
@@ -154,10 +176,14 @@ while read -r label; do
     join -a 1 -1 2 -2 2 - "${control_tmp}" |
     awk 'NF==3{$4=1}{print $0}' |
     sort -k 3,3n |
-    awk '{print $NF}' |
+    if [ "$(cat "${label_nuc_tmp}" | wc -l)" -eq 2 ]; then # flox deletion
+        cat - | grep -v "^NA"
+    else
+        cat -
+    fi |
     cat > ".DAJIN_temp/clustering/temp/control_score_${label}"
 done
 
-rm "${MIDS_ref}" "${MIDS_tmp}" "${control_tmp}"
+rm "${MIDS_ref}" "${MIDS_tmp}" "${control_tmp}" "${label_nuc_tmp}"
 
 exit 0
