@@ -125,8 +125,11 @@ done
 #? Check control
 #===========================================================
 
-[ -z "$(find ${input_dir}/ -name ${control}.f*)" ] &&
+if find ${input_dir}/ -type f | grep -q "${control}"; then
+    :
+else
     error_exit "$control: No control file in ${input_dir}"
+fi
 
 #===========================================================
 #? Check genome
