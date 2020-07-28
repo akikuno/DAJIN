@@ -45,7 +45,7 @@ control_score=".DAJIN_temp/clustering/temp/control_score_${alleletype}"
 MIDS_ref=".DAJIN_temp/clustering/temp/MIDS_${barcode}_${alleletype}"
 tmp_MIDS=".DAJIN_temp/clustering/temp/tmp_MIDS_${barcode}_${alleletype}"
 tmp_control=".DAJIN_temp/clustering/temp/tmp_control_${barcode}_${alleletype}"
-tmp_label_nuc=".DAJIN_temp/clustering/temp/tmp_label_nuc_${barcode}_${alleletype}"
+tmp_label_mapping=".DAJIN_temp/clustering/temp/tmp_label_mapping_${barcode}_${alleletype}"
 
 ################################################################################
 #! Control scoring
@@ -123,24 +123,25 @@ while read -r label; do
         sed "s/=//g" |
         sort -t " " -k 1,1n |
         cut -d " " -f 2 |
-    cat > "${tmp_label_nuc}"
+    cat > "${tmp_label_mapping}"
     #
-    if [ "$(cat "${tmp_label_nuc}" | wc -l)" -eq 3 ]; then # inversion
-        cat "${tmp_label_nuc}" |
+    nrow_tmp_label_mapping=$(cat "${tmp_label_mapping}" | wc -l)
+    if [ "${nrow_tmp_label_mapping}" -eq 3 ]; then # inversion
+        cat "${tmp_label_mapping}" |
             awk 'NR==2{printf tolower($1); next} {printf $1}'
-    elif [ "$(cat "${tmp_label_nuc}" | wc -l)" -eq 2 ]; then # flox deletion
+    elif [ "${nrow_tmp_label_mapping}" -eq 2 ]; then # flox deletion
         wt_length=$(sed 1d .DAJIN_temp/fasta/wt.fa | awk '{print length}')
         que_length=$(sed 1d .DAJIN_temp/fasta/"${label}".fa | awk '{print length}')
         del_length=$((${wt_length}-${que_length}+1))
 
-        cat "${tmp_label_nuc}" |
+        cat "${tmp_label_mapping}" |
             awk -v del_len="${del_length}" 'NR==2{
                 seq=""
                 for(i=1;i<del_len;i++){seq=seq "a"}
                 $0=substr($0,2)
                 printf seq, $0}{printf $0}'
     else
-        cat "${tmp_label_nuc}"
+        cat "${tmp_label_mapping}"
     fi |
     sed "s/*[acgt]//g" |
     sed "s/[=+]//g" |
@@ -169,7 +170,7 @@ while read -r label; do
     join -a 1 -1 2 -2 2 - "${tmp_control}" |
     awk 'NF==3{$4=1}{print $0}' |
     sort -k 3,3n |
-    if [ "$(cat "${tmp_label_nuc}" | wc -l)" -eq 2 ]; then # flox deletion
+    if [ "${nrow_tmp_label_mapping}" -eq 2 ]; then # flox deletion
         cat - | grep -v "^NA"
     else
         cat -
@@ -177,6 +178,6 @@ while read -r label; do
     cat > ".DAJIN_temp/clustering/temp/control_score_${label}"
 done
 
-rm "${MIDS_ref}" "${tmp_MIDS}" "${tmp_control}" "${tmp_label_nuc}"
+rm "${MIDS_ref}" "${tmp_MIDS}" "${tmp_control}" "${tmp_label_mapping}"
 
 exit 0

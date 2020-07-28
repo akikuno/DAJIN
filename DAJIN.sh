@@ -593,10 +593,10 @@ rm -rf .DAJIN_temp/clustering 2>/dev/null
 mkdir -p .DAJIN_temp/clustering/temp
 
 #===========================================================
-#? Prepare control's score
+#? Prepare control's score to define sequencing error
 #===========================================================
 
-./DAJIN/src/clustering_prerequisit.sh "${control}" "wt" "${threads}" 2>/dev/null
+./DAJIN/src/clustering_control_score.sh "${control}" "${threads}" 2>/dev/null
 # wc -l .DAJIN_temp/clustering/temp/control_score_*
 
 #===========================================================
