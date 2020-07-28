@@ -105,6 +105,6 @@ cat > "${query_score}"
 
 rm "${MIDS_que}"
 
-echo "${barcode} ${alleletype} is finished..."
+echo "Scoring ${barcode} ${alleletype} finished..."
 
 exit 0

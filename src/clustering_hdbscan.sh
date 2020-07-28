@@ -22,8 +22,8 @@ error_exit() {
 #? TEST Aurguments
 #===========================================================
 
-# barcode="barcode42"
-# alleletype="target"
+# barcode="barcode34"
+# alleletype="flox_deletion"
 # suffix="${barcode}"_"${alleletype}"
 
 # mapping_alleletype="${alleletype}"
@@ -70,6 +70,6 @@ else
         Rscript DAJIN/src/clustering_hdbscan.R "${query_score}" "${query_label}" "${control_score}" 2>/dev/null
 fi
 
-echo "Clustering ${barcode} ${alleletype} was finished..."
+echo "Clustering ${barcode} ${alleletype} finished..."
 
 exit 0
