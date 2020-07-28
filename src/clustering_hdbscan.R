@@ -15,9 +15,9 @@ pacman::p_load(tidyverse, dbscan)
 #? TEST Auguments
 #===========================================================
 
-file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode42_target"
-file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode42_target"
-file_control <- ".DAJIN_temp/clustering/temp/control_score_target"
+# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode02_wt"
+# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode02_wt"
+# file_control <- ".DAJIN_temp/clustering/temp/control_score_wt"
 
 #===========================================================
 #? Auguments
@@ -146,7 +146,7 @@ rm(df_que)
 #! Cosine similarity to merge similar clusters
 ################################################################################
 # input: df_cluster, hdbscan_cl
-output_cl <- hdbscan_cl
+cossim_merged_cl <- hdbscan_cl
 # --------------------------------------------------
 
 calc_cosine_sim <- function(a, b) crossprod(a, b) / sqrt(crossprod(a) * crossprod(b))
@@ -178,34 +178,34 @@ if (length(cluster) > 1) {
         df_cossim <- bind_rows(df_cossim, df_)
     }
 
-    df_cossim_extracted <- df_cossim %>% filter(score > 0.80)
+    df_cossim_extracted <- df_cossim %>% filter(score > 0.90)
 
     if (nrow(df_cossim_extracted) != 0) {
         for (i in seq_len(nrow(df_cossim_extracted))) {
             pattern_ <- df_cossim_extracted[i, ]$one
             query_ <- df_cossim_extracted[i, ]$two
-            output_cl[output_cl == pattern_] <- query_
+            cossim_merged_cl[cossim_merged_cl == pattern_] <- query_
         }
     }
 }
 
-pattern_ <- output_cl %>%
+pattern_ <- cossim_merged_cl %>%
     unique() %>%
     sort()
-query_ <- output_cl %>%
+query_ <- cossim_merged_cl %>%
     unique() %>%
     order() %>%
     sort()
 
 for (i in seq_along(pattern_)) {
-    output_cl[output_cl == pattern_[i]] <- query_[i]
+    cossim_merged_cl[cossim_merged_cl == pattern_[i]] <- query_[i]
 }
 
 ################################################################################
 #! Output results
 ################################################################################
 
-result <- tibble(read_id = df_label$id, output_cl)
+result <- tibble(read_id = df_label$id, cossim_merged_cl)
 
 write_tsv(result,
     sprintf(".DAJIN_temp/clustering/temp/hdbscan_%s", output_suffix),

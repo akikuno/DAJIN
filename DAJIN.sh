@@ -672,13 +672,16 @@ sh - 2>/dev/null
 #===========================================================
 #? Move output files
 #===========================================================
-rm -rf "${output_dir:-DAJIN_results}"/Consensus/
+[ -d "${output_dir:-DAJIN_results}"/Consensus/ ] && rm -rf "${output_dir:-DAJIN_results}"/Consensus/
 mkdir -p "${output_dir:-DAJIN_results}"/Consensus/
-cp .DAJIN_temp/consensus/* "${output_dir:-DAJIN_results}"/Consensus/ 2>/dev/null
+
+cp -r .DAJIN_temp/consensus/* "${output_dir:-DAJIN_results}"/Consensus/ 2>/dev/null
+rm -rf "${output_dir:-DAJIN_results}"/Consensus/temp 2>/dev/null
 
 ################################################################################
 #! Mapping by minimap2 for IGV visualization
 ################################################################################
+
 cat << EOF
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 Generate BAM files
