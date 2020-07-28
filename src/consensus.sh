@@ -386,7 +386,18 @@ cat << EOF >> .DAJIN_temp/consensus/"${output_filename}".html
 </html>
 EOF
 
-# ls -l .DAJIN_temp/consensus/"${output_filename}".fa
+################################################################################
+#! Move directory
+################################################################################
+
+mkdir -p .DAJIN_temp/consensus/FASTA .DAJIN_temp/consensus/HTML
+mv .DAJIN_temp/consensus/*.fa .DAJIN_temp/consensus/FASTA
+mv .DAJIN_temp/consensus/*.html .DAJIN_temp/consensus/HTML
+
+################################################################################
+#! Remove temporal files
+################################################################################
+
 rm "${tmp_allele_id}" "${mutation_id_loc_type_insnum}" "${mutation_type_site_nuc}" "${tmp_html}"
 
-# exit 0
+exit 0
