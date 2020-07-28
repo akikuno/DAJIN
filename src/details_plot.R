@@ -4,7 +4,7 @@
 
 options(repos = 'https://cloud.r-project.org/')
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
-pacman::p_load(tidyverse,purrr, RColorBrewer)
+pacman::p_load(tidyverse, RColorBrewer)
 
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 #! Format
@@ -42,13 +42,19 @@ allele_others <- df$Allele_type %>%
         str_remove("abnormal|wt|target") %>%
         str_remove("intact ") %>%
         unique() %>%
-        .[-1] 
+        .[-1]
 
 if (length(allele_others) > 0){
+    color_brewer <- c(
+        brewer.pal(n = 8, "Pastel2"),
+        brewer.pal(n = 8, "Set1"),
+        brewer.pal(n = 8, "Set2"),
+        brewer.pal(n = 12, "Set3")
+        )
 
     color_names <- allele_others %>%
-        length() %>%
-        brewer.pal("Pastel2")
+        seq_along() %>%
+        color_brewer[.]
 
     color_others <- allele_others %>%
         set_names(color_names, .)
