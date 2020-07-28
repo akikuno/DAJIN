@@ -126,9 +126,9 @@ while read -r label; do
     cat > "${tmp_label_mapping}"
     #
     nrow_tmp_label_mapping=$(cat "${tmp_label_mapping}" | wc -l)
+    #
     if [ "${nrow_tmp_label_mapping}" -eq 3 ]; then # inversion
-        cat "${tmp_label_mapping}" |
-            awk 'NR==2{printf tolower($1); next} {printf $1}'
+            awk 'NR==2{printf tolower($1); next} {printf $1}' "${tmp_label_mapping}"
     elif [ "${nrow_tmp_label_mapping}" -eq 2 ]; then # flox deletion
         wt_length=$(sed 1d .DAJIN_temp/fasta/wt.fa | awk '{print length}')
         que_length=$(sed 1d .DAJIN_temp/fasta/"${label}".fa | awk '{print length}')
@@ -175,7 +175,7 @@ while read -r label; do
     else
         cat -
     fi |
-    cat > ".DAJIN_temp/clustering/temp/control_score_${label}"
+    awk '{print $NF}' > ".DAJIN_temp/clustering/temp/control_score_${label}"
 done
 
 rm "${MIDS_ref}" "${tmp_MIDS}" "${tmp_control}" "${tmp_label_mapping}"
