@@ -6,7 +6,7 @@
 [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
 
 [日本語はこちら](https://github.com/akikuno/DAJIN/blob/master/misc/README_JP.md)
-# DAJIN
+
 A simple, rapid, scalable whole-allelic profile of genome editing aminals using long-read sequencer
 
 # Set-up
@@ -32,27 +32,32 @@ macOS is not recommended because [Nvidia CUDA will not support it](https://docs.
 You can use DAJIN with CPU though long computational time.  
 
 # Usage
-```
-Usage     : DAJIN.sh -f [text file] (described at "Input")
 
-Input     : Input file should be formatted as below:
-            --------------------------------
-            design=DAJIN/example/design.txt
-            input_dir=DAJIN/example/demultiplex
-            control=barcode01
-            output_dir=Cables2
-            genome=mm10
-            grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
-            threads=10
-            --------------------------------
-            - desing: a multi-FASTA file contains sequences of each genotype. ">wt" and ">target" must be included. 
-            - input_dir: a directory contains FASTA or FASTQ files of long-read sequencing
-            - control: control barcode ID
-            - output_dir: output directory name. optional. default is DAJIN_results
-            - genome: reference genome. e.g. mm10, hg38
-            - grna: gRNA sequence(s). multiple gRNA sequences must be deliminated by comma.
-            - threads: optional. default is two-thirds of available CPU threads.
+```sh
+./DAJIN/DAJIN.sh -f [text file] (described at "Input")
 ```
+
+## Input
+
+Input file should be formatted like below:
+
+```
+design=DAJIN/example/design.txt
+input_dir=DAJIN/example/demultiplex
+control=barcode01
+genome=mm10
+grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
+output_dir=Cables2
+threads=10
+```
+
+- desing: a multi-FASTA file contains sequences of each genotype. ">wt" and ">target" must be included.
+- input_dir: a directory contains FASTA or FASTQ files of long-read sequencing
+- control: control barcode ID
+- genome: reference genome. e.g. mm10, hg38
+- grna: gRNA sequence(s). multiple gRNA sequences must be deliminated by comma.
+- output_dir (optional): output directory name. default dirname is `DAJIN_results`
+- threads (optional): default is two-thirds of available CPU threads.
 
 # Example
 
@@ -61,9 +66,11 @@ Input     : Input file should be formatted as below:
 ```
 
 # Output
+
 ## Whole-allelic profile
-`results` directory contains a figure of whole-allelic profile.  
-This is an example result of three mice.  
+
+The output directory contains a figure of whole-allelic profile.  
+This is an example result of three samples.  
 
 <img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/sequence_MIDS_prediction_result.png" width="50%">  
 
