@@ -69,7 +69,7 @@ mutation_type_site_nuc=".DAJIN_temp/consensus/temp/mutation_type_site_nuc_${out_
 tmp_html=.DAJIN_temp/consensus/temp/tmp_html_"${out_suffix}".html
 
 mutation_design=$(
-    minimap2 -ax map-ont \
+    minimap2 -ax splice \
         .DAJIN_temp/fasta/wt.fa \
         .DAJIN_temp/fasta/target.fa \
         --cs 2>/dev/null |

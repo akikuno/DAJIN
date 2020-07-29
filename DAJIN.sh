@@ -349,8 +349,9 @@ cat ${design_LF} |
 #? Define mutation type
 #? Insertion = I; Deletion = D; Substitution = S
 #===========================================================
+
 mutation_type=$(
-    minimap2 -ax map-ont \
+    minimap2 -ax splice \
         .DAJIN_temp/fasta/wt.fa \
         .DAJIN_temp/fasta/target.fa \
         --cs 2>/dev/null |
