@@ -362,7 +362,7 @@ p {
 }
 .Sub {
     color: white;
-    background-color: #03af7a;
+    background-color: #006E54; /* #03af7a */
     font-weight: bold;
     font-size: 1.0em;
 }
