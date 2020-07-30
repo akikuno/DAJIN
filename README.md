@@ -14,9 +14,10 @@ A simple, rapid, scalable whole-allelic profile of genome editing aminals using 
 ## Linux
 
 ### 1. Install `conda`
-The latest [Anaconda](https://docs.anaconda.com/anaconda/install/) or [Miniconda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) installation is required.
+The [Anaconda](https://docs.anaconda.com/anaconda/install/) or [Miniconda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) installation is required.
 
 ### 2. Clone DAJIN repository
+
 ```
 git clone https://github.com/akikuno/DAJIN.git
 ```
@@ -67,17 +68,35 @@ threads=10
 
 # Output
 
+## Details.csv
+
+`Details.csv` contains sample information and 
+
+|Sample  |Allele ID|% of reads|Allele type  |Indel|Large indel|Design|
+|--------|---------|----------|-------------|-----|-----------|------|
+|sample01|1        |4.2       |abnormal     |+    |+          |-     |
+|sample01|2        |95.8      |wt           |-    |-          |-     |
+|sample02|1        |13.2      |abnormal     |+    |+          |-     |
+|sample02|2        |12        |abnormal     |+    |+          |-     |
+|sample02|3        |74.8      |target       |-    |-          |+     |
+|sample03|1        |55.2      |abnormal     |+    |+          |-     |
+|sample03|2        |44.8      |flox_deletion|-    |-          |-     |
+
+
 ## Whole-allelic profile
 
 The output directory contains a figure of whole-allelic profile.  
 This is an example result of three samples.  
 
-<img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/sequence_MIDS_prediction_result.png" width="50%">  
+<img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/Details.png" width="50%">  
 
-Barcode14 and 19 are a founder mice, whose target allele is flox. Barcode21 is a wild-type mice as a control.   
-This result shows ~80% of reads from Barcode14 are labeled as "target" (flox), and indicates Barcode14 is the desired mouse that has homozygous floxed allele.
+The sample01 is a wild-type mice as a control, whereas the sample02 and sample03 are founder mice. T target allele is flox.
 
-## Alignment viewing using IGV.js
+This result shows ~75% of reads from sample02 are labeled as "target" (flox), and indicates it can be the desired mouse that has homozygous floxed allele.
+
+
+## Alignment viewing using IGV
+
 When you want to see the alignment of reads, you can type the following command.  
 ```
 npx live-server results/igvjs/
@@ -90,7 +109,7 @@ Click `igvjs.html` and you can see the alignment views:
 
 <img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/igvjs_alignment.png" width="50%">
 
-The barcode14 has two purple sites, where **insertion** occurs.
+The sample02 has two purple sites, where **insertion** occurs.
 
 # Contact
 Akihiro Kuno  
