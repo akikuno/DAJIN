@@ -21,28 +21,28 @@ from tensorflow.keras.models import Model
 #! I/O naming
 ################################################################################
 
-# ===========================================================
-# ? TEST auguments
-# ===========================================================
+#===========================================================
+#? TEST auguments
+#===========================================================
 
 # file_name = ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
 # threads = 12
 
-# ===========================================================
-# ? Auguments
-# ===========================================================
+#===========================================================
+#? Auguments
+#===========================================================
 
 args = sys.argv
 file_name = args[1]
 threads = int(args[2])
 
 if threads == "":
-    import multiprocessing    
+    import multiprocessing
     threads = multiprocessing.cpu_count() // 2
 
-# ===========================================================
-# ? Input
-# ===========================================================
+#===========================================================
+#? Input
+#===========================================================
 
 df_sim = pd.read_csv(file_name, header=None, sep="\t")
 df_sim.columns = ["seqID", "seq", "barcodeID"]
@@ -53,9 +53,9 @@ df_sim.seq = "MIDS=" + df_sim.seq
 #! Training model
 ################################################################################
 
-# ===========================================================
-# ? Encording Function
-# ===========================================================
+#===========================================================
+#? Define Function
+#===========================================================
 
 
 def label_encorde_seq(seq):
@@ -72,9 +72,9 @@ def onehot_encode_seq(seq):
     return onehot_seq
 
 
-# ===========================================================
-# ? Train test split
-# ===========================================================
+#===========================================================
+#? Train test split
+#===========================================================
 
 labels, labels_index = pd.factorize(df_sim.barcodeID)
 labels = tf.keras.utils.to_categorical(labels)
@@ -83,12 +83,9 @@ X_train, X_val, Y_train, Y_val = train_test_split(
     onehot_encode_seq(df_sim.seq), labels, test_size=0.2, shuffle=True
 )
 
-# ===========================================================
-# ? L2-constrained Softmax Loss
-# ===========================================================
-#==========================================================
-#? CNN
-#==========================================================
+#===========================================================
+#? Model construction
+#===========================================================
 
 inputs = Input(shape = (X_train.shape[1], X_train.shape[2]))
 init_kernel_size = int(256)
@@ -98,6 +95,7 @@ x = Conv1D(
         kernel_size=init_kernel_size,
         activation="relu",
         name="1st_Conv1D",
+        padding="same",
     )(inputs)
 x = MaxPooling1D(pool_size=4, name="1st_MaxPooling1D")(x)
 
@@ -106,6 +104,7 @@ x = Conv1D(
         kernel_size=int(init_kernel_size / 2),
         activation="relu",
         name="2nd_Conv1D",
+        padding="same",
     )(x)
 x = MaxPooling1D(pool_size=4, name="2nd_MaxPooling1D")(x)
 
@@ -114,6 +113,7 @@ x = Conv1D(
         kernel_size=int(init_kernel_size / 4),
         activation="relu",
         name="3rd_Conv1D",
+        padding="same",
     )(x)
 x = MaxPooling1D(pool_size=4, name="3rd_MaxPooling1D")(x)
 
@@ -127,9 +127,10 @@ model = Model(inputs = inputs, outputs = predictions)
 
 model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
 
-# ===========================================================
-# ? Training
-# ===========================================================
+# model.summary()
+#===========================================================
+#? Training
+#===========================================================
 
 model.fit(
     X_train,
@@ -172,6 +173,7 @@ clf.fit(train_vector)
 ################################################################################
 #! Save models
 ################################################################################
+
 np.save(".DAJIN_temp/data/labels_index.npy", labels_index)
 
 model.save(".DAJIN_temp/data/model.h5")
