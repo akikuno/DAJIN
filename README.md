@@ -102,9 +102,6 @@ The `Conseusus` folder includes FASTA and HTML files which display conseusus seq
 #### BAM
 
 
-## Contact
-- Akihiro Kuno akuno@md.tsukuba.ac.jp
-
 ## License
 
 This project is licensed under the MIT License - see the LICENSE.md file for details
