@@ -1,6 +1,6 @@
 design=DAJIN/example/design.fa
 input_dir=DAJIN/example/fastq
-control=barcode01
-output_dir=DAJIN_cables2
+control=sample01
+output_dir=DAJIN_example
 genome=mm10
 grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
