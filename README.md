@@ -9,42 +9,42 @@
 
 A simple, rapid, scalable whole-allelic profile of genome editing aminals using long-read sequencer
 
-# SETUP
+## SETUP
 
-## Linux
+### Linux
 
-### 1. Install `conda`
+#### 1. Install `conda`
 The [Anaconda](https://docs.anaconda.com/anaconda/install/) or [Miniconda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) installation is required.
 
-### 2. Clone DAJIN repository
+#### 2. Clone DAJIN repository
 
 ```
 git clone https://github.com/akikuno/DAJIN.git
 ```
 
 ---
-## Windows10
+### Windows10
 Windows user needs WSL and settings by Anaconda Prompt.  
 See [this page](https://github.com/akikuno/DAJIN/blob/master/misc/WindowsOS_Setting.md).  
 
 ---
-## macOS
+### macOS
 macOS is not recommended because [Nvidia CUDA will not support it](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html).  
 You can use DAJIN with CPU though long computational time.  
 
-# USAGE
+## USAGE
 
 ```sh
 ./DAJIN/DAJIN.sh -f [text file] (described at "Input")
 ```
 
-## Example
+### Example
 
 ```
 ./DAJIN/DAJIN.sh -f DAJIN/example/desing.txt
 ```
 
-## Input file
+### Input file
 
 Input file should be formatted like below:
 
@@ -66,9 +66,9 @@ threads=10
 - **output_dir** (optional): output directory name. default dirname is `DAJIN_results`
 - **threads** (optional): default is two-thirds of available CPU threads.
 
-## Output files
+### Output files
 
-### Details.csv
+#### Details.csv
 
 `Details.csv` contains sample information and 
 
@@ -82,7 +82,7 @@ threads=10
 |sample03|1        |55.2      |abnormal     |+    |+          |-     |
 |sample03|2        |44.8      |flox_deletion|-    |-          |-     |
 
-### Details.pdf
+#### Details.pdf
 
 The output directory contains a figure of whole-allelic profile.  
 This is an example result of three samples.  
@@ -94,22 +94,22 @@ The sample01 is a wild-type mice as a control, whereas the sample02 and sample03
 This result shows ~75% of reads from sample02 are labeled as "target" (flox), and indicates it can be the desired mouse that has homozygous floxed allele.
 
 
-### Consensus
+#### Consensus
 
 The `Conseusus` folder includes FASTA and HTML files which display conseusus sequence in each allele.
 
 
-### BAM
+#### BAM
 
 
-# Contact
+## Contact
 - Akihiro Kuno akuno@md.tsukuba.ac.jp
 
-# License
+## License
 
 This project is licensed under the MIT License - see the LICENSE.md file for details
 
-# Acknowledgments
+## Acknowledgments
 
 - Dr. Seiya Mizuno
 - Dr. Ayabe Sinya
