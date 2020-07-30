@@ -9,7 +9,7 @@
 
 A simple, rapid, scalable whole-allelic profile of genome editing aminals using long-read sequencer
 
-# Set-up
+# SETUP
 
 ## Linux
 
@@ -32,13 +32,19 @@ See [this page](https://github.com/akikuno/DAJIN/blob/master/misc/WindowsOS_Sett
 macOS is not recommended because [Nvidia CUDA will not support it](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html).  
 You can use DAJIN with CPU though long computational time.  
 
-# Usage
+# USAGE
 
 ```sh
 ./DAJIN/DAJIN.sh -f [text file] (described at "Input")
 ```
 
-## Input
+## Example
+
+```
+./DAJIN/DAJIN.sh -f DAJIN/example/desing.txt
+```
+
+## Input file
 
 Input file should be formatted like below:
 
@@ -52,23 +58,17 @@ output_dir=Cables2
 threads=10
 ```
 
-- desing: a multi-FASTA file contains sequences of each genotype. ">wt" and ">target" must be included.
-- input_dir: a directory contains FASTA or FASTQ files of long-read sequencing
-- control: control barcode ID
-- genome: reference genome. e.g. mm10, hg38
-- grna: gRNA sequence(s). multiple gRNA sequences must be deliminated by comma.
-- output_dir (optional): output directory name. default dirname is `DAJIN_results`
-- threads (optional): default is two-thirds of available CPU threads.
+- **desing**: a multi-FASTA file contains sequences of each genotype. ">wt" and ">target" must be included.
+- **input_dir**: a directory contains FASTA or FASTQ files of long-read sequencing
+- **control**: control barcode ID
+- **genome**: reference genome. e.g. mm10, hg38
+- **grna**: gRNA sequence(s). multiple gRNA sequences must be deliminated by comma.
+- **output_dir** (optional): output directory name. default dirname is `DAJIN_results`
+- **threads** (optional): default is two-thirds of available CPU threads.
 
-# Example
+## Output files
 
-```
-./DAJIN/DAJIN.sh -f DAJIN/example/example.txt
-```
-
-# Output
-
-## Details.csv
+### Details.csv
 
 `Details.csv` contains sample information and 
 
@@ -82,37 +82,37 @@ threads=10
 |sample03|1        |55.2      |abnormal     |+    |+          |-     |
 |sample03|2        |44.8      |flox_deletion|-    |-          |-     |
 
-
-## Whole-allelic profile
+### Details.pdf
 
 The output directory contains a figure of whole-allelic profile.  
 This is an example result of three samples.  
 
-<img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/Details.png" width="50%">  
+<img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/Details.png" width="75%">  
 
 The sample01 is a wild-type mice as a control, whereas the sample02 and sample03 are founder mice. T target allele is flox.
 
 This result shows ~75% of reads from sample02 are labeled as "target" (flox), and indicates it can be the desired mouse that has homozygous floxed allele.
 
 
-## Alignment viewing using IGV
+### Consensus
 
-When you want to see the alignment of reads, you can type the following command.  
-```
-npx live-server results/igvjs/
-```
-The browser will pop-up the following page:  
+The `Conseusus` folder includes FASTA and HTML files which display conseusus sequence in each allele.
 
-<img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/igvjs_localhost.png" width="50%">  
 
-Click `igvjs.html` and you can see the alignment views:  
+### BAM
 
-<img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/igvjs_alignment.png" width="50%">
-
-The sample02 has two purple sites, where **insertion** occurs.
 
 # Contact
-Akihiro Kuno  
-akuno@md.tsukuba.ac.jp
+- Akihiro Kuno akuno@md.tsukuba.ac.jp
 
-# Reference
+# License
+
+This project is licensed under the MIT License - see the LICENSE.md file for details
+
+# Acknowledgments
+
+- Dr. Seiya Mizuno
+- Dr. Ayabe Sinya
+- Mr. Yoshihisa Ikeda
+- Mr. Kotaro Sakamoto
+- Ms. Sayaka Suzuki
