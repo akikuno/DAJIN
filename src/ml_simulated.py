@@ -117,14 +117,6 @@ x = Conv1D(
     )(x)
 x = MaxPooling1D(pool_size=4, name="3rd_MaxPooling1D")(x)
 
-# x = Conv1D(
-#         filters=32,
-#         kernel_size=int(init_kernel_size / 16),
-#         activation="relu",
-#         name="4th_Conv1D",
-#     )(x)
-# x = MaxPooling1D(pool_size=4, name="4th_MaxPooling1D")(x)
-
 x = Flatten(name="flatten")(x)
 
 x = Dense(32, activation="relu", name="1st_FC")(x)
