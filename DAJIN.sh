@@ -435,7 +435,6 @@ EOF
 #? NanoSim
 #===========================================================
 
-printf "Read analysis...\n"
 ./DAJIN/utils/NanoSim/src/read_analysis.py genome \
     -i ".DAJIN_temp/fasta_ont/${control}.fa" \
     -rg .DAJIN_temp/fasta_conv/wt.fa \
@@ -492,15 +491,13 @@ Converting ACGT into MIDS format
 
 EOF
 
-reference=".DAJIN_temp/fasta_conv/wt.fa"
-query=".DAJIN_temp/fasta_conv/target.fa"
-
 #===========================================================
-#? Get mutation loci...
+#? Get mutation loci
 #===========================================================
 
-cat "${reference}" |
-    minimap2 -ax splice - "${query}" --cs 2>/dev/null |
+minimap2 -ax splice \
+    ".DAJIN_temp/fasta_conv/wt.fa" ".DAJIN_temp/fasta_conv/target.fa" \
+    --cs 2>/dev/null |
     awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
     sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
     tr -d "\~\*\-\+atgc" |
@@ -508,7 +505,7 @@ cat "${reference}" |
 cat > .DAJIN_temp/data/mutation_points
 
 #===========================================================
-#? MIDS conversion...
+#? MIDS conversion
 #===========================================================
 
 find .DAJIN_temp/fasta_ont -type f | sort |
