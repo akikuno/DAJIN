@@ -79,8 +79,6 @@ mids_compressed(){
                 for(len_=1; len_ <= len; len_++){
                     str= "D" str
                 }
-                # str=sprintf("%"len"s","")
-                # gsub(/ /,"D",str)
                 $i=str
                 str=""}
             }

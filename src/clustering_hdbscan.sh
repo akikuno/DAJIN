@@ -22,7 +22,7 @@ error_exit() {
 #? TEST Aurguments
 #===========================================================
 
-# barcode="barcode09"
+# barcode="barcode01"
 # alleletype="flox_deletion"
 # suffix="${barcode}"_"${alleletype}"
 
@@ -67,7 +67,7 @@ elif [ ! -s "${query_label}" ]; then
 elif [ ! -s "${control_score}" ]; then
         error_exit "${control_score} is empty"
 else
-        Rscript DAJIN/src/clustering_hdbscan.R "${query_score}" "${query_label}" "${control_score}" 2>/dev/null
+        Rscript DAJIN/src/clustering_hdbscan.R "${query_score}" "${query_label}" "${control_score}"
 fi
 
 echo "Clustering ${barcode} ${alleletype} finished..."
