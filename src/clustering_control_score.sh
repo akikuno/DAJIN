@@ -17,14 +17,14 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #? TEST Auguments
 #===========================================================
 
-# barcode=barcode34
+# control=barcode41
 # threads=12
 
 #===========================================================
 #? Auguments
 #===========================================================
 
-barcode="${1}"
+control="${1}"
 threads="${2}"
 
 #===========================================================
@@ -42,10 +42,10 @@ control_score=".DAJIN_temp/clustering/temp/control_score_${alleletype}"
 #===========================================================
 #? Temporal
 #===========================================================
-MIDS_ref=".DAJIN_temp/clustering/temp/MIDS_${barcode}_${alleletype}"
-tmp_MIDS=".DAJIN_temp/clustering/temp/tmp_MIDS_${barcode}_${alleletype}"
-tmp_control=".DAJIN_temp/clustering/temp/tmp_control_${barcode}_${alleletype}"
-tmp_label_mapping=".DAJIN_temp/clustering/temp/tmp_label_mapping_${barcode}_${alleletype}"
+MIDS_ref=".DAJIN_temp/clustering/temp/MIDS_${control}_${alleletype}"
+tmp_MIDS=".DAJIN_temp/clustering/temp/tmp_MIDS_${control}_${alleletype}"
+tmp_control=".DAJIN_temp/clustering/temp/tmp_control_${control}_${alleletype}"
+tmp_label_mapping=".DAJIN_temp/clustering/temp/tmp_label_mapping_${control}_${alleletype}"
 
 ################################################################################
 #! Control scoring
@@ -55,14 +55,14 @@ tmp_label_mapping=".DAJIN_temp/clustering/temp/tmp_label_mapping_${barcode}_${al
 #? MIDS conversion
 #===========================================================
 
-./DAJIN/src/mids_clustering.sh "${barcode}" "${alleletype}" > "${MIDS_ref}"
+./DAJIN/src/mids_clustering.sh "${control}" "${alleletype}" > "${MIDS_ref}"
 
 #===========================================================
 #? Mutation scoring of control samples
 #===========================================================
 
 cat "${MIDS_ref}" |
-    grep "${barcode}" |
+    grep "${control}" |
     sort -k 1,1 |
     join - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk -v alelle="$alleletype" '$NF==alelle' |

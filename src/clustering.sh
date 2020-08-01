@@ -18,8 +18,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===============================================================================
 #? TEST Aurguments
 #===============================================================================
-# barcode="barcode05"
-# alleletype="inversion"
+# barcode="barcode09"
+# alleletype="flox_deletion"
 
 # suffix="${barcode}"_"${alleletype}"
 # mapping_alleletype="${alleletype}"

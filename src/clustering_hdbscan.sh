@@ -22,7 +22,7 @@ error_exit() {
 #? TEST Aurguments
 #===========================================================
 
-# barcode="barcode34"
+# barcode="barcode09"
 # alleletype="flox_deletion"
 # suffix="${barcode}"_"${alleletype}"
 
