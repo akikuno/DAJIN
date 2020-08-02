@@ -18,17 +18,17 @@ from tensorflow.keras.models import Model
 #! I/O naming
 ################################################################################
 
-# ===========================================================
-# ? TEST auguments
-# ===========================================================
+#===========================================================
+#? TEST auguments
+#===========================================================
 
-# file_name = ".DAJIN_temp/data/MIDS_barcode34_wt"
+# file_name = ".DAJIN_temp/data/MIDS_barcode27_wt"
 # mutation_type = "D"
 # threads = 12
 
-# ===========================================================
-# ? Auguments
-# ===========================================================
+#===========================================================
+#? Auguments
+#===========================================================
 
 args = sys.argv
 file_name = args[1]
@@ -39,21 +39,21 @@ if mutation_type == "":
     raise ValueError("mutation_type is empty")
 
 if threads == "":
-    import multiprocessing    
+    import multiprocessing
     threads = multiprocessing.cpu_count() // 2
 
 
-# ===========================================================
-# ? Input
-# ===========================================================
+#===========================================================
+#? Input
+#===========================================================
 
 df = pd.read_csv(file_name, header=None, sep="\t")
 df.columns = ["seqID", "seq", "barcodeID"]
 df.seq = "MIDS=" + df.seq
 
-# ===========================================================
-# ? Encording Function
-# ===========================================================
+#===========================================================
+#? Encording Function
+#===========================================================
 
 
 def label_encorde_seq(seq):
@@ -85,16 +85,16 @@ clf = pickle.load(open(".DAJIN_temp/data/model_lof.sav", "rb"))
 ################################################################################
 #! Novelity (Anomaly) detection
 ################################################################################
-# ===========================================================
-# ? L2 layer
-# ===========================================================
+#===========================================================
+#? Extract layer
+#===========================================================
 
 model_ = Model(model.get_layer(index=0).input, model.get_layer(index=-2).output)
 predict_vector = model_.predict(X_real, verbose=0, batch_size=32)
 
-# ===========================================================
-# ? LocalOutlierFactor
-# ===========================================================
+#===========================================================
+#? LocalOutlierFactor
+#===========================================================
 
 outliers = clf.predict(predict_vector)
 outliers = np.where(outliers == 1, "normal", "abnormal")
@@ -122,9 +122,9 @@ for index, label in enumerate(labels_index):
     label = label.replace("_simulated", "")
     df["prediction"].mask(df["prediction"] == index, label, inplace=True)
 
-# ---------------------------------------
-# * In the case of a point mutation, the reads determined to be wt_ins and wt_del should be treated as "abnormal".
-# ---------------------------------------
+#---------------------------------------
+#* In the case of a point mutation, the reads determined to be wt_ins and wt_del should be treated as "abnormal".
+#---------------------------------------
 if mutation_type == "S":
     df["prediction"].mask(
         df["prediction"].str.contains("wt_"), "abnormal", inplace=True
