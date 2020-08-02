@@ -45,7 +45,6 @@ control_score=".DAJIN_temp/clustering/temp/control_score_${alleletype}"
 MIDS_ref=".DAJIN_temp/clustering/temp/MIDS_${control}_${alleletype}"
 tmp_MIDS=".DAJIN_temp/clustering/temp/tmp_MIDS_${control}_${alleletype}"
 tmp_control=".DAJIN_temp/clustering/temp/tmp_control_${control}_${alleletype}"
-tmp_label_mapping=".DAJIN_temp/clustering/temp/tmp_label_mapping_${control}_${alleletype}"
 
 ################################################################################
 #! Control scoring
@@ -69,9 +68,9 @@ cat "${MIDS_ref}" |
     cut -d " " -f 2 |
 cat > "${tmp_MIDS}"
 
-# ----------------------------------------
-# Transpose matrix
-# ----------------------------------------
+#===========================================================
+#? Transpose matrix
+#===========================================================
 nr=$(cat "${tmp_MIDS}" | wc -l)
 
 cat "${tmp_MIDS}" |
@@ -85,9 +84,9 @@ cat "${tmp_MIDS}" |
         INS=gsub(/[1-9]|[a-z]/,"@",$0)
         DEL=gsub("D","D",$0)
         SUB=gsub("S","S",$0)
-        # ----------------------------------------
+        #----------------------------------------
         #* Define sequence error when control sample has more than 5% mutations
-        # ----------------------------------------
+        #----------------------------------------
         per=5
         if(INS > NF*per/100 || DEL > NF*per/100 || SUB > NF*per/100)
             num=2
@@ -103,9 +102,12 @@ cat > "${control_score}"
 #! Generate scores of other possible alleles
 ################################################################################
 
-cat "${control_score}" |
-    awk '{print $1,NR}' |
-    sort -t " " -k 2,2 |
+cat ".DAJIN_temp/fasta/${alleletype}.fa" |
+    sed 1d |
+    awk -F "" '{for(i=1;i<=NF;i++) print $i}' |
+    paste - "${control_score}" |
+    awk '{print NR"_"$1, $2}' |
+    sort -t " " -k 1,1 |
 cat > "${tmp_control}"
 
 find .DAJIN_temp/fasta/ -type f |
@@ -114,70 +116,40 @@ find .DAJIN_temp/fasta/ -type f |
     sed "s:.*/::g" |
     sed "s/.fa.*$//g" |
 while read -r label; do
-    minimap2 -t "${threads}" -ax map-ont \
+    minimap2 -t "${threads}" -ax splice \
         .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/"${label}".fa \
         --cs=long 2>/dev/null |
         grep -v "^@" |
         awk '{print $4, $(NF-1)}' |
         sed "s/cs:Z://g" |
-        sed "s/=//g" |
+        sed "s/[=+]//g" |
+        sed "s/\~[actg][actg]//g" |
+        sed "s/\([0-9][0-9]*\)[actg][actg]/\n\1 /g" |
+        sed "s/-[acgt][acgt]*//g" |
         sort -t " " -k 1,1n |
-        cut -d " " -f 2 |
-    cat > "${tmp_label_mapping}"
-    #
-    nrow_tmp_label_mapping=$(cat "${tmp_label_mapping}" | wc -l)
-    #
-    if [ "${nrow_tmp_label_mapping}" -eq 3 ]; then # inversion
-            awk 'NR==2{printf tolower($1); next} {printf $1}' "${tmp_label_mapping}"
-    elif [ "${nrow_tmp_label_mapping}" -eq 2 ]; then # flox deletion
-        wt_length=$(sed 1d .DAJIN_temp/fasta/wt.fa | awk '{print length}')
-        que_length=$(sed 1d .DAJIN_temp/fasta/"${label}".fa | awk '{print length}')
-        del_length=$((${wt_length}-${que_length}+1))
-
-        cat "${tmp_label_mapping}" |
-            awk -v del_len="${del_length}" 'NR==2{
-                seq=""
-                for(i=1;i<del_len;i++){seq=seq "a"}
-                $0=substr($0,2)
-                printf seq, $0}{printf $0}'
-    else
-        cat "${tmp_label_mapping}"
-    fi |
-    sed "s/*[acgt]//g" |
-    sed "s/[=+]//g" |
-    awk -F "" '{
-        refnr=0
-        if($0 !~ "-"){
-            for(i=1; i<=NF; i++){
-                if($i ~ /[A|C|G|T]/){
-                    refnr++
-                    $i="ref"
-                    print $i, refnr, i
-                }
-                else {
-                $i="mut"
-                print $i, "NA", i
-                }
+        awk '{
+            ref_position=1
+            start=$1
+            split($2, seq_array, "")
+            for(i=1; i<=length(seq_array); i++){
+                que_position=i+start-1
+                if(seq_array[i] ~ /[ACGT]/) {
+                    loc=start+ref_position-1
+                    print loc"_"seq_array[i], que_position
+                    ref_position++}
+                else{
+                    loc=start+i-1
+                    print "mut_"seq_array[i], que_position}
             }
-        }
-        else{
-            gsub("-","",$0)
-            for(i=1; i<=NF; i++){
-                if($i ~ /[A|C|G|T]/){refnr++; $i="ref"; print $i, refnr, i}
-            }
-        }}' |
-    sort -t " " -k 2,2 |
-    join -a 1 -1 2 -2 2 - "${tmp_control}" |
-    awk 'NF==3{$4=1}{print $0}' |
-    sort -k 3,3n |
-    if [ "${nrow_tmp_label_mapping}" -eq 2 ]; then # flox deletion
-        cat - | grep -v "^NA"
-    else
-        cat -
-    fi |
-    awk '{print $NF}' > ".DAJIN_temp/clustering/temp/control_score_${label}"
+        }' |
+        sort |
+        join -a 1 - "${tmp_control}" |
+        awk 'NF==2 {print $0,1; next}1' |
+        sort -t " " -k 2,2n |
+        awk '{print $NF}' |
+    cat > ".DAJIN_temp/clustering/temp/control_score_${label}"
 done
 
-rm "${MIDS_ref}" "${tmp_MIDS}" "${tmp_control}" "${tmp_label_mapping}"
+rm "${MIDS_ref}" "${tmp_MIDS}" "${tmp_control}"
 
 exit 0
