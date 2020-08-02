@@ -839,11 +839,11 @@ rm .DAJIN_temp/details/tmp_nameid
 #===========================================================
 
 Rscript DAJIN/src/details_plot.R
+sleep 3 # wait for outputting pdf file
 
 #===========================================================
 #? Move output files
 #===========================================================
-
 cp .DAJIN_temp/details/* "${output_dir:-DAJIN_results}"/
 
 ################################################################################
