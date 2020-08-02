@@ -45,7 +45,6 @@ control_score=".DAJIN_temp/clustering/temp/control_score_${alleletype}"
 MIDS_ref=".DAJIN_temp/clustering/temp/MIDS_${control}_${alleletype}"
 tmp_MIDS=".DAJIN_temp/clustering/temp/tmp_MIDS_${control}_${alleletype}"
 tmp_control=".DAJIN_temp/clustering/temp/tmp_control_${control}_${alleletype}"
-tmp_label_mapping=".DAJIN_temp/clustering/temp/tmp_label_mapping_${control}_${alleletype}"
 
 ################################################################################
 #! Control scoring
@@ -69,9 +68,9 @@ cat "${MIDS_ref}" |
     cut -d " " -f 2 |
 cat > "${tmp_MIDS}"
 
-# ----------------------------------------
-# Transpose matrix
-# ----------------------------------------
+#===========================================================
+#? Transpose matrix
+#===========================================================
 nr=$(cat "${tmp_MIDS}" | wc -l)
 
 cat "${tmp_MIDS}" |
@@ -85,9 +84,9 @@ cat "${tmp_MIDS}" |
         INS=gsub(/[1-9]|[a-z]/,"@",$0)
         DEL=gsub("D","D",$0)
         SUB=gsub("S","S",$0)
-        # ----------------------------------------
+        #----------------------------------------
         #* Define sequence error when control sample has more than 5% mutations
-        # ----------------------------------------
+        #----------------------------------------
         per=5
         if(INS > NF*per/100 || DEL > NF*per/100 || SUB > NF*per/100)
             num=2
@@ -151,6 +150,6 @@ while read -r label; do
     cat > ".DAJIN_temp/clustering/temp/control_score_${label}"
 done
 
-rm "${MIDS_ref}" "${tmp_MIDS}" "${tmp_control}" "${tmp_label_mapping}"
+rm "${MIDS_ref}" "${tmp_MIDS}" "${tmp_control}"
 
 exit 0
