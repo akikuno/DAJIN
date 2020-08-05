@@ -142,7 +142,7 @@ while read -r label; do
                     print "mut_"seq_array[i], que_position}
             }
         }' |
-        sort |
+        sort -u |
         join -a 1 - "${tmp_control}" |
         awk 'NF==2 {print $0,1; next}1' |
         sort -t " " -k 2,2n |
