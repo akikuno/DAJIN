@@ -151,14 +151,14 @@ set $(echo "${grna}" | sed "s/,/ /g")
 x=1
 while [ "${x}" -le $# ]
 do
-    [ "$(grep -c ${1} ${design})" -eq 0 ] &&
-        error_exit "No gRNA sites"
+    [ "$(grep -c ${1} ${design})" -eq 0 ] && error_exit "No gRNA sites"
     x=$(( "${x}" + 1 ))
 done
 
 #===========================================================
 #? Check output directory name
 #===========================================================
+
 [ $(echo "$output_dir" | grep  -c -e '\\' -e ':' -e '*' -e '?' -e '"' -e '<' -e '>' -e '|') -ne 0 ] &&
     error_exit "$output_dir: invalid directory name"
 
@@ -199,63 +199,7 @@ fi
 #! Setting Conda environment
 ################################################################################
 
-#===========================================================
-#? DAJIN_nanosim
-#===========================================================
-set +u
-type conda > /dev/null 2>&1 || error_exit 'Command "conda" not found'
-
-CONDA_BASE=$(conda info --base)
-source "${CONDA_BASE}/etc/profile.d/conda.sh"
-
-if [ "$(conda info -e | grep -c DAJIN_nanosim)" -eq 0 ]; then
-    conda config --add channels defaults
-    conda config --add channels bioconda
-    conda config --add channels conda-forge
-    conda create -y -n DAJIN_nanosim python=3.6
-    conda install -y -n DAJIN_nanosim --file ./DAJIN/utils/NanoSim/requirements.txt
-    conda install -y -n DAJIN_nanosim minimap2
-fi
-
-#===========================================================
-#? DAJIN
-#===========================================================
-
-if [ "$(conda info -e | cut -d " " -f 1 | grep -c DAJIN$)" -eq 0 ]; then
-    conda config --add channels defaults
-    conda config --add channels bioconda
-    conda config --add channels conda-forge
-    conda create -y -n DAJIN python=3.6 \
-        anaconda nodejs wget \
-        tensorflow tensorflow-gpu swifter \
-        samtools minimap2 \
-        r-essentials r-base
-fi
-set -u
-
-#===========================================================
-#? Required software
-#===========================================================
-set +u
-conda activate DAJIN
-set -u
-
-type gzip > /dev/null 2>&1 || error_exit 'Command "gzip" not found'
-type wget > /dev/null 2>&1 || error_exit 'Command "wget" not found'
-type python > /dev/null 2>&1 || error_exit 'Command "python" not found'
-type samtools > /dev/null 2>&1 || error_exit 'Command "samtools" not found'
-type minimap2 > /dev/null 2>&1 || error_exit 'Command "minimap2" not found'
-
-python -c "import tensorflow as tf" > /dev/null 2>&1 ||
-error_exit '"Tensorflow" not found'
-
-#===========================================================
-#? For WSL (Windows Subsystem for Linux)
-#===========================================================
-
-uname -a |
-grep Microsoft 1>/dev/null 2>/dev/null &&
-alias python="python.exe"
+. DAJIN/src/conda_setting.sh
 
 ################################################################################
 #! Formatting environments
@@ -358,7 +302,7 @@ mutation_type=$(
     grep -v "^@" |
     awk '{
         cstag=$(NF-1)
-        if(cstag ~ "-") print "D"
+        if(cstag ~ "~") print "D"
         else if(cstag ~ "\+") print "I"
         else if(cstag ~ "\*") print "S"
         }' 2>/dev/null
