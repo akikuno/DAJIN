@@ -19,20 +19,23 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===========================================================
 
 # barcode=barcode48
-# mapping_alleletype="target"
-# suffix="${barcode}_${mapping_alleletype}"
+# alleletype="target"
 
 #===========================================================
 #? Auguments
 #===========================================================
 
 barcode=${1}
-mapping_alleletype=${2}
-suffix="${barcode}_${mapping_alleletype}"
+alleletype=${2}
 
 #===========================================================
 #? Input
 #===========================================================
+
+suffix="${barcode}_${alleletype}"
+mapping_alleletype="${alleletype}"
+[ "$alleletype" = "normal" ] && mapping_alleletype="wt"
+[ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
 
 reference=".DAJIN_temp/fasta/${mapping_alleletype}.fa"
 query=".DAJIN_temp/fasta_ont/${barcode}.fa"
@@ -44,13 +47,13 @@ query=".DAJIN_temp/fasta_ont/${barcode}.fa"
 #===========================================================
 #? Temporal
 #===========================================================
+
 tmp_query=".DAJIN_temp/tmp_query_${suffix}"_$$
 tmp_seqID=".DAJIN_temp/tmp_seqID_${suffix}"_$$
 
 tmp_all=".DAJIN_temp/tmp_all_${suffix}"_$$
 tmp_primary=".DAJIN_temp/tmp_primary_${suffix}"_$$
 tmp_secondary=".DAJIN_temp/tmp_secondary_${suffix}"_$$
-
 
 ################################################################################
 #! Function definitions
@@ -108,7 +111,7 @@ mids_compressed(){
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     grep "${barcode}" |
-    grep "${mapping_alleletype}" |
+    grep "${alleletype}" |
     cut -f 1 |
     sort |
 cat > "${tmp_seqID}"

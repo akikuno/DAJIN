@@ -20,11 +20,6 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 # barcode="barcode32"
 # alleletype="abnormal"
 
-# suffix="${barcode}"_"${alleletype}"
-# mapping_alleletype="${alleletype}"
-# [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
-# [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
-
 #===========================================================
 #? Auguments
 #===========================================================
@@ -32,14 +27,11 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 barcode="${1}"
 alleletype="${2}"
 
-suffix="${barcode}"_"${alleletype}"
-mapping_alleletype="${alleletype}"
-[ "$alleletype" = "normal" ] && mapping_alleletype="wt"
-[ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
-
 #===========================================================
 #? Input
 #===========================================================
+
+suffix="${barcode}"_"${alleletype}"
 
 #===========================================================
 #? Output
@@ -62,7 +54,7 @@ MIDS_que=".DAJIN_temp/clustering/temp/MIDS_${suffix}"
 #? MIDS conversion
 #===========================================================
 
-./DAJIN/src/mids_clustering.sh "${barcode}" "${mapping_alleletype}" > "${MIDS_que}"
+./DAJIN/src/mids_clustering.sh "${barcode}" "${alleletype}" > "${MIDS_que}"
 
 #===========================================================
 #? Output Sequence ID and Lable
@@ -72,7 +64,7 @@ cat "${MIDS_que}" |
     grep "${barcode}" |
     sort -k 1,1 |
     join - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    awk -v atype="${mapping_alleletype}" '$NF==atype' |
+    awk -v atype="${alleletype}" '$NF==atype' |
     cut -d " " -f 1,3 |
     sed "s/ /,/g" |
 cat > "${query_label}"
@@ -88,7 +80,7 @@ cat "${MIDS_que}" |
     grep "${barcode}" |
     sort -k 1,1 |
     join - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    awk -v atype="${mapping_alleletype}" '$NF==atype' |
+    awk -v atype="${alleletype}" '$NF==atype' |
     cut -d " " -f 2 |
 cat > "${query_seq}"
 
