@@ -40,7 +40,6 @@ threads=${2}
 #===============================================================================
 #? Output
 #===============================================================================
-gggenome_location=.DAJIN_temp/data/gggenome_location
 ref_fa=.DAJIN_temp/data/ref.fa
 
 bam_all=.DAJIN_temp/bam/
@@ -49,22 +48,15 @@ mkdir -p "${bam_all}"
 #===============================================================================
 #? Temporal
 #===============================================================================
-tmp_gggenome=.DAJIN_temp/data/tmp_gggenome
+
+tmp_genome_location=.DAJIN_temp/data/tmp_genome_location
 
 ################################################################################
 #! Server response
 ################################################################################
 
 #===============================================================================
-#? GGGenome
-#===============================================================================
-
-[ $(wget -nv --spider --timeout 5 -t 1 https://gggenome.dbcls.jp/ja/ 2>&1 | grep -c '200 OK') -eq 0 ] &&
-error_exit 1 'No connection to GGGenome server'
-
-
-#===============================================================================
-#? UCSC Genome Browser
+#? DAS server of UCSC Genome Browser
 #===============================================================================
 url_ucsc_usa="http://genome.ucsc.edu/cgi-bin/das/"
 url_ucsc_asia="http://genome-asia.ucsc.edu/cgi-bin/das/"
@@ -83,6 +75,7 @@ fi
 #===============================================================================
 #? GoldenPath of UCSC Genome Browser
 #===============================================================================
+
 url_golden_usa="http://hgdownload.cse.ucsc.edu/goldenPath"
 url_golden_asia="http://hgdownload-asia.soe.ucsc.edu/goldenPath"
 url_golden_euro="http://hgdownload-euro.soe.ucsc.edu/goldenPath"
@@ -105,46 +98,44 @@ fi
 #? Left flank
 #===============================================================================
 
-cat .DAJIN_temp/fasta_conv/wt.fa |
+cat .DAJIN_temp/fasta/wt.fa |
     sed 1d |
-    awk -v genome=${genome} '{seq=substr($0, 1, 50);
-    print "wget -q -O - https://gggenome.dbcls.jp/ja/"genome"/"seq".txt"}' |
-    sh -e |
-    grep chr |
-    cut -f 1-4 |
-cat > "${tmp_gggenome}"
-
-[ $(cat "${tmp_gggenome}" | wc -l) -ne 1 ] &&
-error_exit 1 '
-No matched sequence found in reference genome:
-Check and correct FASTA sequence and reference genome.'
+    awk -v genome=${genome} '{
+        seq=substr($0, 1, 50)
+    print "wget -q -O - \"https://genome.ucsc.edu/cgi-bin/hgBlat?db="genome"&type=BLAT%27s+guess&userSeq="seq"\""}' |
+    sh - |
+    grep "100.0%" | grep chr |
+    sed "s/.*chr/chr/g" |
+    awk 'BEGIN{OFS="\t"}{print $1,$2,$3,$4}' |
+cat > "${tmp_genome_location}"
 
 #===============================================================================
 #? Right flank
 #===============================================================================
 
-cat .DAJIN_temp/fasta_conv/wt.fa |
+cat .DAJIN_temp/fasta/wt.fa |
     sed 1d |
     awk -v genome=${genome} \
         '{seq=substr($0, length($0)-50, length($0));
-        print "wget -q -O - https://gggenome.dbcls.jp/ja/"genome"/"seq".txt"}' |
-    sh -e |
-    grep chr |
-    cut -f 1-4 |
-cat >> "${tmp_gggenome}"
+    print "wget -q -O - \"https://genome.ucsc.edu/cgi-bin/hgBlat?db="genome"&type=BLAT%27s+guess&userSeq="seq"\""}' |
+    sh - |
+    grep "100.0%" | grep chr |
+    sed "s/.*chr/chr/g" |
+    awk 'BEGIN{OFS="\t"}{print $1,$2,$3,$4}' |
+cat >> "${tmp_genome_location}"
 
-[ $(cat "${tmp_gggenome}" | wc -l) -ne 2 ] &&
+#===============================================================================
+#? Assign genome location to variables
+#===============================================================================
+
+[ $(cat "${tmp_genome_location}" | wc -l) -ne 2 ] &&
 error_exit 1 '
-No matched sequence found in reference genome: 
+No matched sequence found in reference genome:
 Check FASTA sequence and reference genome.'
 
-chromosome=$(cat "${tmp_gggenome}" | head -n 1 | cut -f 1)
-start=$(cat "${tmp_gggenome}" | sort -k 3,3n | head -n 1 | cut -f 3)
-end=$(cat "${tmp_gggenome}" | sort -k 3,3nr | head -n 1 | cut -f 4)
-strand=$(cat "${tmp_gggenome}" | head -n 1 | cut -f 2)
-
-printf "${chromosome}\t${start}\t${end}\t${strand}\n" |
-cat > "${gggenome_location}" # this file will be used at "knockin search"
+chromosome=$(cat "${tmp_genome_location}" | head -n 1 | cut -f 1)
+start=$(cat "${tmp_genome_location}" | sort -k 3,3n | head -n 1 | cut -f 3)
+end=$(cat "${tmp_genome_location}" | sort -k 3,3nr | head -n 1 | cut -f 4)
 
 ################################################################################
 #! Obtain Reference fasta file from UCSC Genome browser
@@ -198,53 +189,6 @@ for input in .DAJIN_temp/fasta_ont/*; do
     samtools index -@ ${threads:-1} "${output}"
 done
 
-# #===============================================================================
-# #? 100 reads
-# #===============================================================================
-# for input in .DAJIN_temp/bam/*.bam; do
-#     output=$(echo "${input}" |
-#         sed "s#.DAJIN_temp/bam#.DAJIN_temp/bam/reads100#g")
-#     # echo "${output} is now generating..."
-
-#     header_num=$(samtools view -H -@ ${threads} ${input} | wc -l)
-#     bam_num=$((100+${header_num}))
-
-#     samtools view -h -@ ${threads} ${input} |
-#         head -n "${bam_num}" |
-#     samtools sort -@ ${threads} > "${output}"
-#     samtools index -@ "${threads}" "${output}"
-# done
-
-# # ============================================================================
-# # IGV.JS
-# output_igvjs=.DAJIN_temp/bam/igvjs
-# output_bam_100="${output_igvjs}"/bam_100reads
-# mkdir -p "${output_bam_100}"
-# # ============================================================================
-# read_num=100
-# for input in "${bam_all}"/*bam ; do
-#     output=$(echo ${input} | sed "s#.*/#${output_bam_100}/#g")
-#     # echo "${output} is now generating..."
-#     ####
-#     samtools view -h ${input} 2>/dev/null |
-#     awk '$1 ~ /^@/ || $2 != 4' |
-#     head -n $((${read_num}+5)) |
-#     samtools sort -@ ${threads:-1} - 2>/dev/null > "${output}"
-#     samtools index -@ ${threads:-1} "${output}"
-# done
-# # 
-# find "${output_bam_100}" | grep -e bam$ | sort | sed -e "s#^.*/bam#bam#g" -e 's#_#\\_#g' > .DAJIN_temp/data/tmp1_$$
-# find "${output_bam_100}" | grep -e bam$ | sort | sed -e "s#^.*/bam#bam#g" -e "s#.*/##g" -e "s#.bam##g" -e 's#_#\\_#g' > .DAJIN_temp/data/tmp2_$$
-# paste .DAJIN_temp/data/tmp1_$$ .DAJIN_temp/data/tmp2_$$ > .DAJIN_temp/data/igvjs_template.txt
-# rm .DAJIN_temp/data/tmp1_$$ .DAJIN_temp/data/tmp2_$$
-
-# ./DAJIN/src/mojihame-l -l LABEL \
-#     DAJIN/src/igvjs_template.html \
-#     .DAJIN_temp/data/igvjs_template.txt |
-#     sed -e "s/genome_info/${genome}/g" \
-#         -e "s/locus_info/${chromosome}:${start}-${end}/g" |
-# cat > "${output_igvjs}"/igvjs.html
-
-rm ${tmp_gggenome}
+rm ${tmp_genome_location}
 
 exit 0
