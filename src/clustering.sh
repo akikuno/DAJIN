@@ -7,7 +7,6 @@
 set -eu
 umask 0022
 export LC_ALL=C
-type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 
@@ -18,8 +17,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===============================================================================
 #? TEST Aurguments
 #===============================================================================
-# barcode="barcode09"
-# alleletype="flox_deletion"
+# barcode="barcode48"
+# alleletype="wt"
 
 # suffix="${barcode}"_"${alleletype}"
 # mapping_alleletype="${alleletype}"
@@ -32,8 +31,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 barcode="${1}"
 alleletype="${2}"
-suffix="${barcode}"_"${alleletype}"
 
+suffix="${barcode}"_"${alleletype}"
 mapping_alleletype="${alleletype}"
 [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
 [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
