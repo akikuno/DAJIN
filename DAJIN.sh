@@ -158,12 +158,10 @@ done
 #===========================================================
 #? Check output directory name
 #===========================================================
-
-[ $(echo "$output_dir" | grep  -c -e '\\' -e ':' -e '*' -e '?' -e '"' -e '<' -e '>' -e '|') -ne 0 ] &&
+[ $(echo "$output_dir" | sed "s/[_a-zA-Z0-9]*//g" | wc | awk '{print $2}') -ne 0 ] &&
     error_exit "$output_dir: invalid directory name"
 
 mkdir -p "${output_dir:=DAJIN_results}"/BAM "${output_dir}"/Consensus
-
 
 #===========================================================
 #? Check "filter"
@@ -611,14 +609,54 @@ cat .DAJIN_temp/clustering/label* |
         END{print "wait"}' |
 sh - 2>/dev/null
 
-#===========================================================
-#? Move output files
-#===========================================================
-[ -d "${output_dir:-DAJIN_results}"/Consensus/ ] && rm -rf "${output_dir:-DAJIN_results}"/Consensus/
-mkdir -p "${output_dir:-DAJIN_results}"/Consensus/
 
-cp -r .DAJIN_temp/consensus/* "${output_dir:-DAJIN_results}"/Consensus/ 2>/dev/null
-rm -rf "${output_dir:-DAJIN_results}"/Consensus/temp 2>/dev/null
+################################################################################
+#! Summarize to Details.csv
+################################################################################
+
+mkdir -p .DAJIN_temp/details
+
+#===========================================================
+#? Generate Details.csv
+#===========================================================
+
+find .DAJIN_temp/consensus/* -type f |
+    grep html |
+    sed "s:.*/::g" |
+    sed "s/.html//g" |
+    sed "s/_/ /g" |
+    awk '{print $1"_"$2,$3,$4}' |
+    sort |
+cat > .DAJIN_temp/details/tmp_nameid
+
+cat .DAJIN_temp/clustering/label* |
+    awk '{nr[$1]++; print $0, nr[$1]}' |
+    awk '{print $1"_allele"$5, $4, $2}' |
+    sort |
+    join -a 1 - .DAJIN_temp/details/tmp_nameid |
+    sed "s/_/ /" |
+    awk '$4=="abnormal" {$5="mutation"}1' |
+    awk 'BEGIN{OFS=","}
+        {gsub("allele","",$2)
+        if($6 == "target") $4 = "target"
+        if($4 == "abnormal") $6 ="+"; else $6 = "-"
+        gsub("intact","-", $5)
+        gsub("mutation","+", $5)
+
+        if($4 == "target" && $5 == "-" && $6 == "-") $7 = "+"
+        else $7 = "-"
+        }1' |
+    sed -e "1i Sample, Allele ID, % of reads, Allele type, Indel, Large indel, Design" |
+cat > .DAJIN_temp/details/Details.csv
+
+rm .DAJIN_temp/details/tmp_nameid
+
+#===========================================================
+#? Plot details.csv
+#===========================================================
+
+Rscript DAJIN/src/details_plot.R
+sleep 3 # wait for outputting pdf file
 
 ################################################################################
 #! Mapping by minimap2 for IGV visualization
@@ -713,15 +751,6 @@ while read -r input_bam; do
     samtools index "${output_bam}"
 done
 
-#===========================================================
-#? Move output files
-#===========================================================
-
-rm -rf .DAJIN_temp/bam/temp 2>/dev/null
-rm -rf "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
-mkdir -p "${output_dir:-DAJIN_results}"/BAM/
-cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
-
 ################################################################################
 #! IGV.js Alignment viewing
 ################################################################################
@@ -732,62 +761,31 @@ cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 
 # rm -rf .DAJIN_temp 2>/dev/null
 
-
 ################################################################################
-#! Summarize to Details.csv
+#! Move output files
 ################################################################################
 
-mkdir -p .DAJIN_temp/details
+rm -rf "${output_dir:-DAJIN_results}" 2>/dev/null
+mkdir -p "${output_dir:-DAJIN_results}"/BAM
+mkdir -p "${output_dir:-DAJIN_results}"/Consensus
 
 #===========================================================
-#? Generate Details.csv
+#? BAM
 #===========================================================
-
-#===========================================================
-#? Generate Details.csv
-#===========================================================
-
-find .DAJIN_temp/consensus/* -type f |
-    grep html |
-    sed "s:.*/::g" |
-    sed "s/.html//g" |
-    sed "s/_/ /g" |
-    awk '{print $1"_"$2,$3,$4}' |
-    sort |
-cat > .DAJIN_temp/details/tmp_nameid
-
-cat .DAJIN_temp/clustering/label* |
-    awk '{nr[$1]++; print $0, nr[$1]}' |
-    awk '{print $1"_allele"$5, $4, $2}' |
-    sort |
-    join -a 1 - .DAJIN_temp/details/tmp_nameid |
-    sed "s/_/ /" |
-    awk '$4=="abnormal" {$5="mutation"}1' |
-    awk 'BEGIN{OFS=","}
-        {gsub("allele","",$2)
-        if($6 == "target") $4 = "target"
-        if($4 == "abnormal") $6 ="+"; else $6 = "-"
-        gsub("intact","-", $5)
-        gsub("mutation","+", $5)
-
-        if($4 == "target" && $5 == "-" && $6 == "-") $7 = "+"
-        else $7 = "-"
-        }1' |
-    sed -e "1i Sample, Allele ID, % of reads, Allele type, Indel, Large indel, Design" |
-cat > .DAJIN_temp/details/Details.csv
-
-rm .DAJIN_temp/details/tmp_nameid
+rm -rf .DAJIN_temp/bam/temp 2>/dev/null
+cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 
 #===========================================================
-#? Plot details.csv
+#? Consensus
 #===========================================================
 
-Rscript DAJIN/src/details_plot.R
-sleep 3 # wait for outputting pdf file
+cp -r .DAJIN_temp/consensus/* "${output_dir:-DAJIN_results}"/Consensus/ 2>/dev/null
+rm -rf "${output_dir:-DAJIN_results}"/Consensus/temp 2>/dev/null
 
 #===========================================================
-#? Move output files
+#? Details
 #===========================================================
+
 cp .DAJIN_temp/details/* "${output_dir:-DAJIN_results}"/
 
 ################################################################################
