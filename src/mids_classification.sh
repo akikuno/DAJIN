@@ -12,13 +12,19 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 ################################################################################
 #! I/O naming
 ################################################################################
+
 #===========================================================
-#? Auguments
+#? TEST Auguments
 #===========================================================
-# input_fa=".DAJIN_temp/fasta_ont/wt_simulated_aligned_reads.fasta"
+
+# input_fa=".DAJIN_temp/fasta_ont/target_simulated_aligned_reads.fasta"
 # genotype="wt"
 # label=$(echo "${input_fa}" | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
 # suffix="${label}_${genotype}"
+
+#===========================================================
+#? Auguments
+#===========================================================
 
 input_fa=${1}
 genotype=${2}
@@ -37,12 +43,12 @@ output_MIDS=".DAJIN_temp/data/MIDS_${suffix}"
 #===========================================================
 #? Temporal
 #===========================================================
-tmp_mapping=".DAJIN_temp/tmp_mapping_${suffix}"_$$
-tmp_seqID=".DAJIN_temp/tmp_seqID_${suffix}"_$$
+tmp_mapping=".DAJIN_temp/tmp_mapping_${suffix}"
+tmp_seqID=".DAJIN_temp/tmp_seqID_${suffix}"
 
-tmp_all=".DAJIN_temp/tmp_all_${suffix}"_$$
-tmp_primary=".DAJIN_temp/tmp_primary_${suffix}"_$$
-tmp_secondary=".DAJIN_temp/tmp_secondary_${suffix}"_$$
+tmp_all=".DAJIN_temp/tmp_all_${suffix}"
+tmp_primary=".DAJIN_temp/tmp_primary_${suffix}"
+tmp_secondary=".DAJIN_temp/tmp_secondary_${suffix}"
 
 
 ################################################################################
@@ -52,19 +58,32 @@ tmp_secondary=".DAJIN_temp/tmp_secondary_${suffix}"_$$
 mids_conv(){
     set /dev/stdin
     cat "${1}" |
+        # long deletion
+        sed "s/~[acgt][acgt]\([0-9][0-9]*\)[acgt][acgt]/ ~\1 /g" |
+        awk '{for(i=5;i<=NF;i++){
+            if($i ~ /\~/){
+                sub("~","",$i)
+                len=int($i)
+                for(j=1; j<=len; j++) str = "D" str
+                $i=str
+                str=""
+            }
+        }}1' 2>/dev/null |
+        awk '{printf $1" "$2" "$3" "$4" "
+            for(i=5;i<=NF;i++) printf $i
+            printf "\n"}' |
+        # insertion/point mutation/inversion
         awk '{id=$1; strand=$3; loc=$4; $0=$5
         sub("cs:Z:","",$0)
         gsub(/[ACGT]/, "M", $0)
         gsub(/\*[acgt][acgt]/, " S", $0)
         gsub("=", " ", $0)
         gsub("\+", " +", $0)
-        gsub("-", " -", $0)
+        gsub("\-", " -", $0)
         for(i=1; i<=NF; i++){
             if($i ~ /^\+/){
                 len=length($i)-1
                 for(len_=1; len_ <= len; len_++) str = "I" str
-                # str=sprintf("%"len"s","")
-                # gsub(/ /,"I",str)
                 $i=str
                 str=""}
             else if($i ~ "^-"){
@@ -74,7 +93,7 @@ mids_conv(){
                 str=""}
             }
         gsub(" ", "", $0)
-        print id, loc, $0}' |
+        print id, loc, $0}' 2>/dev/null |
     sort -t " " |
     cat
 }
@@ -109,7 +128,7 @@ second_flank=$(
 #? 変異部から±100塩基を含むリードのみを取り出す
 #===========================================================
 
-minimap2 -ax map-ont "${reference}" "${input_fa}" --cs=long 2>/dev/null |
+minimap2 -ax splice "${reference}" "${input_fa}" --cs=long 2>/dev/null |
     awk -v ref="${ref}" -v reflen="${reflength}" '$3 == ref && length($10) < reflen * 1.1' |
     tee "${tmp_mapping}" |
     grep -v "^@" |
@@ -197,8 +216,6 @@ cat "${tmp_primary}" "${tmp_secondary}" |
         }
         len=length($5)
         for(len_=1; len_ <= len; len_++) str = "=" str
-        # str=sprintf("%"len"s","")
-        # gsub(/ /,"=",str)
         $5=str
         print id, minloc, $3 $5 $7
     }' |
@@ -215,7 +232,7 @@ cat "${tmp_primary}" "${tmp_secondary}" |
     }' |
     # 全てが変異になったリードがあれば除去する。
     awk '$2 !~ /^[I|D|S]+$/' |
-    sed -e "s/$/\t${label}/g" -e "s/ /\t/g" | 
+    sed -e "s/$/\t${label}/g" -e "s/ /\t/g" |
 cat > "${output_MIDS}"
 
 rm "${tmp_mapping}" "${tmp_seqID}" "${tmp_all}" "${tmp_primary}" "${tmp_secondary}"
