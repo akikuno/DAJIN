@@ -7,7 +7,6 @@
 set -eu
 umask 0022
 export LC_ALL=C
-type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 
@@ -18,8 +17,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===============================================================================
 #? TEST Aurguments
 #===============================================================================
-# barcode="barcode09"
-# alleletype="flox_deletion"
+# barcode="barcode32"
+# alleletype="abnormal"
 
 # suffix="${barcode}"_"${alleletype}"
 # mapping_alleletype="${alleletype}"
@@ -32,8 +31,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 barcode="${1}"
 alleletype="${2}"
-suffix="${barcode}"_"${alleletype}"
 
+suffix="${barcode}"_"${alleletype}"
 mapping_alleletype="${alleletype}"
 [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
 [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
@@ -45,7 +44,7 @@ mapping_alleletype="${alleletype}"
 #===========================================================
 #? Output
 #===========================================================
-mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
+mkdir -p ".DAJIN_temp/clustering/temp/"
 query_score=".DAJIN_temp/clustering/temp/query_score_${suffix}"
 query_seq=".DAJIN_temp/clustering/temp/query_seq_${suffix}"
 query_label=".DAJIN_temp/clustering/temp/query_labels_${suffix}"
@@ -73,7 +72,7 @@ cat "${MIDS_que}" |
     grep "${barcode}" |
     sort -k 1,1 |
     join - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    awk -v atype="${alleletype}" '$NF==atype' |
+    awk -v atype="${mapping_alleletype}" '$NF==atype' |
     cut -d " " -f 1,3 |
     sed "s/ /,/g" |
 cat > "${query_label}"
@@ -83,19 +82,19 @@ cat > "${query_label}"
 #===========================================================
 
 #---------------------------------------
-#* 挿入塩基を1つの挿入塩基数にまとめて配列のズレを無くす
+#* output query seq
 #---------------------------------------
 cat "${MIDS_que}" |
     grep "${barcode}" |
     sort -k 1,1 |
     join - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    awk -v atype="${alleletype}" '$NF==atype' |
+    awk -v atype="${mapping_alleletype}" '$NF==atype' |
     cut -d " " -f 2 |
 cat > "${query_seq}"
 
-# ----------------------------------------------------------
-# Output Genomic coodinates (Query)
-# ----------------------------------------------------------
+#----------------------------------------------------------
+#* Output query score
+#----------------------------------------------------------
 cat "${query_seq}" |
     awk -F '' 'BEGIN{OFS=","} {$1=$1;print $0}' |
     sed "s/=/M/g" |
