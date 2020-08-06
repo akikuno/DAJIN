@@ -151,8 +151,7 @@ set $(echo "${grna}" | sed "s/,/ /g")
 x=1
 while [ "${x}" -le $# ]
 do
-    [ "$(grep -c ${1} ${design})" -eq 0 ] &&
-        error_exit "No gRNA sites"
+    [ "$(grep -c ${1} ${design})" -eq 0 ] && error_exit "No gRNA sites"
     x=$(( "${x}" + 1 ))
 done
 
@@ -163,7 +162,6 @@ done
     error_exit "$output_dir: invalid directory name"
 
 mkdir -p "${output_dir:=DAJIN_results}"/BAM "${output_dir}"/Consensus
-
 
 #===========================================================
 #? Check "filter"
@@ -199,63 +197,7 @@ fi
 #! Setting Conda environment
 ################################################################################
 
-#===========================================================
-#? DAJIN_nanosim
-#===========================================================
-set +u
-type conda > /dev/null 2>&1 || error_exit 'Command "conda" not found'
-
-CONDA_BASE=$(conda info --base)
-source "${CONDA_BASE}/etc/profile.d/conda.sh"
-
-if [ "$(conda info -e | grep -c DAJIN_nanosim)" -eq 0 ]; then
-    conda config --add channels defaults
-    conda config --add channels bioconda
-    conda config --add channels conda-forge
-    conda create -y -n DAJIN_nanosim python=3.6
-    conda install -y -n DAJIN_nanosim --file ./DAJIN/utils/NanoSim/requirements.txt
-    conda install -y -n DAJIN_nanosim minimap2
-fi
-
-#===========================================================
-#? DAJIN
-#===========================================================
-
-if [ "$(conda info -e | cut -d " " -f 1 | grep -c DAJIN$)" -eq 0 ]; then
-    conda config --add channels defaults
-    conda config --add channels bioconda
-    conda config --add channels conda-forge
-    conda create -y -n DAJIN python=3.6 \
-        anaconda nodejs wget \
-        tensorflow tensorflow-gpu swifter \
-        samtools minimap2 \
-        r-essentials r-base
-fi
-set -u
-
-#===========================================================
-#? Required software
-#===========================================================
-set +u
-conda activate DAJIN
-set -u
-
-type gzip > /dev/null 2>&1 || error_exit 'Command "gzip" not found'
-type wget > /dev/null 2>&1 || error_exit 'Command "wget" not found'
-type python > /dev/null 2>&1 || error_exit 'Command "python" not found'
-type samtools > /dev/null 2>&1 || error_exit 'Command "samtools" not found'
-type minimap2 > /dev/null 2>&1 || error_exit 'Command "minimap2" not found'
-
-python -c "import tensorflow as tf" > /dev/null 2>&1 ||
-error_exit '"Tensorflow" not found'
-
-#===========================================================
-#? For WSL (Windows Subsystem for Linux)
-#===========================================================
-
-uname -a |
-grep Microsoft 1>/dev/null 2>/dev/null &&
-alias python="python.exe"
+. DAJIN/src/conda_setting.sh
 
 ################################################################################
 #! Formatting environments
@@ -358,7 +300,7 @@ mutation_type=$(
     grep -v "^@" |
     awk '{
         cstag=$(NF-1)
-        if(cstag ~ "-") print "D"
+        if(cstag ~ "~") print "D"
         else if(cstag ~ "\+") print "I"
         else if(cstag ~ "\*") print "S"
         }' 2>/dev/null
@@ -667,6 +609,55 @@ cat .DAJIN_temp/clustering/label* |
         END{print "wait"}' |
 sh - 2>/dev/null
 
+
+################################################################################
+#! Summarize to Details.csv
+################################################################################
+
+mkdir -p .DAJIN_temp/details
+
+#===========================================================
+#? Generate Details.csv
+#===========================================================
+
+find .DAJIN_temp/consensus/* -type f |
+    grep html |
+    sed "s:.*/::g" |
+    sed "s/.html//g" |
+    sed "s/_/ /g" |
+    awk '{print $1"_"$2,$3,$4}' |
+    sort |
+cat > .DAJIN_temp/details/tmp_nameid
+
+cat .DAJIN_temp/clustering/label* |
+    awk '{nr[$1]++; print $0, nr[$1]}' |
+    awk '{print $1"_allele"$5, $4, $2}' |
+    sort |
+    join -a 1 - .DAJIN_temp/details/tmp_nameid |
+    sed "s/_/ /" |
+    awk '$4=="abnormal" {$5="mutation"}1' |
+    awk 'BEGIN{OFS=","}
+        {gsub("allele","",$2)
+        if($6 == "target") $4 = "target"
+        if($4 == "abnormal") $6 ="+"; else $6 = "-"
+        gsub("intact","-", $5)
+        gsub("mutation","+", $5)
+
+        if($4 == "target" && $5 == "-" && $6 == "-") $7 = "+"
+        else $7 = "-"
+        }1' |
+    sed -e "1i Sample, Allele ID, % of reads, Allele type, Indel, Large indel, Design" |
+cat > .DAJIN_temp/details/Details.csv
+
+rm .DAJIN_temp/details/tmp_nameid
+
+#===========================================================
+#? Plot details.csv
+#===========================================================
+
+Rscript DAJIN/src/details_plot.R
+sleep 3 # wait for outputting pdf file
+
 ################################################################################
 #! Mapping by minimap2 for IGV visualization
 ################################################################################
@@ -770,54 +761,6 @@ done
 
 # rm -rf .DAJIN_temp 2>/dev/null
 
-
-################################################################################
-#! Summarize to Details.csv
-################################################################################
-
-mkdir -p .DAJIN_temp/details
-
-#===========================================================
-#? Generate Details.csv
-#===========================================================
-
-find .DAJIN_temp/consensus/* -type f |
-    grep html |
-    sed "s:.*/::g" |
-    sed "s/.html//g" |
-    sed "s/_/ /g" |
-    awk '{print $1"_"$2,$3,$4}' |
-    sort |
-cat > .DAJIN_temp/details/tmp_nameid
-
-cat .DAJIN_temp/clustering/label* |
-    awk '{nr[$1]++; print $0, nr[$1]}' |
-    awk '{print $1"_allele"$5, $4, $2}' |
-    sort |
-    join -a 1 - .DAJIN_temp/details/tmp_nameid |
-    sed "s/_/ /" |
-    awk '$4=="abnormal" {$5="mutation"}1' |
-    awk 'BEGIN{OFS=","}
-        {gsub("allele","",$2)
-        if($6 == "target") $4 = "target"
-        if($4 == "abnormal") $6 ="+"; else $6 = "-"
-        gsub("intact","-", $5)
-        gsub("mutation","+", $5)
-
-        if($4 == "target" && $5 == "-" && $6 == "-") $7 = "+"
-        else $7 = "-"
-        }1' |
-    sed -e "1i Sample, Allele ID, % of reads, Allele type, Indel, Large indel, Design" |
-cat > .DAJIN_temp/details/Details.csv
-
-rm .DAJIN_temp/details/tmp_nameid
-
-#===========================================================
-#? Plot details.csv
-#===========================================================
-
-Rscript DAJIN/src/details_plot.R
-
 ################################################################################
 #! Move output files
 ################################################################################
@@ -826,21 +769,19 @@ rm -rf "${output_dir:-DAJIN_results}" 2>/dev/null
 mkdir -p "${output_dir:-DAJIN_results}"/BAM
 mkdir -p "${output_dir:-DAJIN_results}"/Consensus
 
-
 #===========================================================
 #? BAM
 #===========================================================
 rm -rf .DAJIN_temp/bam/temp 2>/dev/null
 cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
+
 #===========================================================
 #? Consensus
 #===========================================================
 
-[ -d "${output_dir:-DAJIN_results}"/Consensus/ ] && rm -rf "${output_dir:-DAJIN_results}"/Consensus/
-mkdir -p "${output_dir:-DAJIN_results}"/Consensus/
-
 cp -r .DAJIN_temp/consensus/* "${output_dir:-DAJIN_results}"/Consensus/ 2>/dev/null
 rm -rf "${output_dir:-DAJIN_results}"/Consensus/temp 2>/dev/null
+
 #===========================================================
 #? Details
 #===========================================================
