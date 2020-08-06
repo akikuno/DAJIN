@@ -45,8 +45,9 @@ control_score=".DAJIN_temp/clustering/temp/control_score_${alleletype}"
 MIDS_ref=".DAJIN_temp/clustering/temp/MIDS_${control}_${alleletype}"
 tmp_MIDS=".DAJIN_temp/clustering/temp/tmp_MIDS_${control}_${alleletype}"
 tmp_control=".DAJIN_temp/clustering/temp/tmp_control_${control}_${alleletype}"
-tmp_label_mapping=".DAJIN_temp/clustering/temp/tmp_label_mapping_${control}_${alleletype}"
-
+tmp_strecher=".DAJIN_temp/clustering/temp/tmp_strecher_${control}_${alleletype}"
+tmp_strecher_wt=".DAJIN_temp/clustering/temp/tmp_strecher_wt_${control}_${alleletype}"
+tmp_strecher_label=".DAJIN_temp/clustering/temp/tmp_strecher_label${control}_${alleletype}"
 ################################################################################
 #! Control scoring
 ################################################################################
@@ -111,46 +112,72 @@ cat ".DAJIN_temp/fasta/${alleletype}.fa" |
     sort -t " " -k 1,1 |
 cat > "${tmp_control}"
 
-find .DAJIN_temp/fasta/ -type f |
-    grep -v wt.fa |
-    grep -v fasta.fa |
-    sed "s:.*/::g" |
-    sed "s/.fa.*$//g" |
-while read -r label; do
-    minimap2 -t "${threads}" -ax splice \
-        .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/"${label}".fa \
-        --cs=long 2>/dev/null |
-        grep -v "^@" |
-        awk '{print $4, $(NF-1)}' |
-        sed "s/cs:Z://g" |
-        sed "s/[=+]//g" |
-        sed "s/\~[actg][actg]//g" |
-        sed "s/\([0-9][0-9]*\)[actg][actg]/\n\1 /g" |
-        sed "s/-[acgt][acgt]*//g" |
-        sort -t " " -k 1,1n |
-        awk '{
-            ref_position=1
-            start=$1
-            split($2, seq_array, "")
-            for(i=1; i<=length(seq_array); i++){
-                que_position=i+start-1
-                if(seq_array[i] ~ /[ACGT]/) {
-                    loc=start+ref_position-1
-                    print loc"_"seq_array[i], que_position
-                    ref_position++}
-                else{
-                    loc=start+i-1
-                    print "mut_"seq_array[i], que_position}
-            }
-        }' |
-        sort |
-        join -a 1 - "${tmp_control}" |
-        awk 'NF==2 {print $0,1; next}1' |
-        sort -t " " -k 2,2n |
-        awk '{print $NF}' |
-    cat > ".DAJIN_temp/clustering/temp/control_score_${label}"
-done
+stretcher \
+    -asequence .DAJIN_temp/fasta/wt.fa \
+    -bsequence .DAJIN_temp/fasta/"${label}".fa \
+    -aformat markx2 \
+    -outfile "${tmp_strecher}" 2>/dev/null
 
-rm "${MIDS_ref}" "${tmp_MIDS}" "${tmp_control}" "${tmp_label_mapping}"
+cat "${tmp_strecher}" |
+    awk 'NF==2' |
+    awk '$0 ~ /[ACGT.-]/' |
+    awk 'NR%2==1 {printf $2}' |
+    awk -F "" '{for(i=1;i<=NF;i++) print $i}' |
+cat > "${tmp_strecher_wt}"
+
+cat "${tmp_strecher}" |
+    awk 'NF==2' |
+    awk '$0 ~ /[ACGT.-]/' |
+    awk 'NR%2==0 {printf $2}' |
+    awk -F "" '{for(i=1;i<=NF;i++) print $i}' |
+cat > "${tmp_strecher_label}"
+
+splice_num="$(
+    minimap2 -ax splice .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/${label}.fa 2>/dev/null |
+    grep -c -v "^@"
+    )"
+
+if [ "${splice_num}" -eq 3 ]; then
+# inversion
+set $(
+    paste "${tmp_strecher_wt}" "${tmp_strecher_label}" |
+    awk '$1=="-" {print "-"; next}
+        {refrow++; print $1, $NF}' |
+    awk '$2=="-" {$1="-"}1' |
+    awk '{printf $1}' |
+    sed "s/-\([ACTG].*\)-/-\n\1\n/g" | # flox-ki
+    sed "s/--*$//g" | # flox-ki
+    awk 'NR==2{gsub(".", "-", $0)} {printf $0}' | # flox-ki
+    awk '{mutlen=gsub("-", " ", $0)
+        print length($1)+1,length($1)+mutlen+2}'
+    )
+
+cat "${tmp_control}" |
+    sort -k 1,1n |
+    awk '{print $NF}' |
+    sed -e "$1i @" |
+    sed -e "$2i @" |
+    tr -d "\n" |
+    sed "s/@/\n/g" |
+    awk -F "" 'NR==2{
+        seq=""
+        for(i=NF; i>0; i--) seq=seq""$i
+        print seq; next}1' |
+    tr -d "\n" |
+awk -F "" '{for(i=1;i<=NF;i++) print $i}'
+else
+# deletion/knockin/point mutation
+paste "${tmp_strecher_wt}" "${tmp_strecher_label}" |
+    awk '$1=="-" {print $0, NR; next}
+        {refrow++; querow=NR; print refrow"_"$0, querow}' |
+    sort |
+    join -a 1 - "${tmp_control}" |
+    awk '$2!="-"' | # deletion
+    awk '$1=="-" {$(NF+1)=1}1' | # insertion
+    sort -t " " -k 3,3n |
+    awk '{print $NF}'
+fi |
+cat > ".DAJIN_temp/clustering/temp/control_score_${label}"
+# rm "${MIDS_ref}" "${tmp_MIDS}" "${tmp_control}" "${tmp_label_mapping}"
 
 exit 0
