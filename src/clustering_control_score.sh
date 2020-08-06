@@ -4,7 +4,7 @@
 #! Initialize shell environment
 ################################################################################
 
-set -eu
+set -u
 umask 0022
 export LC_ALL=C
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
@@ -42,12 +42,14 @@ control_score=".DAJIN_temp/clustering/temp/control_score_${alleletype}"
 #===========================================================
 #? Temporal
 #===========================================================
+
 MIDS_ref=".DAJIN_temp/clustering/temp/MIDS_${control}_${alleletype}"
 tmp_MIDS=".DAJIN_temp/clustering/temp/tmp_MIDS_${control}_${alleletype}"
 tmp_control=".DAJIN_temp/clustering/temp/tmp_control_${control}_${alleletype}"
 tmp_strecher=".DAJIN_temp/clustering/temp/tmp_strecher_${control}_${alleletype}"
 tmp_strecher_wt=".DAJIN_temp/clustering/temp/tmp_strecher_wt_${control}_${alleletype}"
 tmp_strecher_label=".DAJIN_temp/clustering/temp/tmp_strecher_label${control}_${alleletype}"
+
 ################################################################################
 #! Control scoring
 ################################################################################
