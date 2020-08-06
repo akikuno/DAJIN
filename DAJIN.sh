@@ -686,7 +686,7 @@ if [ "_$mutation_type" = "_S" ]; then
     mv .DAJIN_temp/fasta_ont/wt_del* .DAJIN_temp/
 fi
 
-./DAJIN/src/mapping.sh "${genome:-mm10}" "${threads:-1}"
+./DAJIN/src/mapping.sh "${genome:-mm10}" "${threads:-1}" || exit 1
 
 if [ "_$mutation_type" = "_S" ]; then
     mv .DAJIN_temp/wt_ins* .DAJIN_temp/fasta_ont/
