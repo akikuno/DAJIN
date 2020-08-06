@@ -136,9 +136,10 @@ fi
 #===========================================================
 
 genome_check=$(
-    wget -qO - "https://gggenome.dbcls.jp/ja/help.html#db_list" |
-    grep "href" |
-    grep -c "/${genome:-XXX}/")
+    wget -q -O - "http://hgdownload.soe.ucsc.edu/downloads.html" |
+    grep hgTracks |
+    grep -c "${genome:-XXX}"
+)
 
 [ "$genome_check" -eq 0 ] &&
     error_exit "$genome: No such reference genome"
