@@ -159,7 +159,7 @@ done
 #===========================================================
 #? Check output directory name
 #===========================================================
-[ $(echo "$output_dir" | grep  -c -e '\\' -e ':' -e '*' -e '?' -e '"' -e '<' -e '>' -e '|') -ne 0 ] &&
+[ $(echo "$output_dir" | sed "s/[_a-zA-Z0-9]*//g" | wc | awk '{print $2}') -ne 0 ] &&
     error_exit "$output_dir: invalid directory name"
 
 mkdir -p "${output_dir:=DAJIN_results}"/BAM "${output_dir}"/Consensus
@@ -667,15 +667,6 @@ cat .DAJIN_temp/clustering/label* |
         END{print "wait"}' |
 sh - 2>/dev/null
 
-#===========================================================
-#? Move output files
-#===========================================================
-[ -d "${output_dir:-DAJIN_results}"/Consensus/ ] && rm -rf "${output_dir:-DAJIN_results}"/Consensus/
-mkdir -p "${output_dir:-DAJIN_results}"/Consensus/
-
-cp -r .DAJIN_temp/consensus/* "${output_dir:-DAJIN_results}"/Consensus/ 2>/dev/null
-rm -rf "${output_dir:-DAJIN_results}"/Consensus/temp 2>/dev/null
-
 ################################################################################
 #! Mapping by minimap2 for IGV visualization
 ################################################################################
@@ -769,15 +760,6 @@ while read -r input_bam; do
     samtools index "${output_bam}"
 done
 
-#===========================================================
-#? Move output files
-#===========================================================
-
-rm -rf .DAJIN_temp/bam/temp 2>/dev/null
-rm -rf "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
-mkdir -p "${output_dir:-DAJIN_results}"/BAM/
-cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
-
 ################################################################################
 #! IGV.js Alignment viewing
 ################################################################################
@@ -794,10 +776,6 @@ cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 ################################################################################
 
 mkdir -p .DAJIN_temp/details
-
-#===========================================================
-#? Generate Details.csv
-#===========================================================
 
 #===========================================================
 #? Generate Details.csv
@@ -840,8 +818,31 @@ rm .DAJIN_temp/details/tmp_nameid
 
 Rscript DAJIN/src/details_plot.R
 
+################################################################################
+#! Move output files
+################################################################################
+
+rm -rf "${output_dir:-DAJIN_results}" 2>/dev/null
+mkdir -p "${output_dir:-DAJIN_results}"/BAM
+mkdir -p "${output_dir:-DAJIN_results}"/Consensus
+
+
 #===========================================================
-#? Move output files
+#? BAM
+#===========================================================
+rm -rf .DAJIN_temp/bam/temp 2>/dev/null
+cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
+#===========================================================
+#? Consensus
+#===========================================================
+
+[ -d "${output_dir:-DAJIN_results}"/Consensus/ ] && rm -rf "${output_dir:-DAJIN_results}"/Consensus/
+mkdir -p "${output_dir:-DAJIN_results}"/Consensus/
+
+cp -r .DAJIN_temp/consensus/* "${output_dir:-DAJIN_results}"/Consensus/ 2>/dev/null
+rm -rf "${output_dir:-DAJIN_results}"/Consensus/temp 2>/dev/null
+#===========================================================
+#? Details
 #===========================================================
 
 cp .DAJIN_temp/details/* "${output_dir:-DAJIN_results}"/
