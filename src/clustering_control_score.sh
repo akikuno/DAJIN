@@ -45,9 +45,13 @@ control_score=".DAJIN_temp/clustering/temp/control_score_${alleletype}"
 MIDS_ref=".DAJIN_temp/clustering/temp/MIDS_${control}_${alleletype}"
 tmp_MIDS=".DAJIN_temp/clustering/temp/tmp_MIDS_${control}_${alleletype}"
 tmp_control=".DAJIN_temp/clustering/temp/tmp_control_${control}_${alleletype}"
+<<<<<<< HEAD
 tmp_strecher=".DAJIN_temp/clustering/temp/tmp_strecher_${control}_${alleletype}"
 tmp_strecher_wt=".DAJIN_temp/clustering/temp/tmp_strecher_wt_${control}_${alleletype}"
 tmp_strecher_label=".DAJIN_temp/clustering/temp/tmp_strecher_label${control}_${alleletype}"
+=======
+
+>>>>>>> d4e2634f6beb42a2afa56b3e0481f39ed46b084c
 ################################################################################
 #! Control scoring
 ################################################################################
@@ -70,9 +74,9 @@ cat "${MIDS_ref}" |
     cut -d " " -f 2 |
 cat > "${tmp_MIDS}"
 
-# ----------------------------------------
-# Transpose matrix
-# ----------------------------------------
+#===========================================================
+#? Transpose matrix
+#===========================================================
 nr=$(cat "${tmp_MIDS}" | wc -l)
 
 cat "${tmp_MIDS}" |
@@ -86,9 +90,9 @@ cat "${tmp_MIDS}" |
         INS=gsub(/[1-9]|[a-z]/,"@",$0)
         DEL=gsub("D","D",$0)
         SUB=gsub("S","S",$0)
-        # ----------------------------------------
+        #----------------------------------------
         #* Define sequence error when control sample has more than 5% mutations
-        # ----------------------------------------
+        #----------------------------------------
         per=5
         if(INS > NF*per/100 || DEL > NF*per/100 || SUB > NF*per/100)
             num=2
@@ -112,6 +116,7 @@ cat ".DAJIN_temp/fasta/${alleletype}.fa" |
     sort -t " " -k 1,1 |
 cat > "${tmp_control}"
 
+<<<<<<< HEAD
 stretcher \
     -asequence .DAJIN_temp/fasta/wt.fa \
     -bsequence .DAJIN_temp/fasta/"${label}".fa \
@@ -179,5 +184,48 @@ paste "${tmp_strecher_wt}" "${tmp_strecher_label}" |
 fi |
 cat > ".DAJIN_temp/clustering/temp/control_score_${label}"
 # rm "${MIDS_ref}" "${tmp_MIDS}" "${tmp_control}" "${tmp_label_mapping}"
+=======
+find .DAJIN_temp/fasta/ -type f |
+    grep -v wt.fa |
+    grep -v fasta.fa |
+    sed "s:.*/::g" |
+    sed "s/.fa.*$//g" |
+while read -r label; do
+    minimap2 -t "${threads}" -ax splice \
+        .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/"${label}".fa \
+        --cs=long 2>/dev/null |
+        grep -v "^@" |
+        awk '{print $4, $(NF-1)}' |
+        sed "s/cs:Z://g" |
+        sed "s/[=+]//g" |
+        sed "s/\~[actg][actg]//g" |
+        sed "s/\([0-9][0-9]*\)[actg][actg]/\n\1 /g" |
+        sed "s/-[acgt][acgt]*//g" |
+        sort -t " " -k 1,1n |
+        awk '{
+            ref_position=1
+            start=$1
+            split($2, seq_array, "")
+            for(i=1; i<=length(seq_array); i++){
+                que_position=i+start-1
+                if(seq_array[i] ~ /[ACGT]/) {
+                    loc=start+ref_position-1
+                    print loc"_"seq_array[i], que_position
+                    ref_position++}
+                else{
+                    loc=start+i-1
+                    print "mut_"seq_array[i], que_position}
+            }
+        }' |
+        sort |
+        join -a 1 - "${tmp_control}" |
+        awk 'NF==2 {print $0,1; next}1' |
+        sort -t " " -k 2,2n |
+        awk '{print $NF}' |
+    cat > ".DAJIN_temp/clustering/temp/control_score_${label}"
+done
+
+rm "${MIDS_ref}" "${tmp_MIDS}" "${tmp_control}"
+>>>>>>> d4e2634f6beb42a2afa56b3e0481f39ed46b084c
 
 exit 0
