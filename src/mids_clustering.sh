@@ -45,7 +45,6 @@ query=".DAJIN_temp/fasta_ont/${barcode}.fa"
 #? Temporal
 #===========================================================
 tmp_query=".DAJIN_temp/tmp_query_${suffix}"_$$
-# tmp_mapping=".DAJIN_temp/tmp_mapping_${suffix}"
 tmp_seqID=".DAJIN_temp/tmp_seqID_${suffix}"_$$
 
 tmp_all=".DAJIN_temp/tmp_all_${suffix}"_$$
@@ -104,12 +103,8 @@ mids_compressed(){
 }
 
 ################################################################################
-#! Extract mapping_alleletype in fasta file
+#! Extract fasta file including "mapping_alleletype"
 ################################################################################
-
-#===========================================================
-#? 変数の定義
-#===========================================================
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     grep "${barcode}" |
@@ -167,7 +162,6 @@ cat "${tmp_primary}" "${tmp_secondary}" |
     sort -t " " -k 2,2n |
     awk '{seq_[$1]=seq_[$1]" "$2" "$3" "$4}
         END{for(key in seq_) print key,seq_[key]}' |
-    # grep inversion_100_aligned_7213_F_54_2709_73 |
     awk 'NF==3
     #---------------------------------------
     #* Flox deletion
