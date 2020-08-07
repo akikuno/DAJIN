@@ -100,7 +100,7 @@ x = Conv1D(
 x = MaxPooling1D(pool_size=12, padding="same", name="1st_MaxPooling1D")(x)
 
 x = Conv1D(
-        filters=64,
+        filters=32,
         kernel_size=int(init_kernel_size / 2),
         activation="relu",
         name="2nd_Conv1D",
@@ -109,7 +109,7 @@ x = Conv1D(
 x = MaxPooling1D(pool_size=6, padding="same", name="2nd_MaxPooling1D")(x)
 
 x = Conv1D(
-        filters=128,
+        filters=32,
         kernel_size=int(init_kernel_size / 4),
         activation="relu",
         name="3rd_Conv1D",
