@@ -97,25 +97,25 @@ x = Conv1D(
         name="1st_Conv1D",
         padding="same",
     )(inputs)
-x = MaxPooling1D(pool_size=16, padding="same", name="1st_MaxPooling1D")(x)
+x = MaxPooling1D(pool_size=12, padding="same", name="1st_MaxPooling1D")(x)
 
 x = Conv1D(
-        filters=32,
+        filters=64,
         kernel_size=int(init_kernel_size / 2),
         activation="relu",
         name="2nd_Conv1D",
         padding="same",
     )(x)
-x = MaxPooling1D(pool_size=8, padding="same", name="2nd_MaxPooling1D")(x)
+x = MaxPooling1D(pool_size=6, padding="same", name="2nd_MaxPooling1D")(x)
 
 x = Conv1D(
-        filters=32,
+        filters=128,
         kernel_size=int(init_kernel_size / 4),
         activation="relu",
         name="3rd_Conv1D",
         padding="same",
     )(x)
-x = MaxPooling1D(pool_size=4, padding="same", name="3rd_MaxPooling1D")(x)
+x = MaxPooling1D(pool_size=3, padding="same", name="3rd_MaxPooling1D")(x)
 
 x = Flatten(name="flatten")(x)
 
