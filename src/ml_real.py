@@ -22,7 +22,7 @@ from tensorflow.keras.models import Model
 # ? TEST auguments
 # ===========================================================
 
-# file_name = ".DAJIN_temp/data/MIDS_barcode34_wt"
+# file_name = ".DAJIN_temp/data/MIDS_barcode27_wt"
 # mutation_type = "D"
 # threads = 12
 
@@ -39,7 +39,7 @@ if mutation_type == "":
     raise ValueError("mutation_type is empty")
 
 if threads == "":
-    import multiprocessing    
+    import multiprocessing
     threads = multiprocessing.cpu_count() // 2
 
 
@@ -72,7 +72,7 @@ def onehot_encode_seq(seq):
 
 X_real = onehot_encode_seq(df["seq"])
 
-del df["seq"]  # <<<
+# del df["seq"]  # <<<
 
 ################################################################################
 #! load trained models
@@ -111,19 +111,21 @@ df.groupby("barcodeID").outliers.value_counts() #!<<<<<
 predict = model.predict(X_real.astype("float16"), verbose=0, batch_size=32)
 predict = np.argmax(predict, axis=1)
 
-del X_real  # <<<
+# del X_real  # <<<
 
 df["prediction"] = predict
 df["prediction"].mask(df["outliers"] == "abnormal", "abnormal", inplace=True)
 
-del df["outliers"]  # <<<
+# del df["outliers"]  # <<<
 
 for index, label in enumerate(labels_index):
     label = label.replace("_simulated", "")
     df["prediction"].mask(df["prediction"] == index, label, inplace=True)
 
 # ---------------------------------------
-# * In the case of a point mutation, the reads determined to be wt_ins and wt_del should be treated as "abnormal".
+# * In the case of a point mutation,
+# * the reads named "wt_ins" and "wt_del"
+# * should be treated as "abnormal".
 # ---------------------------------------
 if mutation_type == "S":
     df["prediction"].mask(

@@ -88,7 +88,7 @@ X_train, X_val, Y_train, Y_val = train_test_split(
 #===========================================================
 
 inputs = Input(shape = (X_train.shape[1], X_train.shape[2]))
-init_kernel_size = int(256)
+init_kernel_size = int(512)
 
 x = Conv1D(
         filters=32,
@@ -97,29 +97,29 @@ x = Conv1D(
         name="1st_Conv1D",
         padding="same",
     )(inputs)
-x = MaxPooling1D(pool_size=4, name="1st_MaxPooling1D")(x)
+x = MaxPooling1D(pool_size=12, padding="same", name="1st_MaxPooling1D")(x)
 
 x = Conv1D(
-        filters=32,
+        filters=64,
         kernel_size=int(init_kernel_size / 2),
         activation="relu",
         name="2nd_Conv1D",
         padding="same",
     )(x)
-x = MaxPooling1D(pool_size=4, name="2nd_MaxPooling1D")(x)
+x = MaxPooling1D(pool_size=6, padding="same", name="2nd_MaxPooling1D")(x)
 
 x = Conv1D(
-        filters=32,
+        filters=128,
         kernel_size=int(init_kernel_size / 4),
         activation="relu",
         name="3rd_Conv1D",
         padding="same",
     )(x)
-x = MaxPooling1D(pool_size=4, name="3rd_MaxPooling1D")(x)
+x = MaxPooling1D(pool_size=3, padding="same", name="3rd_MaxPooling1D")(x)
 
 x = Flatten(name="flatten")(x)
 
-x = Dense(32, activation="relu", name="1st_FC")(x)
+x = Dense(128, activation="relu", name="1st_FC")(x)
 
 predictions = Dense(len(labels_index), activation="softmax", name="softmax")(x)
 
@@ -150,7 +150,7 @@ model.fit(
 #===========================================================
 
 model_ = Model(model.get_layer(index=0).input, model.get_layer(index=-2).output)
-# model_.summary()
+model_.summary()
 train_vector = model_.predict(X_train, verbose=0, batch_size=32)
 
 # del X_train  # <<<
@@ -160,8 +160,8 @@ train_vector = model_.predict(X_train, verbose=0, batch_size=32)
 #===========================================================
 
 clf = LocalOutlierFactor(
-    n_neighbors=20,
-    metric="euclidean",
+    n_neighbors=10,
+    # metric="euclidean",
     contamination="auto",
     leaf_size=400,
     novelty=True,
