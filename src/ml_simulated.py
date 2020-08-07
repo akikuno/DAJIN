@@ -88,7 +88,7 @@ X_train, X_val, Y_train, Y_val = train_test_split(
 #===========================================================
 
 inputs = Input(shape = (X_train.shape[1], X_train.shape[2]))
-init_kernel_size = int(512)
+init_kernel_size = int(256)
 
 x = Conv1D(
         filters=32,
