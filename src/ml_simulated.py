@@ -1,7 +1,7 @@
 import os
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
+# os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
 
 import sys
 import numpy as np
@@ -119,7 +119,7 @@ x = MaxPooling1D(pool_size=3, padding="same", name="3rd_MaxPooling1D")(x)
 
 x = Flatten(name="flatten")(x)
 
-x = Dense(128, activation="relu", name="1st_FC")(x)
+x = Dense(32, activation="relu", name="1st_FC")(x)
 
 predictions = Dense(len(labels_index), activation="softmax", name="softmax")(x)
 
@@ -136,7 +136,7 @@ model.fit(
     X_train,
     Y_train,
     epochs=20,
-    verbose=0,
+    verbose=1,
     batch_size=32,
     validation_data=(X_val, Y_val),
     shuffle=True,
