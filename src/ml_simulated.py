@@ -88,7 +88,7 @@ X_train, X_val, Y_train, Y_val = train_test_split(
 #===========================================================
 
 inputs = Input(shape = (X_train.shape[1], X_train.shape[2]))
-init_kernel_size = int(512)
+init_kernel_size = int(256)
 
 x = Conv1D(
         filters=32,
@@ -100,7 +100,7 @@ x = Conv1D(
 x = MaxPooling1D(pool_size=12, padding="same", name="1st_MaxPooling1D")(x)
 
 x = Conv1D(
-        filters=64,
+        filters=32,
         kernel_size=int(init_kernel_size / 2),
         activation="relu",
         name="2nd_Conv1D",
@@ -109,7 +109,7 @@ x = Conv1D(
 x = MaxPooling1D(pool_size=6, padding="same", name="2nd_MaxPooling1D")(x)
 
 x = Conv1D(
-        filters=128,
+        filters=32,
         kernel_size=int(init_kernel_size / 4),
         activation="relu",
         name="3rd_Conv1D",
@@ -150,7 +150,7 @@ model.fit(
 #===========================================================
 
 model_ = Model(model.get_layer(index=0).input, model.get_layer(index=-2).output)
-model_.summary()
+# model_.summary()
 train_vector = model_.predict(X_train, verbose=0, batch_size=32)
 
 # del X_train  # <<<
@@ -160,10 +160,10 @@ train_vector = model_.predict(X_train, verbose=0, batch_size=32)
 #===========================================================
 
 clf = LocalOutlierFactor(
-    n_neighbors=10,
-    # metric="euclidean",
+    n_neighbors=20,
+    metric="jaccard",
     contamination="auto",
-    leaf_size=400,
+    leaf_size=30,
     novelty=True,
     n_jobs=threads,
 )

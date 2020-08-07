@@ -72,7 +72,7 @@ def onehot_encode_seq(seq):
 
 X_real = onehot_encode_seq(df["seq"])
 
-# del df["seq"]  # <<<
+del df["seq"]  # <<<
 
 ################################################################################
 #! load trained models
@@ -86,7 +86,7 @@ clf = pickle.load(open(".DAJIN_temp/data/model_lof.sav", "rb"))
 #! Novelity (Anomaly) detection
 ################################################################################
 # ===========================================================
-# ? L2 layer
+# ? FC layer
 # ===========================================================
 
 model_ = Model(model.get_layer(index=0).input, model.get_layer(index=-2).output)
@@ -116,7 +116,7 @@ predict = np.argmax(predict, axis=1)
 df["prediction"] = predict
 df["prediction"].mask(df["outliers"] == "abnormal", "abnormal", inplace=True)
 
-# del df["outliers"]  # <<<
+del df["outliers"]  # <<<
 
 for index, label in enumerate(labels_index):
     label = label.replace("_simulated", "")
