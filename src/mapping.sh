@@ -101,10 +101,10 @@ fi
 cat .DAJIN_temp/fasta/wt.fa |
     sed 1d |
     awk -v genome=${genome} '{
-        seq=substr($0, 1, 50)
+        seq=substr($0, 1, 100)
     print "wget -q -O - \"https://genome.ucsc.edu/cgi-bin/hgBlat?db="genome"&type=BLAT%27s+guess&userSeq="seq"\""}' |
     sh - |
-    grep "100.0%" | grep chr |
+    grep "100.0%" | grep chr | awk '$6==100' |
     sed "s/.*chr/chr/g" |
     awk 'BEGIN{OFS="\t"}{print $1,$2,$3,$4}' |
 cat > "${tmp_genome_location}"
@@ -116,10 +116,10 @@ cat > "${tmp_genome_location}"
 cat .DAJIN_temp/fasta/wt.fa |
     sed 1d |
     awk -v genome=${genome} \
-        '{seq=substr($0, length($0)-50, length($0));
+        '{seq=substr($0, length($0)-99, length($0));
     print "wget -q -O - \"https://genome.ucsc.edu/cgi-bin/hgBlat?db="genome"&type=BLAT%27s+guess&userSeq="seq"\""}' |
     sh - |
-    grep "100.0%" | grep chr |
+    grep "100.0%" | grep chr | awk '$6==100' |
     sed "s/.*chr/chr/g" |
     awk 'BEGIN{OFS="\t"}{print $1,$2,$3,$4}' |
 cat >> "${tmp_genome_location}"
