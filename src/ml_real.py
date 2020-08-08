@@ -139,7 +139,7 @@ df.groupby("barcodeID").prediction.value_counts() #!<<<<<
 ################################################################################
 
 df.to_csv(
-    ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt",
+    ".DAJIN_temp/data/tmp_DAJIN_MIDS_prediction_result.txt",
     header=False,
     index=False,
     sep="\t",

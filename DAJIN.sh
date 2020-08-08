@@ -473,50 +473,53 @@ Allele prediction
 
 EOF
 
-#===========================================================
-#? Train models
-#===========================================================
+./DAJIN/src/ml_prediction.sh "${control}" "${threads}" \
+> .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt
 
-cat .DAJIN_temp/data/MIDS_* |
-    grep "_sim" |
-    sed -e "s/_aligned_reads//g" |
-cat > ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
+# #===========================================================
+# #? Train models
+# #===========================================================
 
-cat .DAJIN_temp/data/MIDS_"${control}"_wt |
-    grep -v "IIIIIIIIII" |
-    grep -v "DDDDDDDDDD" |
-    grep -v "SSSSSSSSSS" |
-    head -n 10000 |
-    sed "s/${control}$/wt_simulated/g" |
-cat >> ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
+# cat .DAJIN_temp/data/MIDS_* |
+#     grep "_sim" |
+#     sed -e "s/_aligned_reads//g" |
+# cat > ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
+
+# cat .DAJIN_temp/data/MIDS_"${control}"_wt |
+#     grep -v "IIIIIIIIII" |
+#     grep -v "DDDDDDDDDD" |
+#     grep -v "SSSSSSSSSS" |
+#     head -n 10000 |
+#     sed "s/${control}$/wt_simulated/g" |
+# cat >> ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
 
 
-python ./DAJIN/src/ml_simulated.py \
-    ".DAJIN_temp/data/DAJIN_MIDS_sim.txt" "${threads}"
+# python ./DAJIN/src/ml_simulated.py \
+#     ".DAJIN_temp/data/DAJIN_MIDS_sim.txt" "${threads}"
 
-#===========================================================
-#? Predict labels
-#===========================================================
+# #===========================================================
+# #? Predict labels
+# #===========================================================
 
-true > ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
+# true > ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
 
-find .DAJIN_temp/data/MIDS* |
-    grep -v sim |
-    sort |
-while read -r input; do
-    barcode=$(echo $input | cut -d "_" -f 3)
-    echo "Prediction of ${barcode} is now processing..."
+# find .DAJIN_temp/data/MIDS* |
+#     grep -v sim |
+#     sort |
+# while read -r input; do
+#     barcode=$(echo $input | cut -d "_" -f 3)
+#     echo "Prediction of ${barcode} is now processing..."
 
-    python ./DAJIN/src/ml_real.py \
-        "${input}" \
-        "${mutation_type}" "${threads}" ||
-    exit 1
-done
+#     python ./DAJIN/src/ml_real.py \
+#         "${input}" \
+#         "${mutation_type}" "${threads}" ||
+#     exit 1
+# done
 
-cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    sort |
-cat > .DAJIN_temp/tmp_$$
-mv .DAJIN_temp/tmp_$$ .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt
+# cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
+#     sort |
+# cat > .DAJIN_temp/tmp_$$
+# mv .DAJIN_temp/tmp_$$ .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt
 
 
 ################################################################################
