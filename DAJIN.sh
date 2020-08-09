@@ -661,7 +661,6 @@ rm .DAJIN_temp/details/tmp_nameid
 #===========================================================
 
 Rscript DAJIN/src/details_plot.R
-sleep 3 # wait for outputting pdf file
 
 ################################################################################
 #! Mapping by minimap2 for IGV visualization
@@ -792,6 +791,10 @@ rm -rf "${output_dir:-DAJIN_results}"/Consensus/temp 2>/dev/null
 #===========================================================
 
 cp .DAJIN_temp/details/* "${output_dir:-DAJIN_results}"/
+
+while ! [ -f  "${output_dir:-DAJIN_results}"/Details.pdf ]; do
+    sleep 3 # wait for outputting pdf file
+done
 
 ################################################################################
 #! Finish call
