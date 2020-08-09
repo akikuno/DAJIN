@@ -474,7 +474,8 @@ Allele prediction
 EOF
 
 ./DAJIN/src/ml_prediction.sh "${control}" "${threads}" \
-> .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt
+> .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt ||
+exit 1
 
 # #===========================================================
 # #? Train models
