@@ -22,8 +22,8 @@ from tensorflow.keras.models import Model
 # ? TEST auguments
 # ===========================================================
 
-# file_name = ".DAJIN_temp/data/MIDS_barcode27_wt"
-# mutation_type = "D"
+# file_name = ".DAJIN_temp/data/MIDS_barcode21_wt"
+# mutation_type = "S"
 # threads = 12
 
 # ===========================================================
