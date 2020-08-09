@@ -33,6 +33,20 @@ threads="${2}"
 
 alleletype="wt"
 
+mutation_type=$(
+    minimap2 -ax splice \
+        .DAJIN_temp/fasta/wt.fa \
+        .DAJIN_temp/fasta/target.fa \
+        --cs 2>/dev/null |
+    grep -v "^@" |
+    awk '{
+        cstag=$(NF-1)
+        if(cstag ~ "~") print "D"
+        else if(cstag ~ "\+") print "I"
+        else if(cstag ~ "\*") print "S"
+        }' 2>/dev/null
+)
+
 #===========================================================
 #? Output
 #===========================================================
@@ -183,13 +197,16 @@ while read -r label; do
         sort |
         join -a 1 - "${tmp_control}" |
         awk '$2!="-"' | # deletion
-        awk '$1=="-" {$(NF+1)=1}1' | # insertion
+        awk '$1=="-" {$(NF+1)=1}1' | # knockin
+        awk '$2~/[ACGT]/ {$(NF+1)=1}1' | # point mutation
         sort -t " " -k 3,3n |
         awk '{print $NF}'
     fi |
     cat > ".DAJIN_temp/clustering/temp/control_score_${label}"
 
 done
+
+[ _"${mutation_type}" = "_S" ] && mv ".DAJIN_temp/clustering/temp/control_score_target" "${control_score}"
 
 ################################################################################
 #! remove temporal files
