@@ -16,17 +16,11 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===========================================================
 #? TEST Auguments
 #===========================================================
-# barcode="barcode12"
+# barcode="barcode21"
 # alleletype="wt"
-# cluster=2
-# percentage=47.0
-# alleleid=3
-
-# in_suffix="${barcode}"_"${alleletype}"
-# out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
-# mapping_alleletype="${alleletype}"
-# [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
-# [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
+# cluster=1
+# percentage=69.7
+# alleleid=2
 
 #===========================================================
 #? Auguments
@@ -38,15 +32,15 @@ cluster="${3}"
 percentage="${4}"
 alleleid="${5}"
 
+#===========================================================
+#? Input
+#===========================================================
+
 in_suffix="${barcode}"_"${alleletype}"
 out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
 mapping_alleletype="${alleletype}"
 [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
 [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
-
-#===========================================================
-#? Input
-#===========================================================
 
 control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
 allele_id=".DAJIN_temp/clustering/readid_cl_mids_${in_suffix}"
@@ -76,7 +70,7 @@ mutation_design=$(
     grep -v "^@" |
     awk '{
         cstag=$(NF-1)
-        if(cstag ~ "-") print "D"
+        if(cstag ~ "\~") print "D"
         else if(cstag ~ "\+") print "I"
         else if(cstag ~ "\*") print "S"
         }' 2>/dev/null
@@ -96,8 +90,6 @@ cat "${allele_id}" |
     sed "s/=/M/g" |
     awk -F "" 'BEGIN{OFS=","}{$1=$1}1' |
 cat > "${tmp_allele_id}"
-
-# cut -d "," -f 738-740 $tmp_allele_id | sort | uniq -c
 
 Rscript DAJIN/src/consensus.R "${tmp_allele_id}" "${control_score}" "${cluster}"
 
@@ -298,7 +290,7 @@ elif [ "${diff_wt}" -eq 0 ]; then
     output_filename="${output_filename}_intact_wt"
 elif [ "${contaion_target}" -ne 0 ]; then
     output_filename="${output_filename}_mutation_target"
-elif [ "$(grep -c intact $mutation_type_site_nuc)" -eq 1 ]; then
+elif [ "$(grep -c intact ${mutation_type_site_nuc})" -eq 1 ]; then
     output_filename="${output_filename}_intact_${alleletype}"
 else
     output_filename="${output_filename}_mutation_${alleletype}"

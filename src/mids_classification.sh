@@ -232,7 +232,7 @@ cat "${tmp_primary}" "${tmp_secondary}" |
     }' |
     # 全てが変異になったリードがあれば除去する。
     awk '$2 !~ /^[I|D|S]+$/' |
-    sed -e "s/$/\t${label}/g" -e "s/ /\t/g" | 
+    sed -e "s/$/\t${label}/g" -e "s/ /\t/g" |
 cat > "${output_MIDS}"
 
 rm "${tmp_mapping}" "${tmp_seqID}" "${tmp_all}" "${tmp_primary}" "${tmp_secondary}"

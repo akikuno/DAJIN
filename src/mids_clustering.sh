@@ -20,7 +20,6 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 # barcode=barcode48
 # alleletype="target"
-# suffix="${barcode}_${alleletype}"
 
 #===========================================================
 #? Auguments
@@ -28,13 +27,17 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 barcode=${1}
 alleletype=${2}
-suffix="${barcode}_${alleletype}"
 
 #===========================================================
 #? Input
 #===========================================================
 
-reference=".DAJIN_temp/fasta/${alleletype}.fa"
+suffix="${barcode}_${alleletype}"
+mapping_alleletype="${alleletype}"
+[ "$alleletype" = "normal" ] && mapping_alleletype="wt"
+[ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
+
+reference=".DAJIN_temp/fasta/${mapping_alleletype}.fa"
 query=".DAJIN_temp/fasta_ont/${barcode}.fa"
 
 #===========================================================
@@ -44,14 +47,13 @@ query=".DAJIN_temp/fasta_ont/${barcode}.fa"
 #===========================================================
 #? Temporal
 #===========================================================
+
 tmp_query=".DAJIN_temp/tmp_query_${suffix}"_$$
-# tmp_mapping=".DAJIN_temp/tmp_mapping_${suffix}"
 tmp_seqID=".DAJIN_temp/tmp_seqID_${suffix}"_$$
 
 tmp_all=".DAJIN_temp/tmp_all_${suffix}"_$$
 tmp_primary=".DAJIN_temp/tmp_primary_${suffix}"_$$
 tmp_secondary=".DAJIN_temp/tmp_secondary_${suffix}"_$$
-
 
 ################################################################################
 #! Function definitions
@@ -104,12 +106,8 @@ mids_compressed(){
 }
 
 ################################################################################
-#! Extract alleletype in fasta file
+#! Extract fasta file including "mapping_alleletype"
 ################################################################################
-
-#===========================================================
-#? 変数の定義
-#===========================================================
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     grep "${barcode}" |
@@ -134,8 +132,8 @@ cat > "${tmp_query}"
 reflength=$(cat "${reference}" | grep -v "^>" | awk '{print length($0)}')
 
 minimap2 -ax splice "${reference}" "${tmp_query}" --cs=long 2>/dev/null |
-    awk -v alleletype="${alleletype}" -v reflen="${reflength}" \
-        '$3 == alleletype && length($10) < reflen * 1.1' |
+    awk -v mapping_alleletype="${mapping_alleletype}" -v reflen="${reflength}" \
+        '$3 == mapping_alleletype && length($10) < reflen * 1.1' |
     sort |
     # append alignment info
     awk '{
@@ -167,7 +165,6 @@ cat "${tmp_primary}" "${tmp_secondary}" |
     sort -t " " -k 2,2n |
     awk '{seq_[$1]=seq_[$1]" "$2" "$3" "$4}
         END{for(key in seq_) print key,seq_[key]}' |
-    # grep inversion_100_aligned_7213_F_54_2709_73 |
     awk 'NF==3
     #---------------------------------------
     #* Flox deletion

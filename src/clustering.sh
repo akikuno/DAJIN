@@ -17,13 +17,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===============================================================================
 #? TEST Aurguments
 #===============================================================================
-# barcode="barcode48"
-# alleletype="wt"
-
-# suffix="${barcode}"_"${alleletype}"
-# mapping_alleletype="${alleletype}"
-# [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
-# [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
+# barcode="barcode32"
+# alleletype="abnormal"
 
 #===========================================================
 #? Auguments
@@ -32,19 +27,16 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 barcode="${1}"
 alleletype="${2}"
 
-suffix="${barcode}"_"${alleletype}"
-mapping_alleletype="${alleletype}"
-[ "$alleletype" = "normal" ] && mapping_alleletype="wt"
-[ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
-
 #===========================================================
 #? Input
 #===========================================================
 
+suffix="${barcode}"_"${alleletype}"
+
 #===========================================================
 #? Output
 #===========================================================
-mkdir -p ".DAJIN_temp/clustering/temp/" # 念のため
+mkdir -p ".DAJIN_temp/clustering/temp/"
 query_score=".DAJIN_temp/clustering/temp/query_score_${suffix}"
 query_seq=".DAJIN_temp/clustering/temp/query_seq_${suffix}"
 query_label=".DAJIN_temp/clustering/temp/query_labels_${suffix}"
@@ -62,7 +54,7 @@ MIDS_que=".DAJIN_temp/clustering/temp/MIDS_${suffix}"
 #? MIDS conversion
 #===========================================================
 
-./DAJIN/src/mids_clustering.sh "${barcode}" "${mapping_alleletype}" > "${MIDS_que}"
+./DAJIN/src/mids_clustering.sh "${barcode}" "${alleletype}" > "${MIDS_que}"
 
 #===========================================================
 #? Output Sequence ID and Lable
@@ -82,7 +74,7 @@ cat > "${query_label}"
 #===========================================================
 
 #---------------------------------------
-#* 挿入塩基を1つの挿入塩基数にまとめて配列のズレを無くす
+#* output query seq
 #---------------------------------------
 cat "${MIDS_que}" |
     grep "${barcode}" |
@@ -92,9 +84,9 @@ cat "${MIDS_que}" |
     cut -d " " -f 2 |
 cat > "${query_seq}"
 
-# ----------------------------------------------------------
-# Output Genomic coodinates (Query)
-# ----------------------------------------------------------
+#----------------------------------------------------------
+#* Output query score
+#----------------------------------------------------------
 cat "${query_seq}" |
     awk -F '' 'BEGIN{OFS=","} {$1=$1;print $0}' |
     sed "s/=/M/g" |

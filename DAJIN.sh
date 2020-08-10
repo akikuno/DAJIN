@@ -136,9 +136,10 @@ fi
 #===========================================================
 
 genome_check=$(
-    wget -qO - "https://gggenome.dbcls.jp/ja/help.html#db_list" |
-    grep "href" |
-    grep -c "/${genome:-XXX}/")
+    wget -q -O - "http://hgdownload.soe.ucsc.edu/downloads.html" |
+    grep hgTracks |
+    grep -c "${genome:-XXX}"
+)
 
 [ "$genome_check" -eq 0 ] &&
     error_exit "$genome: No such reference genome"
@@ -472,50 +473,54 @@ Allele prediction
 
 EOF
 
-#===========================================================
-#? Train models
-#===========================================================
+./DAJIN/src/ml_prediction.sh "${control}" "${threads}" \
+> .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt ||
+exit 1
 
-cat .DAJIN_temp/data/MIDS_* |
-    grep "_sim" |
-    sed -e "s/_aligned_reads//g" |
-cat > ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
+# #===========================================================
+# #? Train models
+# #===========================================================
 
-cat .DAJIN_temp/data/MIDS_"${control}"_wt |
-    grep -v "IIIIIIIIII" |
-    grep -v "DDDDDDDDDD" |
-    grep -v "SSSSSSSSSS" |
-    head -n 10000 |
-    sed "s/${control}$/wt_simulated/g" |
-cat >> ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
+# cat .DAJIN_temp/data/MIDS_* |
+#     grep "_sim" |
+#     sed -e "s/_aligned_reads//g" |
+# cat > ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
+
+# cat .DAJIN_temp/data/MIDS_"${control}"_wt |
+#     grep -v "IIIIIIIIII" |
+#     grep -v "DDDDDDDDDD" |
+#     grep -v "SSSSSSSSSS" |
+#     head -n 10000 |
+#     sed "s/${control}$/wt_simulated/g" |
+# cat >> ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
 
 
-python ./DAJIN/src/ml_simulated.py \
-    ".DAJIN_temp/data/DAJIN_MIDS_sim.txt" "${threads}"
+# python ./DAJIN/src/ml_simulated.py \
+#     ".DAJIN_temp/data/DAJIN_MIDS_sim.txt" "${threads}"
 
-#===========================================================
-#? Predict labels
-#===========================================================
+# #===========================================================
+# #? Predict labels
+# #===========================================================
 
-true > ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
+# true > ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
 
-find .DAJIN_temp/data/MIDS* |
-    grep -v sim |
-    sort |
-while read -r input; do
-    barcode=$(echo $input | cut -d "_" -f 3)
-    echo "Prediction of ${barcode} is now processing..."
+# find .DAJIN_temp/data/MIDS* |
+#     grep -v sim |
+#     sort |
+# while read -r input; do
+#     barcode=$(echo $input | cut -d "_" -f 3)
+#     echo "Prediction of ${barcode} is now processing..."
 
-    python ./DAJIN/src/ml_real.py \
-        "${input}" \
-        "${mutation_type}" "${threads}" ||
-    exit 1
-done
+#     python ./DAJIN/src/ml_real.py \
+#         "${input}" \
+#         "${mutation_type}" "${threads}" ||
+#     exit 1
+# done
 
-cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    sort |
-cat > .DAJIN_temp/tmp_$$
-mv .DAJIN_temp/tmp_$$ .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt
+# cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
+#     sort |
+# cat > .DAJIN_temp/tmp_$$
+# mv .DAJIN_temp/tmp_$$ .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt
 
 
 ################################################################################
@@ -656,7 +661,6 @@ rm .DAJIN_temp/details/tmp_nameid
 #===========================================================
 
 Rscript DAJIN/src/details_plot.R
-sleep 3 # wait for outputting pdf file
 
 ################################################################################
 #! Mapping by minimap2 for IGV visualization
@@ -685,7 +689,7 @@ if [ "_$mutation_type" = "_S" ]; then
     mv .DAJIN_temp/fasta_ont/wt_del* .DAJIN_temp/
 fi
 
-./DAJIN/src/mapping.sh "${genome:-mm10}" "${threads:-1}"
+./DAJIN/src/mapping.sh "${genome:-mm10}" "${threads:-1}" || exit 1
 
 if [ "_$mutation_type" = "_S" ]; then
     mv .DAJIN_temp/wt_ins* .DAJIN_temp/fasta_ont/
@@ -787,6 +791,10 @@ rm -rf "${output_dir:-DAJIN_results}"/Consensus/temp 2>/dev/null
 #===========================================================
 
 cp .DAJIN_temp/details/* "${output_dir:-DAJIN_results}"/
+
+while ! [ -f  "${output_dir:-DAJIN_results}"/Details.pdf ]; do
+    sleep 3 # wait for outputting pdf file
+done
 
 ################################################################################
 #! Finish call
