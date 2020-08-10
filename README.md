@@ -11,10 +11,12 @@ A simple, rapid, scalable whole-allelic profile of genome editing aminals using 
 
 ## SETUP
 
-### Linux
+### Linux and macOS
 
-#### 1. Install `conda`
-The [Anaconda](https://docs.anaconda.com/anaconda/install/) or [Miniconda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) installation is required.
+#### 1. Install `git` and `conda`
+
+- [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+- [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)
 
 #### 2. Clone DAJIN repository
 
@@ -22,15 +24,15 @@ The [Anaconda](https://docs.anaconda.com/anaconda/install/) or [Miniconda](https
 git clone https://github.com/akikuno/DAJIN.git
 ```
 
----
 ### Windows10
-Windows user needs WSL and settings by Anaconda Prompt.  
-See [this page](https://github.com/akikuno/DAJIN/blob/master/misc/WindowsOS_Setting.md).  
 
----
+Windows10 user needs [WSL2](https://docs.microsoft.com/en-us/windows/wsl/install-win10).
+
+<!-- ---
 ### macOS
+
 macOS is not recommended because [Nvidia CUDA will not support it](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html).  
-You can use DAJIN with CPU though long computational time.  
+You can use DAJIN with CPU though long computational time.   -->
 
 ## USAGE
 
@@ -38,7 +40,7 @@ You can use DAJIN with CPU though long computational time.
 ./DAJIN/DAJIN.sh -f [text file] (described at "Input")
 ```
 
-### Example
+### Example usage
 
 ```
 ./DAJIN/DAJIN.sh -f DAJIN/example/desing.txt
@@ -46,7 +48,7 @@ You can use DAJIN with CPU though long computational time.
 
 ### Input file
 
-Input file should be formatted like below:
+Input file should be formatted as below:
 
 ```
 design=DAJIN/example/design.txt
@@ -93,14 +95,16 @@ The sample01 is a wild-type mice as a control, whereas the sample02 and sample03
 
 This result shows ~75% of reads from sample02 are labeled as "target" (flox), and indicates it can be the desired mouse that has homozygous floxed allele.
 
-
 #### Consensus
 
 The `Conseusus` folder includes FASTA and HTML files which display conseusus sequence in each allele.
 
+> in preparation
+
 
 #### BAM
 
+> in preparation
 
 ## License
 
