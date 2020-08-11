@@ -17,9 +17,9 @@ VERSION=1.0
 
 usage(){
 cat <<- USAGE
-Usage     : DAJIN.sh -f [text file] (described at "Input")
+Usage     : DAJIN.sh -i [text file] (described at "Input")
 
-Example   : DAJIN.sh -f DAJIN/example/example.txt
+Example   : DAJIN.sh -i DAJIN/example/example.txt
 
 Input     : Input file should be formatted as below:
             # Example
@@ -69,7 +69,7 @@ do
         -version | -versio | -versi | -vers | -ver | -ve | -v )
             echo "DAJIN version: $VERSION" && exit 0
             ;;
-        --file | -f )
+        --input | --in | --i | -i )
             if ! [ -r "$2" ]; then
                 error_exit "$2: No such file"
             fi
