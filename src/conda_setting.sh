@@ -26,6 +26,13 @@ if [ "$(conda info -e | grep -c DAJIN_nanosim)" -eq 0 ]; then
     conda install -y -n DAJIN_nanosim minimap2
 fi
 
+conda activate DAJIN_nanosim
+
+python ./DAJIN/utils/NanoSim/src/simulator.py --version >/dev/null 2>&1 ||
+error_exit '"NanoSim" installation has failed'
+
+rm -rf DAJIN/utils/NanoSim/src/__pycache__
+
 #===========================================================
 #? DAJIN
 #===========================================================
@@ -52,8 +59,15 @@ gzip --version > /dev/null || error_exit 'Command "gzip" installation has failed
 wget --version > /dev/null || error_exit 'Command "wget" installation has failed'
 python --version > /dev/null || error_exit 'Command "python" installation has failed'
 Rscript --version > /dev/null || error_exit 'Command "Rscript" installation has failed'
-samtools --version > /dev/null || error_exit 'Command "samtools" installation has failed'
 minimap2 --version > /dev/null || error_exit 'Command "minimap2" installation has failed'
 
 python -c "import tensorflow as tf" > /dev/null ||
 error_exit '"Tensorflow" not found'
+
+if samtools --version 2>&1 | grep libcrypto >/dev/null; then
+    CONDA_ENV=$(conda info -e | awk '$2=="*"{print $NF}')
+    (cd "${CONDA_ENV}"/lib/ && ln -s libcrypto.so.1.1 libcrypto.so.1.0.0)
+fi
+samtools --version > /dev/null || error_exit 'Command "samtools" installation has failed'
+
+exit 0
