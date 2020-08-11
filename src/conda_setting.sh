@@ -7,7 +7,7 @@ error_exit() {
     exit 1
 }
 
-type conda > /dev/null 2>&1 || error_exit 'Command "conda" not found'
+conda --version > /dev/null || error_exit 'Command "conda" not found'
 
 #===========================================================
 #? DAJIN_nanosim
@@ -20,6 +20,7 @@ if [ "$(conda info -e | grep -c DAJIN_nanosim)" -eq 0 ]; then
     conda config --add channels defaults
     conda config --add channels bioconda
     conda config --add channels conda-forge
+    conda update -y conda
     conda create -y -n DAJIN_nanosim python=3.6
     conda install -y -n DAJIN_nanosim --file ./DAJIN/utils/NanoSim/requirements.txt
     conda install -y -n DAJIN_nanosim minimap2
@@ -33,6 +34,7 @@ if [ "$(conda info -e | cut -d " " -f 1 | grep -c DAJIN$)" -eq 0 ]; then
     conda config --add channels defaults
     conda config --add channels bioconda
     conda config --add channels conda-forge
+    conda update -y conda
     conda create -y -n DAJIN python=3.7 \
         anaconda wget \
         tensorflow tensorflow-gpu \
@@ -46,11 +48,12 @@ fi
 
 conda activate DAJIN
 
-type gzip > /dev/null 2>&1 || error_exit 'Command "gzip" not found'
-type wget > /dev/null 2>&1 || error_exit 'Command "wget" not found'
-type python > /dev/null 2>&1 || error_exit 'Command "python" not found'
-type samtools > /dev/null 2>&1 || error_exit 'Command "samtools" not found'
-type minimap2 > /dev/null 2>&1 || error_exit 'Command "minimap2" not found'
+gzip --version > /dev/null || error_exit 'Command "gzip" installation has failed'
+wget --version > /dev/null || error_exit 'Command "wget" installation has failed'
+python --version > /dev/null || error_exit 'Command "python" installation has failed'
+Rscript --version > /dev/null || error_exit 'Command "Rscript" installation has failed'
+samtools --version > /dev/null || error_exit 'Command "samtools" installation has failed'
+minimap2 --version > /dev/null || error_exit 'Command "minimap2" installation has failed'
 
-python -c "import tensorflow as tf" > /dev/null 2>&1 ||
+python -c "import tensorflow as tf" > /dev/null ||
 error_exit '"Tensorflow" not found'
