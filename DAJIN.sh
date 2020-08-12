@@ -1,264 +1,23 @@
 #!/bin/bash
 
+
 ################################################################################
 #! Initialize shell environment
 ################################################################################
 
-set -u
 umask 0022
 export LC_ALL=C
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
-
 ################################################################################
-#! Define the functions for printing usage and error message
-################################################################################
-VERSION=1.0
-
-usage(){
-cat <<- USAGE
-Usage     : DAJIN.sh -f [text file] (described at "Input")
-
-Example   : DAJIN.sh -f DAJIN/example/example.txt
-
-Input     : Input file should be formatted as below:
-            # Example
-            ------
-            design=DAJIN/example/design.txt
-            input_dir=DAJIN/example/demultiplex
-            control=barcode01
-            genome=mm10
-            grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
-            output_dir=DAJIN_cables2
-            threads=10
-            filter=on
-            ------
-            - desing: a multi-FASTA file contains sequences of each genotype. ">wt" and ">target" must be included. 
-            - input_dir: a directory contains FASTA or FASTQ files of long-read sequencing
-            - control: control barcode ID
-            - genome: reference genome. e.g. mm10, hg38
-            - grna: gRNA sequence(s). multiple gRNA sequences must be deliminated by comma.
-            - output_dir (optional): output directory name. optional. Default is "DAJIN_results"
-            - threads (optional): Default is two-thirds of available CPU threads.
-            - filter (optional): set filter to remove very minor allele (less than 3%). Default is "on"
-USAGE
-}
-
-usage_and_exit(){
-    usage
-    exit 1
-}
-
-error_exit() {
-    echo "$@" 1>&2
-    exit 1
-}
-
-################################################################################
-#! Parse arguments
-################################################################################
-[ $# -eq 0 ] && usage_and_exit
-
-while [ $# -gt 0 ]
-do
-    case "$1" in
-        --help | --hel | --he | --h | '--?' | -help | -hel | -he | -h | '-?')
-            usage_and_exit
-            ;;
-        --version | --versio | --versi | --vers | --ver | --ve | --v | \
-        -version | -versio | -versi | -vers | -ver | -ve | -v )
-            echo "DAJIN version: $VERSION" && exit 0
-            ;;
-        --file | -f )
-            if ! [ -r "$2" ]; then
-                error_exit "$2: No such file"
-            fi
-            design=$(cat "$2" | grep "design" | sed -e "s/ //g" -e "s/.*=//g")
-            ont_dir=$(cat "$2" | grep "input_dir" | sed -e "s/ //g" -e "s/.*=//g")
-            ont_cont=$(cat "$2" | grep "control" | sed -e "s/ //g" -e "s/.*=//g")
-            genome=$(cat "$2" | grep "genome" | sed -e "s/ //g" -e "s/.*=//g")
-            grna=$(cat "$2" | grep "grna" | sed -e "s/ //g" -e "s/.*=//g")
-            output_dir=$(cat "$2" | grep "output_dir" | sed -e "s/ //g" -e "s/.*=//g")
-            threads=$(cat "$2" | grep "threads" | sed -e "s/ //g" -e "s/.*=//g")
-            filter=$(cat "$2" | grep "filter" | sed -e "s/ //g" -e "s/.*=//g")
-            ;;
-        -* )
-        error_exit "Unrecognized option : $1"
-            ;;
-        *)
-            break
-            ;;
-    esac
-    shift
-done
-
-#===========================================================
-#? Check required arguments
-#===========================================================
-
-if [ -z "$design" ] || [ -z "$ont_dir" ] || [ -z "$ont_cont" ] || [ -z "$genome" ] || [ -z "$grna" ]
-then
-    error_exit "Required arguments are not specified"
-fi
-
-#===========================================================
-#? Check fasta file
-#===========================================================
-
-if ! [ -e "$design" ]; then
-    error_exit "$design: No such file"
-fi
-
-if [ "$(grep -c '>target' ${design})" -eq 0 ] || [ "$(grep -c '>wt' ${design})" -eq 0 ]; then
-    error_exit "$design: design must include \">target\" and \">wt\". "
-fi
-
-#===========================================================
-#? Check directory
-#===========================================================
-
-if ! [ -d "${ont_dir}" ]; then
-    error_exit "$ont_dir: No such directory"
-fi
-
-if [ -z "$(ls $ont_dir)" ]; then
-    error_exit "$ont_dir: Empty directory"
-fi
-
-#===========================================================
-#? Check control
-#===========================================================
-
-[ -z "$(find ${ont_dir}/ -name ${ont_cont}.f*)" ] &&
-error_exit "$ont_cont: No control file in ${ont_dir}"
-
-#===========================================================
-#? Check genome
-#===========================================================
-
-genome_check=$(
-    wget -qO - "https://gggenome.dbcls.jp/ja/help.html#db_list" |
-    grep "href" |
-    grep -c "/${genome:-XXX}/")
-
-[ "$genome_check" -eq 0 ] &&
-error_exit "$genome: No such reference genome"
-
-#===========================================================
-#? Check grna
-#===========================================================
-
-set $(echo "${grna}" | sed "s/,/ /g")
-x=1
-while [ "${x}" -le $# ]
-do
-    [ "$(grep -c ${1} ${design})" -eq 0 ] &&
-    error_exit "No gRNA sites"
-    x=$(( "${x}" + 1 ))
-done
-
-#===========================================================
-#? Check output directory name
-#===========================================================
-if [ $(echo "$output_dir" | grep  -c -e '\\' -e ':' -e '*' -e '?' -e '"' -e '<' -e '>' -e '|') -eq 1 ]; then
-    error_exit "$output_dir: invalid directory name"
-fi
-mkdir -p "${output_dir:=DAJIN_results}"/BAM "${output_dir}"/Consensus
-
-
-#===========================================================
-#? Check "filter"
-#===========================================================
-if [ -z "${filter}" ];then
-    filter=on
-elif [ _"${filter}" = _"off" ];then
-    :
-else
-    error_exit "${filter}: invalid filter name (on/off)"
-fi
-
-#===========================================================
-#? Define threads
-#===========================================================
-
-expr "${threads}" + 1 >/dev/null 2>&1
-if [ $? -lt 2 ]; then
-    :
-else
-    unset threads
-    # Linux and similar...
-    threads=$(getconf _NPROCESSORS_ONLN 2>/dev/null | awk '{print int($0/1.5+0.5)}')
-    # FreeBSD and similar...
-    [ -z "$threads" ] && threads=$(getconf NPROCESSORS_ONLN | awk '{print int($0/1.5)+0.5}')
-    # Solaris and similar...
-    [ -z "$threads" ] && threads=$(ksh93 -c 'getconf NPROCESSORS_ONLN' | awk '{print int($0/1.5+0.5)}')
-    # Give up...
-    [ -z "$threads" ] && threads=1
-fi
-
-################################################################################
-#! Setting Conda environment
+#! Argument parse
 ################################################################################
 
-set +u
-type conda > /dev/null 2>&1 || error_exit 'Command "conda" not found'
-
-CONDA_BASE=$(conda info --base)
-. "${CONDA_BASE}/etc/profile.d/conda.sh"
-
-#===========================================================
-#? DAJIN_nanosim
-#===========================================================
-
-if [ "$(conda info -e | grep -c DAJIN_nanosim)" -eq 0 ]; then
-    conda config --add channels defaults
-    conda config --add channels bioconda
-    conda config --add channels conda-forge
-    conda create -y -n DAJIN_nanosim python=3.7
-    conda install -y -n DAJIN_nanosim --file ./DAJIN/utils/NanoSim/requirements.txt
-    conda install -y -n DAJIN_nanosim minimap2
-fi
-
-#===========================================================
-#? DAJIN
-#===========================================================
-
-if [ "$(conda info -e | cut -d " " -f 1 | grep -c DAJIN$)" -eq 0 ]; then
-    conda config --add channels defaults
-    conda config --add channels bioconda
-    conda config --add channels conda-forge
-    conda create -y -n DAJIN python=3.7 \
-        anaconda nodejs wget \
-        tensorflow tensorflow-gpu \
-        samtools minimap2 \
-        r-essentials r-base
-fi
-set -u
-
-#===========================================================
-#? Required software
-#===========================================================
-
-set +u
-conda activate DAJIN
-set -u
-
-type gzip > /dev/null 2>&1 || error_exit 'Command "gzip" not found'
-type wget > /dev/null 2>&1 || error_exit 'Command "wget" not found'
-type python > /dev/null 2>&1 || error_exit 'Command "python" not found'
-type samtools > /dev/null 2>&1 || error_exit 'Command "samtools" not found'
-type minimap2 > /dev/null 2>&1 || error_exit 'Command "minimap2" not found'
-
-python -c "import tensorflow as tf" > /dev/null 2>&1 ||
-error_exit '"Tensorflow" not found'
-
-#===========================================================
-#? For WSL (Windows Subsystem for Linux)
-#===========================================================
-
-uname -a |
-grep Microsoft 1>/dev/null 2>/dev/null &&
-alias python="python.exe"
+design=prdm14_cas9.fa
+control=barcode26
+threads=12
+genome=mm10
+input_dir=fastq
 
 ################################################################################
 #! Formatting environments
@@ -268,7 +27,7 @@ alias python="python.exe"
 #? Make temporal directory
 #===========================================================
 rm -rf ".DAJIN_temp" 2>/dev/null || true
-dirs="fasta fasta_conv fasta_ont NanoSim bam igvjs data clustering/temp seqlogo/temp"
+dirs="fasta fasta_conv fasta_ont NanoSim bam data"
 
 echo "${dirs}" |
     sed "s:^:.DAJIN_temp/:g" |
@@ -289,7 +48,10 @@ cat > .DAJIN_temp/fasta/fasta.fa
 
 design_LF=".DAJIN_temp/fasta/fasta.fa"
 
-# Separate multiple-FASTA into FASTA files
+#---------------------------------------
+#* Separate multiple-FASTA into FASTA files
+#---------------------------------------
+
 cat ${design_LF} |
     sed "s/^/@/g" |
     tr -d "\n" |
@@ -345,18 +107,20 @@ cat ${design_LF} |
         print $1"\n"toupper($2) > output
     }'
 
-#---------------------------------------
-#* Define mutation type
-#---------------------------------------
+#===========================================================
+#? Define mutation type
+#? Insertion = I; Deletion = D; Substitution = S
+#===========================================================
+
 mutation_type=$(
-    minimap2 -ax map-ont \
+    minimap2 -ax splice \
         .DAJIN_temp/fasta/wt.fa \
         .DAJIN_temp/fasta/target.fa \
         --cs 2>/dev/null |
     grep -v "^@" |
     awk '{
         cstag=$(NF-1)
-        if(cstag ~ "-") print "D"
+        if(cstag ~ "~") print "D"
         else if(cstag ~ "\+") print "I"
         else if(cstag ~ "\*") print "S"
         }' 2>/dev/null
@@ -398,7 +162,7 @@ fi
 #? Format ONT reads into FASTA file
 #===========================================================
 
-for input in ${ont_dir}/* ; do
+for input in ${input_dir}/* ; do
     output=$(
         echo "${input}" |
         sed -e "s#.*/#.DAJIN_temp/fasta_ont/#g" \
@@ -418,23 +182,22 @@ done
 ################################################################################
 #! NanoSim (v2.5.0)
 ################################################################################
-set +u
+
 conda activate DAJIN_nanosim
-set -u
 
 cat << EOF
-++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 NanoSim read simulation
-++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 EOF
 
 #===========================================================
 #? NanoSim
 #===========================================================
 
-printf "Read analysis...\n"
 ./DAJIN/utils/NanoSim/src/read_analysis.py genome \
-    -i ".DAJIN_temp/fasta_ont/${ont_cont}.fa" \
+    -i ".DAJIN_temp/fasta_ont/${control}.fa" \
     -rg .DAJIN_temp/fasta_conv/wt.fa \
     -t ${threads:-1} \
     -o .DAJIN_temp/NanoSim/training
@@ -475,12 +238,13 @@ rm -rf DAJIN/utils/NanoSim/src/__pycache__
 
 printf 'Success!!\nSimulation is finished\n'
 
+
+
 ################################################################################
 #! MIDS conversion
 ################################################################################
 set +u
 conda activate DAJIN
-set -u
 
 cat << EOF
 ++++++++++++++++++++++++++++++++++++++++++
@@ -491,7 +255,10 @@ EOF
 reference=".DAJIN_temp/fasta_conv/wt.fa"
 query=".DAJIN_temp/fasta_conv/target.fa"
 
-# Get mutation loci...
+#===========================================================
+#? Get mutation loci
+#===========================================================
+
 cat "${reference}" |
     minimap2 -ax splice - "${query}" --cs 2>/dev/null |
     awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
@@ -500,8 +267,12 @@ cat "${reference}" |
     awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
 cat > .DAJIN_temp/data/mutation_points
 
-# MIDS conversion...
+#===========================================================
+#? MIDS conversion
+#===========================================================
+
 find .DAJIN_temp/fasta_ont -type f | sort |
+    grep -e "${ont_cont}" -e sim |
     awk '{print "./DAJIN/src/mids_classification.sh", $0, "wt", "&"}' |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)
@@ -513,303 +284,110 @@ sh - 2>/dev/null
 
 printf "MIDS conversion was finished...\n"
 
-################################################################################
-#! Prediction
-################################################################################
+#===========================================================
+#? ACGT conversion
+#===========================================================
 
-cat << EOF
-++++++++++++++++++++++++++++++++++++++++++
-Allele prediction
-++++++++++++++++++++++++++++++++++++++++++
-EOF
+find .DAJIN_temp/fasta_ont -type f | sort |
+    grep -e "${ont_cont}" -e sim |
+    awk '{print "./DAJIN/src/acgt_classification.sh", $0, "wt", "&"}' |
+    awk -v th=${threads:-1} '{
+        if (NR%th==0) gsub("&","&\nwait",$0)
+        print}
+        END{print "wait"}' |
+sh - 2>/dev/null
 
+[ "_${mutation_type}" = "_S" ] && rm .DAJIN_temp/data/MIDS_target*
+
+printf "ACGT conversion was finished...\n"
 
 #===========================================================
-#? Train models
+#? Prepare data
 #===========================================================
+
+#---------------------------------------
+#* MIDS
+#---------------------------------------
 
 cat .DAJIN_temp/data/MIDS_* |
     grep "_sim" |
+    grep -v "^ab" |
     sed -e "s/_aligned_reads//g" |
-cat > ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
+cat > ".DAJIN_temp/data/DAJIN_MIDS_train.txt"
 
-cat .DAJIN_temp/data/MIDS_"${ont_cont}"_wt |
-    grep -v "IIIIIIIIII" |
-    grep -v "DDDDDDDDDD" |
-    grep -v "SSSSSSSSSS" |
-    head -n 10000 |
-    sed "s/${ont_cont}$/wt_simulated/g" |
-cat >> ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
+head -n 1000 .DAJIN_temp/data/MIDS_* |
+    grep -e negacon -e del |
+    grep -v DAJIN_temp |
+    grep -v "^$" |
+    grep "^ab" |
+    sed -e "s/_aligned_reads//g" |
+cat > ".DAJIN_temp/data/DAJIN_MIDS_test.txt"
 
+#---------------------------------------
+#* ACGT
+#---------------------------------------
+
+cat .DAJIN_temp/data/ACGT_* |
+    grep "_sim" |
+    grep -v "^ab" |
+    sed -e "s/_aligned_reads//g" |
+cat > ".DAJIN_temp/data/DAJIN_ACGT_train.txt"
+
+head -n 1000 .DAJIN_temp/data/ACGT_* |
+    grep -e negacon -e del |
+    grep -v DAJIN_temp |
+    grep -v "^$" |
+    grep "^ab" |
+    sed -e "s/_aligned_reads//g" |
+cat > ".DAJIN_temp/data/DAJIN_ACGT_test.txt"
+
+################################################################################
+#! Report best metric for LOF
+################################################################################
+
+#---------------------------------------
+#* MIDS
+#---------------------------------------
+
+
+################################################################################
+#! Report accuracy: MIDS vs ACGT
+################################################################################
+
+#---------------------------------------
+#* MIDS
+#---------------------------------------
+
+: > accuracy_anomaly_detection.csv
+
+iter=20
+cat << EOF |
 python ./DAJIN/src/ml_simulated.py \
-    ".DAJIN_temp/data/DAJIN_MIDS_sim.txt" "${threads}"
-
-#===========================================================
-#? Predict labels
-#===========================================================
-
-true > ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
-
-find .DAJIN_temp/data/MIDS* |
-    grep -v sim |
-    sort |
-while read -r input; do
-    barcode=$(echo $input | cut -d "_" -f 3)
-    echo "${barcode} is now processing..."
-
-    python ./DAJIN/src/ml_real.py \
-        "${input}" \
-        "${mutation_type}" "${threads}" ||
-    exit 1
-done
-
-cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    sort |
-cat > .DAJIN_temp/tmp_$$
-mv .DAJIN_temp/tmp_$$ .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt
-
-printf "Prediction was finished...\n"
-
-# #===========================================================
-# #? Report the percentage of alleles in each sample
-# #===========================================================
+    ".DAJIN_temp/data/DAJIN_MIDS_train.txt" \
+    ".DAJIN_temp/data/DAJIN_MIDS_test.txt" \
+    "${threads}"
+EOF
+awk -v iter="${iter}" '{while(i<iter){
+        i++
+        print $0,"on", i
+        print $0,"off", i
+        }}' |
+sh -
 
 #---------------------------------------
-#* Report the percentage of alleles in each sample
+#* ACGT
 #---------------------------------------
 
-cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    cut -f 2,3 |
-    sort |
-    uniq -c |
-    awk '{barcode[$2]+=$1
-        read_info[$2]=$1"____"$3" "read_info[$2]}
-    END{for(key in barcode) print key,barcode[key], read_info[key]}' |
-    awk '{for(i=3;i<=NF; i++) print $1,$2,$i}' |
-    sed "s/____/ /g" |
-    awk '{print $1, $3/$2*100, $4}' |
-cat > ".DAJIN_temp/tmp_prediction_proportion"
-
-################################################################################
-#! Clustering
-################################################################################
-cat << EOF
-++++++++++++++++++++++++++++++++++++++++++
-Allele clustering
-++++++++++++++++++++++++++++++++++++++++++
+iter=20
+cat << EOF |
+python ./DAJIN/src/ml_simulated.py \
+    ".DAJIN_temp/data/DAJIN_ACGT_train.txt" \
+    ".DAJIN_temp/data/DAJIN_ACGT_test.txt" \
+    "${threads}"
 EOF
-
-rm -rf .DAJIN_temp/clustering 2>/dev/null
-mkdir -p .DAJIN_temp/clustering/temp
-
-#===========================================================
-#? Prepare control score
-#===========================================================
-
-./DAJIN/src/clustering_prerequisit.sh "${ont_cont}" "wt" "${threads}"
-# wc -l .DAJIN_temp/clustering/temp/control_score_*
-
-#===========================================================
-#? Prepare control score
-#===========================================================
-
-cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    cut -f 2,3 |
-    sort -u |
-    #!--------------------------------------------------------
-    # grep barcode05 |
-    #!--------------------------------------------------------
-    awk '{print "./DAJIN/src/clustering.sh",$1, $2, "&"}' |
-    awk -v th=${threads:-1} '{
-        if (NR%th==0) gsub("&","&\nwait",$0)}1
-        END{print "wait"}' |
+awk -v iter="${iter}" '{while(i<iter){
+        i++
+        print $0,"on", i
+        print $0,"off", i
+        }}' |
 sh -
-
-#===========================================================
-#? Clustering by HDBSCAN
-#===========================================================
-
-cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    cut -f 2,3 |
-    sort -u |
-    #!--------------------------------------------------------
-    # grep -e barcode11 |
-    #!--------------------------------------------------------
-    awk '{print "./DAJIN/src/clustering_hdbscan.sh",$1, $2}' |
-sh -
-
-# ls -lh .DAJIN_temp/clustering/temp/hdbscan_*
-# rm .DAJIN_temp/tmp_*
-
-#===========================================================
-#? Allele percentage
-#===========================================================
-
-cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    cut -f 2 |
-    sort -u |
-    awk -v filter="${filter:-on}" \
-    '{print "./DAJIN/src/clustering_allele_percentage.sh", $1, filter}' |
-    #!--------------------------------------------------------
-    # grep barcode21 |
-    #!--------------------------------------------------------
-    awk -v th=${threads:-1} '{
-        if (NR%th==0) gsub("&","&\nwait",$0)}1
-        END{print "wait"}' |
-sh -
-
-################################################################################
-#! Get consensus sequence in each cluster
-################################################################################
-cat << EOF
-++++++++++++++++++++++++++++++++++++++++++
-"Report consensus sequence
-++++++++++++++++++++++++++++++++++++++++++
-EOF
-
-rm -rf .DAJIN_temp/consensus/ 2>/dev/null
-mkdir -p .DAJIN_temp/consensus/temp
-
-cat .DAJIN_temp/clustering/label* |
-    awk '{nr[$1]++; print $0, nr[$1]}' |
-    #!--------------------------------------------------------
-    grep -v abnormal |
-    #!--------------------------------------------------------
-    awk '{print "./DAJIN/src/consensus.sh", $0, "&"}' |
-    awk -v th=${threads:-1} '{
-        if (NR%th==0) gsub("&","&\nwait",$0)}1
-        END{print "wait"}' |
-sh -
-
-rm -rf "${output_dir:-DAJIN_results}"/Consensus/
-mkdir -p "${output_dir:-DAJIN_results}"/Consensus/
-cp .DAJIN_temp/consensus/* "${output_dir:-DAJIN_results}"/Consensus/ 2>/dev/null
-
-################################################################################
-#! Summarize to Details.csv
-################################################################################
-
-find .DAJIN_temp/consensus/* -type f |
-    grep html |
-    sed "s:.*/::g" |
-    sed "s/.html//g" |
-    sed "s/_/ /g" |
-    awk '{print $1"_"$2,$3,$4}' |
-    sort |
-cat > .DAJIN_temp/tmp_nameid
-
-cat .DAJIN_temp/clustering/label* |
-    awk '{nr[$1]++; print $0, nr[$1]}' |
-    awk '{print $1"_allele"$5, $4, $2}' |
-    sort |
-    join -a 1 - .DAJIN_temp/tmp_nameid |
-    sed "s/_/ /" |
-    awk '$4=="abnormal" {$5="mutation"}1' |
-    awk 'BEGIN{OFS=","}
-        {gsub("allele","",$2)
-        if($6 == "target") $4 = "target"
-        if($4 == "abnormal") $6 ="+"; else $6 = "-"
-        gsub("intact","-", $5)
-        gsub("mutation","+", $5)
-
-        if($4 == "target" && $5 == "-" && $6 == "-") $7 = "+"
-        else $7 = "-"
-        }1' |
-    sed -e "1i Sample, Allele ID, % of reads, Allele type, Indel, Large indel, Design" |
-cat > "${output_dir:-DAJIN_results}"/Details.csv
-
-rm .DAJIN_temp/tmp_nameid
-
-################################################################################
-#! Mapping by minimap2 for IGV visualization
-################################################################################
-rm -rf .DAJIN_temp/bam/ 2>/dev/null
-mkdir -p .DAJIN_temp/bam/temp
-mkdir -p .DAJIN_temp/bam/reads20
-
-cat << EOF
-++++++++++++++++++++++++++++++++++++++++++
-Generate BAM files
-++++++++++++++++++++++++++++++++++++++++++
-EOF
-
-if [ "_$mutation_type" = "_S" ]; then
-    mv .DAJIN_temp/fasta_ont/wt_ins* .DAJIN_temp/
-    mv .DAJIN_temp/fasta_ont/wt_del* .DAJIN_temp/
-fi
-
-./DAJIN/src/mapping.sh "${genome:-mm10}" "${threads:-1}"
-
-# mkdir -p "${output_dir:-DAJIN_results}"/BAM
-# cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM
-
-if [ "_$mutation_type" = "_S" ]; then
-    mv .DAJIN_temp/wt_ins* .DAJIN_temp/fasta_ont/
-    mv .DAJIN_temp/wt_del* .DAJIN_temp/fasta_ont/
-fi
-
-#===========================================================
-#? Generate BAM files on each cluster
-#===========================================================
-
-cat .DAJIN_temp/clustering/label* |
-    awk '{nr[$1]++; print $0, nr[$1]}' |
-while read -r allele
-do
-    barcode=$(echo ${allele} | cut -d " " -f 1)
-    alleletype=$(echo ${allele} | cut -d " " -f 2)
-    cluster=$(echo ${allele} | cut -d " " -f 3)
-    alleleid=$(echo ${allele} | cut -d " " -f 5)
-    #
-    input_bam="${barcode}_${alleletype}"
-    output_bam="${barcode}_allele${alleleid}"
-    #
-    find .DAJIN_temp/clustering/result_allele_id* |
-        grep "${input_bam}" |
-        xargs cat |
-        awk -v cl="${cluster}" '$2==cl' |
-        cut -f 1 |
-        sort |
-    cat > ".DAJIN_temp/bam/temp/tmp_id_$$"
-
-    samtools view -h ".DAJIN_temp/bam/${barcode}".bam |
-        awk '/^@/{print}
-            NR==FNR{a[$1];next}
-            $1 in a' \
-            .DAJIN_temp/bam/temp/tmp_id_$$ - |
-        samtools sort -@ "${threads:-1}" 2>/dev/null |
-    cat > .DAJIN_temp/bam/"${output_bam}".bam
-    samtools index .DAJIN_temp/bam/"${output_bam}".bam
-
-    #---------------------------------------
-    #* reads20
-    #---------------------------------------
-
-    header_num=$(samtools view -H ".DAJIN_temp/bam/${barcode}".bam | wc -l)
-    bam_num=$((20 + "${header_num}"))
-    
-    samtools view -h .DAJIN_temp/bam/"${output_bam}".bam |
-        head -n "${bam_num}" |
-        samtools sort -@ "${threads:-1}" 2>/dev/null |
-    cat > .DAJIN_temp/bam/reads20/"${output_bam}".bam
-    samtools index .DAJIN_temp/bam/reads20/"${output_bam}".bam
-done
-rm -rf .DAJIN_temp/bam/temp 2>/dev/null
-
-rm -rf "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
-mkdir -p "${output_dir:-DAJIN_results}"/BAM/
-cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
-
-################################################################################
-#! IGV.js Alignment viewing
-################################################################################
-
-# printf "Visualizing alignment reads...\n"
-# printf "Browser will be launched. Click 'igvjs.html'.\n"
-# { npx live-server "${output_dir:-DAJIN_results}"/BAM/igvjs/ & } 1>/dev/null 2>/dev/null
-
-# rm -rf .DAJIN_temp 2>/dev/null
-
-printf "Completed! \nCheck ${output_dir:-DAJIN_results} directory.\n"
-
-exit 0
