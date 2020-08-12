@@ -1,5 +1,4 @@
 import os
-
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
 
@@ -23,42 +22,38 @@ from tensorflow.keras.models import Model
 #? TEST auguments
 #==========================================================
 
-# file_cont = ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
-# file_ab = ".DAJIN_temp/data/DAJIN_MIDS_ab.txt"
+# file_train = ".DAJIN_temp/data/DAJIN_MIDS_train.txt"
+# file_test = ".DAJIN_temp/data/DAJIN_MIDS_test.txt"
 # threads = 12
-# L2="on"
 
 #==========================================================
 #? Auguments
 #==========================================================
 
 args = sys.argv
-file_cont = args[1]
-file_ab = args[2]
-
+file_train = args[1]
+file_test = args[2]
 if args[3] == "":
     import multiprocessing
     threads = multiprocessing.cpu_count() // 2
 else:
     threads = int(args[3])
 
+iter_num = int(args[4])
+
+print(f"{iter_num} execution...")
+
 #==========================================================
 #? Input
 #==========================================================
 
-df_sim = pd.read_csv(file_cont, header=None, sep="\t")
+df_sim = pd.read_csv(file_train, header=None, sep="\t")
 df_sim.columns = ["seqID", "seq", "barcodeID"]
 
-if "MIDS" in file_cont:
+if "MIDS" in file_train:
     df_sim.seq = "MIDS=" + df_sim.seq
 else:
     df_sim.seq = "ACGT=" + df_sim.seq
-
-#==========================================================
-#? Output
-#==========================================================
-
-
 
 ################################################################################
 #! Training model
@@ -157,24 +152,25 @@ model.fit(
 #! Import abnormal reads
 ################################################################################
 
-df_ab = pd.read_csv(file_ab, header=None, sep="\t")
-df_ab.columns = ["seqID", "seq", "barcodeID"]
+df_test = pd.read_csv(file_test, header=None, sep="\t")
+df_test.columns = ["seqID", "seq", "barcodeID"]
 
-if "MIDS" in file_ab:
-    df_ab.seq = "MIDS=" + df_ab.seq
+if "MIDS" in file_test:
+    df_test.seq = "MIDS=" + df_test.seq
 else:
-    df_ab.seq = "ACGT=" + df_ab.seq
+    df_test.seq = "ACGT=" + df_test.seq
 
-X_real = onehot_encode_seq(df_ab.seq)
+X_real = onehot_encode_seq(df_test.seq)
 
 ################################################################################
 #! Novelity (Anomaly) detection
 ################################################################################
+
 # ===========================================================
 # ? FC layer
 # ===========================================================
+
 model_ = Model(model.get_layer(index=0).input, model.get_layer(index=-2).output)
-# model_.summary()
 train_vector = model_.predict(X_train, verbose=0, batch_size=32)
 predict_vector = model_.predict(X_real, verbose=0, batch_size=32)
 
@@ -182,10 +178,13 @@ predict_vector = model_.predict(X_real, verbose=0, batch_size=32)
 #? LocalOutlierFactor
 #===========================================================
 
+df_tmp = df_test
+
 metrics =  ["cityblock", "cosine", "euclidean", "l1", "l2", "manhattan",
             "braycurtis", "canberra", "chebyshev", "correlation", "dice", "hamming", "jaccard", "kulsinski", "minkowski", "rogerstanimoto", "russellrao",
-            "sokalmichener", "sokalsneath", "sqeuclidean", "yule"]
+            "sokalmichener", "sokalsneath", "sqeuclidean"]
 
+# metrics = ["cosine", "jaccard"]
 df_res = pd.DataFrame()
 for metric in metrics:
     print("======================")
@@ -200,29 +199,10 @@ for metric in metrics:
     clf.fit(train_vector)
     outliers = clf.predict(predict_vector)
     outliers = np.where(outliers == 1, "normal", "abnormal")
-    df_ab["outliers"] = outliers
-    print(df_ab.groupby("barcodeID").outliers.value_counts())
-    df_test = df_ab.groupby("barcodeID").outliers.value_counts().to_frame()
-    df_test["metric"] = metric
-    df_res = pd.concat([df_res, df_test])
+    df_test["outliers"] = outliers
+    df_tmp = df_test.groupby("barcodeID").outliers.value_counts().to_frame()
+    df_tmp["metric"] = metric
+    df_tmp["iter"] = iter_num
+    df_res = pd.concat([df_res, df_tmp])
 
-################################################################################
-#! Evaluation
-################################################################################
-
-from sklearn.metrics import accuracy_score
-# from sklearn.metrics import precision_score, recall_score, f1_score
-
-df_ab["true"] = np.where(df_ab.barcodeID.str.contains("nega"), 1, 0)
-
-df_report = pd.DataFrame(df_ab.groupby("barcodeID").apply(lambda x: accuracy_score(x.true, x.pred)))
-df_report.columns = ["value"]
-df_report["model"] = L2
-
-if "MIDS" in file_ab:
-    df_report["convertion"] = "MIDS"
-else:
-    df_report["convertion"] = "ACGT"
-
-df_report.to_csv("accuracy_anomaly_detection.csv", mode='a', header=False)
-
+df_res.to_csv("results_lof.csv", mode = "a", header=False)
