@@ -711,16 +711,6 @@ while read -r input_bam; do
 done
 
 ################################################################################
-#! IGV.js Alignment viewing
-################################################################################
-
-# printf "Visualizing alignment reads...\n"
-# printf "Browser will be launched. Click 'igvjs.html'.\n"
-# { npx live-server "${output_dir:-DAJIN_results}"/BAM/igvjs/ & } 1>/dev/null 2>/dev/null
-
-# rm -rf .DAJIN_temp 2>/dev/null
-
-################################################################################
 #! Move output files
 ################################################################################
 
