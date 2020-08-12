@@ -15,38 +15,40 @@ conda --version > /dev/null || error_exit 'Command "conda" not found'
 
 CONDA_BASE=$(conda info --base)
 . "${CONDA_BASE}/etc/profile.d/conda.sh"
+conda config --add channels defaults 2>/dev/null
+conda config --add channels bioconda 2>/dev/null
+conda config --add channels conda-forge 2>/dev/null
 
 if [ "$(conda info -e | grep -c DAJIN_nanosim)" -eq 0 ]; then
-    conda config --add channels defaults
-    conda config --add channels bioconda
-    conda config --add channels conda-forge
-    conda update -y conda
-    conda create -y -n DAJIN_nanosim python=3.6
-    conda install -y -n DAJIN_nanosim --file ./DAJIN/utils/NanoSim/requirements.txt
-    conda install -y -n DAJIN_nanosim minimap2
+    echo Create "DAJIN_nanosim" environment...
+    conda update -y conda 2>/dev/null
+    conda create -y -n DAJIN_nanosim python=3.6 2>/dev/null
+    conda install -y -n DAJIN_nanosim --file ./DAJIN/utils/NanoSim/requirements.txt 2>/dev/null
+    conda install -y -n DAJIN_nanosim minimap2 2>/dev/null
 fi
 
 conda activate DAJIN_nanosim
 
 python ./DAJIN/utils/NanoSim/src/simulator.py --version >/dev/null 2>&1 ||
 error_exit '"NanoSim" installation has failed'
+minimap2 --version > /dev/null || error_exit 'Command "minimap2" installation has failed'
 
 rm -rf DAJIN/utils/NanoSim/src/__pycache__
+
+conda deactivate
 
 #===========================================================
 #? DAJIN
 #===========================================================
 
 if [ "$(conda info -e | cut -d " " -f 1 | grep -c DAJIN$)" -eq 0 ]; then
-    conda config --add channels defaults
-    conda config --add channels bioconda
-    conda config --add channels conda-forge
-    conda update -y conda
+    echo Create "DAJIN" environment...
+    conda update -y conda >/dev/null 2>&1
     conda create -y -n DAJIN python=3.7 \
-        anaconda wget \
+        numpy pandas scikit-learn wget \
         tensorflow tensorflow-gpu \
         samtools minimap2 \
-        r-essentials r-base r-dbscan
+        r-essentials r-base r-dbscan >/dev/null 2>&1
 fi
 
 #===========================================================
