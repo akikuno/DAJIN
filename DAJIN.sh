@@ -13,13 +13,13 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 ################################################################################
 #! Define the functions for printing usage and error message
 ################################################################################
-VERSION=1.0
+VERSION=0.1
 
 usage(){
 cat <<- USAGE
-Usage     : DAJIN.sh -f [text file] (described at "Input")
+Usage     : DAJIN.sh -i [text file] (described at "Input")
 
-Example   : DAJIN.sh -f DAJIN/example/example.txt
+Example   : DAJIN.sh -i DAJIN/example/example.txt
 
 Input     : Input file should be formatted as below:
             # Example
@@ -69,7 +69,7 @@ do
         -version | -versio | -versi | -vers | -ver | -ve | -v )
             echo "DAJIN version: $VERSION" && exit 0
             ;;
-        --file | -f )
+        --input | --in | --i | -i )
             if ! [ -r "$2" ]; then
                 error_exit "$2: No such file"
             fi
@@ -477,51 +477,6 @@ EOF
 > .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt ||
 exit 1
 
-# #===========================================================
-# #? Train models
-# #===========================================================
-
-# cat .DAJIN_temp/data/MIDS_* |
-#     grep "_sim" |
-#     sed -e "s/_aligned_reads//g" |
-# cat > ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
-
-# cat .DAJIN_temp/data/MIDS_"${control}"_wt |
-#     grep -v "IIIIIIIIII" |
-#     grep -v "DDDDDDDDDD" |
-#     grep -v "SSSSSSSSSS" |
-#     head -n 10000 |
-#     sed "s/${control}$/wt_simulated/g" |
-# cat >> ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
-
-
-# python ./DAJIN/src/ml_simulated.py \
-#     ".DAJIN_temp/data/DAJIN_MIDS_sim.txt" "${threads}"
-
-# #===========================================================
-# #? Predict labels
-# #===========================================================
-
-# true > ".DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt"
-
-# find .DAJIN_temp/data/MIDS* |
-#     grep -v sim |
-#     sort |
-# while read -r input; do
-#     barcode=$(echo $input | cut -d "_" -f 3)
-#     echo "Prediction of ${barcode} is now processing..."
-
-#     python ./DAJIN/src/ml_real.py \
-#         "${input}" \
-#         "${mutation_type}" "${threads}" ||
-#     exit 1
-# done
-
-# cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-#     sort |
-# cat > .DAJIN_temp/tmp_$$
-# mv .DAJIN_temp/tmp_$$ .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt
-
 
 ################################################################################
 #! Clustering
@@ -590,7 +545,7 @@ sh - 2>/dev/null
 
 cat << EOF
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-"Report consensus sequence
+Report consensus sequence
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 EOF
@@ -756,16 +711,6 @@ while read -r input_bam; do
 done
 
 ################################################################################
-#! IGV.js Alignment viewing
-################################################################################
-
-# printf "Visualizing alignment reads...\n"
-# printf "Browser will be launched. Click 'igvjs.html'.\n"
-# { npx live-server "${output_dir:-DAJIN_results}"/BAM/igvjs/ & } 1>/dev/null 2>/dev/null
-
-# rm -rf .DAJIN_temp 2>/dev/null
-
-################################################################################
 #! Move output files
 ################################################################################
 
@@ -799,6 +744,8 @@ done
 ################################################################################
 #! Finish call
 ################################################################################
+
+rm -rf .DAJIN_temp
 
 cat << EOF
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

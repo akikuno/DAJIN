@@ -150,18 +150,15 @@ model.fit(
 #===========================================================
 
 model_ = Model(model.get_layer(index=0).input, model.get_layer(index=-2).output)
-# model_.summary()
 train_vector = model_.predict(X_train, verbose=0, batch_size=32)
-
-# del X_train  # <<<
 
 #===========================================================
 #? LocalOutlierFactor
 #===========================================================
 
 clf = LocalOutlierFactor(
-    n_neighbors=20,
-    metric="jaccard",
+    n_neighbors=100,
+    metric="euclidean",
     contamination="auto",
     leaf_size=30,
     novelty=True,
