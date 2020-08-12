@@ -58,7 +58,7 @@ conda activate DAJIN
 gzip --version > /dev/null || error_exit 'Command "gzip" installation has failed'
 wget --version > /dev/null || error_exit 'Command "wget" installation has failed'
 python --version > /dev/null || error_exit 'Command "python" installation has failed'
-Rscript --version > /dev/null || error_exit 'Command "Rscript" installation has failed'
+R --version > /dev/null || error_exit 'Command "Rscript" installation has failed'
 minimap2 --version > /dev/null || error_exit 'Command "minimap2" installation has failed'
 
 python -c "import tensorflow as tf" > /dev/null ||
@@ -69,5 +69,3 @@ if samtools --version 2>&1 | grep libcrypto >/dev/null; then
     (cd "${CONDA_ENV}"/lib/ && ln -s libcrypto.so.1.1 libcrypto.so.1.0.0)
 fi
 samtools --version > /dev/null || error_exit 'Command "samtools" installation has failed'
-
-exit 0
