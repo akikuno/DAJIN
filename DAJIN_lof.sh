@@ -343,10 +343,7 @@ cat > ".DAJIN_temp/data/DAJIN_ACGT_test.txt"
 #! Report best metric for LOF
 ################################################################################
 
-#---------------------------------------
-#* MIDS
-#---------------------------------------
-true > results_lof.csv
+true > results_lof_metrics.csv
 
 iter=20
 cat << EOF |
@@ -361,7 +358,7 @@ awk -v iter="${iter}" '{while(i<iter){
         }}' |
 sh -
 
-cat results_lof.csv |
+cat results_lof_metrics.csv |
     grep -v barcodeID |
     awk -F "," 'BEGIN{OFS=","}
     $2=="normal" && $3=="1000" {
@@ -372,5 +369,39 @@ cat results_lof.csv |
         print $0
         $2="normal"; $3="0"
         print $0; next}1' |
-cat > results_lof_add.csv
+cat > tmp_$$
+mv tmp_$$ results_lof_metrics.csv
 
+################################################################################
+#! Report best n_neighbors for LOF
+################################################################################
+
+true > results_lof_neighbor.csv
+
+
+iter=20
+cat << EOF |
+python ./DAJIN/src/ml_lof_neighbors.py \
+    ".DAJIN_temp/data/DAJIN_MIDS_train.txt" \
+    ".DAJIN_temp/data/DAJIN_MIDS_test.txt" \
+    "${threads}"
+EOF
+awk -v iter="${iter}" '{while(i<iter){
+        i++
+        print $0,i
+        }}' |
+sh -
+
+cat results_lof_neighbor.csv |
+    grep -v barcodeID |
+    awk -F "," 'BEGIN{OFS=","}
+    $2=="normal" && $3=="1000" {
+        print $0
+        $2="abnormal"; $3="0"
+        print $0; next}
+    $2=="abnormal" && $3=="1000"{
+        print $0
+        $2="normal"; $3="0"
+        print $0; next}1' |
+cat > tmp_$$
+mv tmp_$$ results_lof_neighbor.csv

@@ -186,23 +186,20 @@ metrics =  ["cityblock", "cosine", "euclidean", "l1", "l2", "manhattan",
 
 # metrics = ["cosine", "jaccard"]
 df_res = pd.DataFrame()
-for metric in metrics:
-    print("======================")
-    print(metric)
+for n_neighbor in [5, 10, 20, 50, 100, 200, 500, 1000]:
     clf = LocalOutlierFactor(
-    n_neighbors=20,
-    metric=metric,
-    leaf_size=30,
-    novelty=True,
-    n_jobs=threads,
+        n_neighbors=n_neighbor,
+        metric="euclidean",
+        novelty=True,
+        n_jobs=threads,
     )
     clf.fit(train_vector)
     outliers = clf.predict(predict_vector)
     outliers = np.where(outliers == 1, "normal", "abnormal")
     df_test["outliers"] = outliers
     df_tmp = df_test.groupby("barcodeID").outliers.value_counts().to_frame()
-    df_tmp["metric"] = metric
+    df_tmp["n_neighbor"] = n_neighbor
     df_tmp["iter"] = iter_num
     df_res = pd.concat([df_res, df_tmp])
 
-df_res.to_csv("results_lof_metrics.csv", mode = "a", header=False)
+df_res.to_csv("results_lof_neighbor.csv", mode = "a", header=False)
