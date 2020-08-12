@@ -67,7 +67,7 @@ if (length(allele_others) > 0){
 #==========================================================
 
 p <- ggplot(df, aes(x = Sample, y = `%_of_reads`, fill = Allele_type)) +
-    geom_col(position = position_stack()) +
+    geom_col(position = position_stack(), color = "black", size = 0.5) +
     scale_fill_manual(
         name = "Allele type",
         values = color) +
