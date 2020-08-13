@@ -47,7 +47,7 @@ if [ "$(conda info -e | cut -d " " -f 1 | grep -c DAJIN$)" -eq 0 ]; then
     conda create -y -n DAJIN python=3.7 \
         numpy pandas scikit-learn scipy \
         tensorflow tensorflow-gpu \
-        wget samtools minimap2 \
+        wget emboss samtools minimap2 \
         r-essentials r-base r-dbscan >/dev/null 2>&1
 fi
 
@@ -59,6 +59,7 @@ conda activate DAJIN
 
 gzip --version > /dev/null || error_exit 'Command "gzip" installation has failed'
 wget --version > /dev/null || error_exit 'Command "wget" installation has failed'
+stretcher --version > /dev/null || error_exit 'Command "stretcher" installation has failed'
 python --version > /dev/null || error_exit 'Command "python" installation has failed'
 R --version > /dev/null || error_exit 'Command "Rscript" installation has failed'
 minimap2 --version > /dev/null || error_exit 'Command "minimap2" installation has failed'
