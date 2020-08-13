@@ -162,8 +162,6 @@ done
 [ $(echo "$output_dir" | sed "s/[_a-zA-Z0-9]*//g" | wc | awk '{print $2}') -ne 0 ] &&
     error_exit "$output_dir: invalid directory name"
 
-mkdir -p "${output_dir:=DAJIN_results}"/BAM "${output_dir}"/Consensus
-
 #===========================================================
 #? Check "filter"
 #===========================================================
@@ -714,7 +712,7 @@ done
 #! Move output files
 ################################################################################
 
-rm -rf "${output_dir:-DAJIN_results}" 2>/dev/null
+rm -rf "${output_dir:=DAJIN_results}" 2>/dev/null
 mkdir -p "${output_dir:-DAJIN_results}"/BAM
 mkdir -p "${output_dir:-DAJIN_results}"/Consensus
 
@@ -745,14 +743,13 @@ done
 #! Finish call
 ################################################################################
 
-rm -rf .DAJIN_temp
+rm -rf .DAJIN_temp/
 
 cat << EOF
 --------------------------------------------------------------------------------
 Completed!
 Check ${output_dir:-DAJIN_results} directory
 --------------------------------------------------------------------------------
-
 EOF
 
 exit 0
