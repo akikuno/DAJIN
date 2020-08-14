@@ -12,7 +12,7 @@ We validated DAJIN in the following systems.
 |GPU| NVIDIA GeForce GTX 1080 Ti |
 |Memory| 64 GB |
 
-## Windows10 (WSL2)
+## Windows 10 (WSL2)
 
 | OS | Ubuntu 18.04.5 LTS on Windows 10 x86_64 |
 | ---- | ---- |
