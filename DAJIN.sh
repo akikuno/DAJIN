@@ -745,6 +745,9 @@ done
 
 rm -rf .DAJIN_temp/
 
+set +u
+conda deactivate
+
 cat << EOF
 --------------------------------------------------------------------------------
 Completed!
