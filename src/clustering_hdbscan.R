@@ -4,7 +4,7 @@
 
 options(repos = "https://cloud.r-project.org/")
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
-pacman::p_load(tidyverse, dbscan)
+pacman::p_load(tidyverse, dbscan, parallel)
 
 
 ################################################################################
@@ -15,8 +15,8 @@ pacman::p_load(tidyverse, dbscan)
 #? TEST Auguments
 #===========================================================
 
-# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode48_wt"
-# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode48_wt"
+# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode32_wt"
+# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode32_wt"
 # file_control <- ".DAJIN_temp/clustering/temp/control_score_wt"
 # threads <- 12L
 
@@ -53,11 +53,10 @@ mids_score <- matrix(NA, length(mids), ncol(df_que))
 rownames(mids_score) <- mids
 
 for (row in seq_along(mids)) {
-    for (col in seq_along(colnames(df_que))) {
-        mids_score[row, col] <-
-            str_count(pull(df_que[, col]), pattern = mids[row]) %>%
-            sum()
-    }
+    mids_score[row, ] <-
+    mclapply(seq_along(colnames(df_que)) %>% as.list,
+        function(x) pull(df_que[, x]) %>% str_count(pattern = mids[row]) %>% sum(),
+        mc.cores = as.integer(threads)) %>% unlist
 }
 
 mids_score["M", ] <- 0
@@ -70,9 +69,10 @@ for (col in seq_along(colnames(df_que))) {
 }
 
 df_score[, pull(df_control) == 2] <- 0
+df_que[, pull(df_control) == 2] <- "M"
 df_score <- df_score[, colSums(df_score) != 0]
 
-rm(mids_score, df_que, df_control)
+rm(mids_score, df_control)
 
 ################################################################################
 #! PCA
@@ -92,15 +92,15 @@ rm(pca_res)
 #! HDBSCAN
 ################################################################################
 
-if (nrow(output_pca) < 250) {
-    cl_sizes <- seq(10, nrow(output_pca), length = 10)
+if (nrow(output_pca) < 500) {
+    cl_sizes <- seq(10, nrow(output_pca), length = 10) %>% as.integer
 } else {
-    cl_sizes <- seq(25, 250, length = 10)
+    cl_sizes <- seq(25, 500, length = 10) %>% as.integer
 }
 
-cl_nums <- parallel::mclapply(cl_sizes,
+cl_nums <- mclapply(cl_sizes,
     function(x) hdbscan(output_pca, minPts = x)$cluster %>% table %>% length,
-    mc.cores = threads) %>% unlist
+    mc.cores = as.integer(threads)) %>% unlist
 
 cl_num_opt <- cl_nums %>% table()
 
@@ -140,21 +140,25 @@ for (i in unique(hdbscan_cl)) {
 }
 rm(df_score)
 
+# ggplot(df_cluster, aes(x=loc, y=score)) +
+# geom_point() +
+# facet_wrap(~cluster, nrow=1)
+
 ################################################################################
 #! Cosine similarity to merge similar clusters
+# if two sequences are simillar, merge them
 ################################################################################
-# input: df_cluster, hdbscan_cl
-cossim_merged_cl <- hdbscan_cl
-# --------------------------------------------------
 
 calc_cosine_sim <- function(a, b) crossprod(a, b) / sqrt(crossprod(a) * crossprod(b))
+
+cossim_merged_cl <- hdbscan_cl
 
 cluster <- df_cluster$cluster %>%
     unique()
 
 if (length(cluster) > 1) {
-    cl_combn <- combn(cluster, 2)
     df_cossim <- NULL
+    cl_combn <- combn(cluster, 2)
 
     i <- 1
     for (i in seq(ncol(cl_combn))) {
@@ -175,6 +179,62 @@ if (length(cluster) > 1) {
         )
         df_cossim <- bind_rows(df_cossim, df_)
     }
+    df_cossim_extracted <- df_cossim %>% filter(score > 0.90)
+
+    if (nrow(df_cossim_extracted) != 0) {
+        for (i in seq_along(rownames(df_cossim_extracted))) {
+            pattern_ <- df_cossim_extracted[i, ]$one
+            query_ <- df_cossim_extracted[i, ]$two
+            cossim_merged_cl[cossim_merged_cl == pattern_] <- query_
+        }
+    }
+}
+
+pattern_ <- cossim_merged_cl %>%
+    unique() %>%
+    sort()
+query_ <- cossim_merged_cl %>%
+    unique() %>%
+    order() %>%
+    sort()
+
+for (i in seq_along(pattern_)) {
+    cossim_merged_cl[cossim_merged_cl == pattern_[i]] <- query_[i]
+}
+
+################################################################################
+#! Sequence identity to merge similar clusters
+# if two sequences are the same, merge them
+################################################################################
+
+if (length(cluster) > 1) {
+    df_cossim <- NULL
+    cl_combn <- combn(cluster, 2)
+
+    i <- 1
+    for (i in seq(ncol(cl_combn))) {
+        seq_1 <- df_que[cossim_merged_cl == cl_combn[1, i], ] %>%
+            mclapply(
+                function(x) x %>% table %>% which.max %>% names,
+                mc.cores = as.integer(threads)) %>%
+            unlist %>%
+            str_c(collapse = "")
+
+        seq_2 <- df_que[cossim_merged_cl == cl_combn[2, i], ] %>%
+            mclapply(
+                function(x) x %>% table %>% which.max %>% names,
+                mc.cores = as.integer(threads)) %>%
+            unlist %>%
+            str_c(collapse = "")
+
+        df_ <- tibble(
+            one = cl_combn[1, i],
+            two = cl_combn[2, i],
+            score = identical(seq_1, seq_2)
+        )
+        df_cossim <- bind_rows(df_cossim, df_)
+    }
+    df_cossim_extracted <- df_cossim %>% filter(score == TRUE)
 
     if (nrow(df_cossim_extracted) != 0) {
         for (i in seq_along(rownames(df_cossim_extracted))) {
