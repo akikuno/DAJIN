@@ -623,7 +623,7 @@ done
 #! Finish call
 ################################################################################
 
-rm -rf .DAJIN_temp/
+[ -z "${TEST}" ] && rm -rf .DAJIN_temp/
 
 set +u
 conda deactivate
