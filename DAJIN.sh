@@ -73,15 +73,15 @@ do
             if ! [ -r "$2" ]; then
                 error_exit "$2: No such file"
             fi
-            design=$(cat "$2" | grep "design" | sed -e "s/ //g" -e "s/.*=//g")
-            input_dir=$(cat "$2" | grep "input_dir" | sed -e "s/ //g" -e "s/.*=//g")
-            control=$(cat "$2" | grep "control" | sed -e "s/ //g" -e "s/.*=//g")
-            genome=$(cat "$2" | grep "genome" | sed -e "s/ //g" -e "s/.*=//g")
-            grna=$(cat "$2" | grep "grna" | sed -e "s/ //g" -e "s/.*=//g")
-            output_dir=$(cat "$2" | grep "output_dir" | sed -e "s/ //g" -e "s/.*=//g")
-            threads=$(cat "$2" | grep "threads" | sed -e "s/ //g" -e "s/.*=//g")
-            filter=$(cat "$2" | grep "filter" | sed -e "s/ //g" -e "s/.*=//g")
-            TEST=$(cat "$2" | grep "TEST" | sed -e "s/ //g" -e "s/.*=//g")
+            design=$(cat "$2" | grep "^design" | sed -e "s/ //g" -e "s/.*=//g")
+            input_dir=$(cat "$2" | grep "^input_dir" | sed -e "s/ //g" -e "s/.*=//g")
+            control=$(cat "$2" | grep "^control" | sed -e "s/ //g" -e "s/.*=//g")
+            genome=$(cat "$2" | grep "^genome" | sed -e "s/ //g" -e "s/.*=//g")
+            grna=$(cat "$2" | grep "^grna" | sed -e "s/ //g" -e "s/.*=//g")
+            output_dir=$(cat "$2" | grep "^output_dir" | sed -e "s/ //g" -e "s/.*=//g")
+            threads=$(cat "$2" | grep "^threads" | sed -e "s/ //g" -e "s/.*=//g")
+            filter=$(cat "$2" | grep "^filter" | sed -e "s/ //g" -e "s/.*=//g")
+            TEST=$(cat "$2" | grep "^TEST" | sed -e "s/ //g" -e "s/.*=//g")
             ;;
         -* )
         error_exit "Unrecognized option : $1"
