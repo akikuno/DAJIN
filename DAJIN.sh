@@ -81,6 +81,7 @@ do
             output_dir=$(cat "$2" | grep "output_dir" | sed -e "s/ //g" -e "s/.*=//g")
             threads=$(cat "$2" | grep "threads" | sed -e "s/ //g" -e "s/.*=//g")
             filter=$(cat "$2" | grep "filter" | sed -e "s/ //g" -e "s/.*=//g")
+            TEST=$(cat "$2" | grep "TEST" | sed -e "s/ //g" -e "s/.*=//g")
             ;;
         -* )
         error_exit "Unrecognized option : $1"
