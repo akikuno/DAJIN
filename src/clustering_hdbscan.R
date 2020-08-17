@@ -15,9 +15,10 @@ pacman::p_load(tidyverse, dbscan)
 #? TEST Auguments
 #===========================================================
 
-# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode02_wt"
-# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode02_wt"
+# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode48_wt"
+# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode48_wt"
 # file_control <- ".DAJIN_temp/clustering/temp/control_score_wt"
+# threads <- 12L
 
 #===========================================================
 #? Auguments
@@ -27,6 +28,7 @@ args <- commandArgs(trailingOnly = TRUE)
 file_que <- args[1]
 file_label <- args[2]
 file_control <- args[3]
+threads <- as.integer(args[4])
 
 #===========================================================
 #? Inputs
@@ -46,36 +48,37 @@ output_suffix <- file_label %>% str_remove(".*labels_")
 #! Pre-processing
 ################################################################################
 
-mids_score <- matrix(NA, 4, ncol(df_que))
-rownames(mids_score) <- c("M", "I", "D", "S")
+mids <- c("M", "I", "D", "S", "=")
+mids_score <- matrix(NA, length(mids), ncol(df_que))
+rownames(mids_score) <- mids
 
-for (row in 1:4) {
-    mutation <- rownames(mids_score)[row]
-    for (col in 1 : ncol(df_que)) {
+for (row in seq_along(mids)) {
+    for (col in seq_along(colnames(df_que))) {
         mids_score[row, col] <-
-            str_count(pull(df_que[, col]), pattern = mutation) %>%
+            str_count(pull(df_que[, col]), pattern = mids[row]) %>%
             sum()
     }
 }
 
-mids_score[1, ] <- 0
+mids_score["M", ] <- 0
 mids_score["D", ] <- mids_score["D", ] * -1
 
-for (col in 1:ncol(df_que)) {
+df_score <- df_que
+for (col in seq_along(colnames(df_que))) {
     res <- mids_score[, col]
-    df_que[, col] <- pull(df_que[, col]) %>% res[.]
+    df_score[, col] <- pull(df_que[, col]) %>% res[.]
 }
 
-df_que[, pull(df_control) == 2] <- 0
-df_que <- df_que[, colSums(df_que) != 0]
+df_score[, pull(df_control) == 2] <- 0
+df_score <- df_score[, colSums(df_score) != 0]
 
-rm(mids_score, df_control)
+rm(mids_score, df_que, df_control)
 
 ################################################################################
 #! PCA
 ################################################################################
 
-pca_res <- prcomp(df_que, scale. = F)
+pca_res <- prcomp(df_score, scale. = F)
 
 components <- 1:10
 output_pca <- pca_res$x[, components]
@@ -95,18 +98,13 @@ if (nrow(output_pca) < 250) {
     cl_sizes <- seq(25, 250, length = 10)
 }
 
-cl_nums <- c()
-i <- 1
-for (i in seq_along(cl_sizes)) {
-    cl <- hdbscan(output_pca, minPts = cl_sizes[i])
-    cl_nums[i] <- cl$cluster %>%
-        table() %>%
-        length()
-}
+cl_nums <- parallel::mclapply(cl_sizes,
+    function(x) hdbscan(output_pca, minPts = x)$cluster %>% table %>% length,
+    mc.cores = threads) %>% unlist
 
 cl_num_opt <- cl_nums %>% table()
 
-if (length(cl_num_opt[names(cl_num_opt) != 1]) > 0) {
+if ((cl_num_opt %>% names != 1) %>% sum > 0) {
     cl_num_opt <- cl_num_opt[names(cl_num_opt) != 1] %>%
         which.max() %>%
         names()
@@ -124,23 +122,23 @@ hdbscan_cl <- cl$cluster + 1
 #! Extract mutation frequency scores in each cluster
 ################################################################################
 
-zero_to_one <- function(x) (x - min(x)) / (max(x) - min(x))
-
 df_cluster <- tibble(loc = integer(), cluster = integer(), score = double())
 
+tmp_df_score <- df_score %>% colSums/nrow(df_score)
 for (i in unique(hdbscan_cl)) {
-    tmp_score <- df_que[hdbscan_cl == i, ] %>%
-        colSums() %>%
-        zero_to_one()
+    tmp_score <- df_score[hdbscan_cl == i, ] %>%
+        colSums/sum(hdbscan_cl == i)
+
+    tmp_score <- tmp_df_score - tmp_score
 
     tmp_df <- tibble(
-        loc = seq_len(ncol(df_que)),
+        loc = seq_along(colnames(df_score)),
         cluster = i,
         score = tmp_score
     )
     df_cluster <- df_cluster %>% bind_rows(tmp_df)
 }
-rm(df_que)
+rm(df_score)
 
 ################################################################################
 #! Cosine similarity to merge similar clusters
@@ -178,10 +176,8 @@ if (length(cluster) > 1) {
         df_cossim <- bind_rows(df_cossim, df_)
     }
 
-    df_cossim_extracted <- df_cossim %>% filter(score > 0.90)
-
     if (nrow(df_cossim_extracted) != 0) {
-        for (i in seq_len(nrow(df_cossim_extracted))) {
+        for (i in seq_along(rownames(df_cossim_extracted))) {
             pattern_ <- df_cossim_extracted[i, ]$one
             query_ <- df_cossim_extracted[i, ]$two
             cossim_merged_cl[cossim_merged_cl == pattern_] <- query_

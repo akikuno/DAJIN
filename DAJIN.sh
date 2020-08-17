@@ -517,7 +517,7 @@ sh - 2>/dev/null
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     cut -f 2,3 |
     sort -u |
-    awk '{print "./DAJIN/src/clustering_hdbscan.sh",$1, $2}' |
+    awk -v th=${threads:-1} '{print "./DAJIN/src/clustering_hdbscan.sh",$1, $2, th}' |
 sh - 2>/dev/null
 
 # ls -lh .DAJIN_temp/clustering/temp/hdbscan_*
