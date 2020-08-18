@@ -15,10 +15,10 @@ pacman::p_load(tidyverse, dbscan, parallel)
 #? TEST Auguments
 #===========================================================
 
-# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode32_wt"
-# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode32_wt"
-# file_control <- ".DAJIN_temp/clustering/temp/control_score_wt"
-# threads <- 12L
+# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode14_target"
+# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode14_target"
+# file_control <- ".DAJIN_temp/clustering/temp/control_score_target"
+# threads <- 6L
 
 #===========================================================
 #? Auguments
@@ -68,8 +68,8 @@ for (col in seq_along(colnames(df_que))) {
     df_score[, col] <- pull(df_que[, col]) %>% res[.]
 }
 
-df_score[, pull(df_control) == 2] <- 0
 df_que[, pull(df_control) == 2] <- "M"
+df_score[, pull(df_control) == 2] <- 0
 df_score <- df_score[, colSums(df_score) != 0]
 
 rm(mids_score, df_control)
@@ -179,7 +179,7 @@ if (length(cluster) > 1) {
         )
         df_cossim <- bind_rows(df_cossim, df_)
     }
-    df_cossim_extracted <- df_cossim %>% filter(score > 0.90)
+    df_cossim_extracted <- df_cossim %>% filter(score > 0.6)
 
     if (nrow(df_cossim_extracted) != 0) {
         for (i in seq_along(rownames(df_cossim_extracted))) {
