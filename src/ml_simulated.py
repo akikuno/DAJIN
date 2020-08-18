@@ -132,13 +132,16 @@ model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accur
 #? Training
 #===========================================================
 
+callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
+
 model.fit(
     X_train,
     Y_train,
-    epochs=20,
+    epochs=100,
     verbose=1,
     batch_size=32,
     validation_data=(X_val, Y_val),
+    callbacks=[callback],
     shuffle=True,
 )
 
