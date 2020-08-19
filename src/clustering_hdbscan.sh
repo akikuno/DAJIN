@@ -22,8 +22,8 @@ error_exit() {
 #? TEST Aurguments
 #===========================================================
 
-# barcode="barcode32"
-# alleletype="wt"
+# barcode="barcode14"
+# alleletype="target"
 # threads=12
 
 #===========================================================

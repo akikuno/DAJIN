@@ -197,8 +197,8 @@ while read -r label; do
         sort |
         join -a 1 - "${tmp_control}" |
         awk '$2!="-"' | # deletion
-        awk '$1=="-" {$(NF+1)=1}1' | # knockin
-        awk '$2~/[ACGT]/ {$(NF+1)=1}1' | # point mutation
+        awk '$2~/[ACGT]/ {$4=1}1' | # point mutation
+        awk '$1=="-" {$4=100}1' | # knockin
         sort -t " " -k 3,3n |
         awk '{print $NF}'
     fi |

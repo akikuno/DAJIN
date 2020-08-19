@@ -4,21 +4,12 @@
 
 options(repos = "https://cloud.r-project.org/")
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
-pacman::p_load(tidyverse, dbscan, parallel)
+pacman::p_load(tidyverse, dbscan, parallel, mclust)
 
 
 ################################################################################
 #! I/O naming
 ################################################################################
-
-#===========================================================
-#? TEST Auguments
-#===========================================================
-
-# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode14_target"
-# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode14_target"
-# file_control <- ".DAJIN_temp/clustering/temp/control_score_target"
-# threads <- 6L
 
 #===========================================================
 #? Auguments
@@ -31,12 +22,21 @@ file_control <- args[3]
 threads <- as.integer(args[4])
 
 #===========================================================
+#? TEST Auguments
+#===========================================================
+
+# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode01_abnormal"
+# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode01_abnormal"
+# file_control <- ".DAJIN_temp/clustering/temp/control_score_wt"
+# threads <- 14L
+
+#===========================================================
 #? Inputs
 #===========================================================
 
 df_que <- read_csv(file_que, col_names = FALSE, col_types = cols())
 df_label <- read_csv(file_label, col_names = c("id", "label"), col_types = cols())
-df_control <- read_csv(file_control, col_names = FALSE, col_types = cols())
+df_control <- read_csv(file_control, col_names = c("score"), col_types = cols())
 
 #===========================================================
 #? Outputs
@@ -56,7 +56,8 @@ for (row in seq_along(mids)) {
     mids_score[row, ] <-
     mclapply(seq_along(colnames(df_que)) %>% as.list,
         function(x) pull(df_que[, x]) %>% str_count(pattern = mids[row]) %>% sum(),
-        mc.cores = as.integer(threads)) %>% unlist
+        mc.cores = as.integer(threads)) %>%
+        unlist
 }
 
 mids_score["M", ] <- 0
@@ -67,6 +68,31 @@ for (col in seq_along(colnames(df_que))) {
     res <- mids_score[, col]
     df_score[, col] <- pull(df_que[, col]) %>% res[.]
 }
+
+#===========================================================
+#? Match or 0 at sequence error loci
+#===========================================================
+
+#--------------------------------------
+#* Insertion
+#--------------------------------------
+
+tmp_inserr <- df_que %>%
+    select(which(df_control$score==100)) %>%
+    mclapply(
+        function(x) x %>% table %>% which.max %>% names,
+        mc.cores = as.integer(threads)) %>%
+    unlist %>%
+    str_detect("M")
+
+tmp_inserr[tmp_inserr==TRUE] <- 2
+tmp_inserr[tmp_inserr==FALSE] <- 1
+
+df_control$score[df_control$score==100] <- tmp_inserr
+
+#--------------------------------------
+#* Input sequence error (M/0)
+#--------------------------------------
 
 df_que[, pull(df_control) == 2] <- "M"
 df_score[, pull(df_control) == 2] <- 0
@@ -89,34 +115,54 @@ for (i in components) {
 rm(pca_res)
 
 ################################################################################
-#! HDBSCAN
+#! Clustering
 ################################################################################
 
-if (nrow(output_pca) < 500) {
-    cl_sizes <- seq(10, nrow(output_pca), length = 10) %>% as.integer
-} else {
-    cl_sizes <- seq(25, 500, length = 10) %>% as.integer
-}
+modelNames <- c("EII", "VII", "EEI", "EVI", "VEI", "VVI")
+BIC <- mclustBIC(output_pca)
+mclust_models <- mclapply(modelNames,
+    function(x) Mclust(output_pca, x = BIC, modelNames = x),
+    mc.cores = as.integer(threads))
 
-cl_nums <- mclapply(cl_sizes,
-    function(x) hdbscan(output_pca, minPts = x)$cluster %>% table %>% length,
-    mc.cores = as.integer(threads)) %>% unlist
+opt_modelName <- lapply(mclust_models, function(x) summary(x, parameters = TRUE)$classification %>% levels %>% as.integer %>% max) %>%
+    unlist %>%
+    set_names(modelNames)
 
-cl_num_opt <- cl_nums %>% table()
+opt_modelName <- opt_modelName[opt_modelName==opt_modelName %>%
+    table %>%
+    which.max %>%
+    names][1] %>%
+    names
 
-if ((cl_num_opt %>% names != 1) %>% sum > 0) {
-    cl_num_opt <- cl_num_opt[names(cl_num_opt) != 1] %>%
-        which.max() %>%
-        names()
-} else {
-    cl_num_opt <- cl_num_opt %>%
-        which.max() %>%
-        names()
-}
-cl_num_opt <- which(cl_nums == cl_num_opt) %>% max()
+#print("Mclust start!!")
 
-cl <- hdbscan(output_pca, minPts = cl_sizes[cl_num_opt])
-hdbscan_cl <- cl$cluster + 1
+hdbscan_cl <- Mclust(output_pca, x = BIC, modelNames = opt_modelName)$classification
+#print("Mclust finished!!")
+
+# if (nrow(output_pca) < 500) {
+#     cl_sizes <- seq(10, nrow(output_pca), length = 10) %>% as.integer
+# } else {
+#     cl_sizes <- seq(25, 500, length = 10) %>% as.integer
+# }
+# cl_nums <- mclapply(cl_sizes,
+#     function(x) hdbscan(output_pca, minPts = x)$cluster %>% table %>% length,
+#     mc.cores = as.integer(threads)) %>% unlist
+# gc();gc()
+
+# cl_num_opt <- cl_nums %>% table()
+# if ((cl_num_opt %>% names != 1) %>% sum > 0) {
+#     cl_num_opt <- cl_num_opt[names(cl_num_opt) != 1] %>%
+#         which.max() %>%
+#         names()
+# } else {
+#     cl_num_opt <- cl_num_opt %>%
+#         which.max() %>%
+#         names()
+# }
+# cl_num_opt <- which(cl_nums == cl_num_opt) %>% max()
+
+# cl <- hdbscan(output_pca, minPts = cl_sizes[cl_num_opt])
+# hdbscan_cl <- cl$cluster + 1
 
 ################################################################################
 #! Extract mutation frequency scores in each cluster
@@ -207,33 +253,27 @@ for (i in seq_along(pattern_)) {
 # if two sequences are the same, merge them
 ################################################################################
 
-if (length(cluster) > 1) {
+if (length(query_) > 1) {
     df_cossim <- NULL
-    cl_combn <- combn(cluster, 2)
+    cl_combn <- combn(query_, 2)
 
-    i <- 1
+    tmp_seq <- mclapply(cossim_merged_cl %>% unique %>% sort,
+            function(x) {df_que[cossim_merged_cl == x, ] %>%
+            lapply(function(x) x %>% table %>% which.max %>% names) %>%
+            unlist %>%
+            str_c(collapse = "")},
+            mc.cores = as.integer(threads))
+
+    df_cossim <- NULL
     for (i in seq(ncol(cl_combn))) {
-        seq_1 <- df_que[cossim_merged_cl == cl_combn[1, i], ] %>%
-            mclapply(
-                function(x) x %>% table %>% which.max %>% names,
-                mc.cores = as.integer(threads)) %>%
-            unlist %>%
-            str_c(collapse = "")
-
-        seq_2 <- df_que[cossim_merged_cl == cl_combn[2, i], ] %>%
-            mclapply(
-                function(x) x %>% table %>% which.max %>% names,
-                mc.cores = as.integer(threads)) %>%
-            unlist %>%
-            str_c(collapse = "")
-
-        df_ <- tibble(
-            one = cl_combn[1, i],
-            two = cl_combn[2, i],
-            score = identical(seq_1, seq_2)
-        )
-        df_cossim <- bind_rows(df_cossim, df_)
+            df_ <- tibble(
+                one = cl_combn[1, i],
+                two = cl_combn[2, i],
+                score = identical(tmp_seq[[cl_combn[1, i]]], tmp_seq[[cl_combn[2, i]]])
+            )
+            df_cossim <- bind_rows(df_cossim, df_)
     }
+
     df_cossim_extracted <- df_cossim %>% filter(score == TRUE)
 
     if (nrow(df_cossim_extracted) != 0) {

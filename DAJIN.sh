@@ -512,15 +512,21 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
 sh - 2>/dev/null
 
 #===========================================================
-#? Clustering by HDBSCAN
+#? Clustering
 #===========================================================
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     cut -f 2,3 |
     sort -u |
-    awk -v th=${threads:-1} '{print "./DAJIN/src/clustering_hdbscan.sh",$1, $2, th}' |
+    awk -v th=${threads:-1} '{print "./DAJIN/src/clustering_hdbscan.sh", $1, $2, th}' |
 sh - 2>/dev/null
 
+
+cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
+    cut -f 2,3 |
+    sort -u |
+    awk -v th=${threads:-1} '{print "./DAJIN/src/clustering_re.sh", $1, $2, th}' |
+sh - 2>/dev/null
 # ls -lh .DAJIN_temp/clustering/temp/hdbscan_*
 # rm .DAJIN_temp/tmp_*
 
@@ -555,6 +561,26 @@ EOF
 
 rm -rf .DAJIN_temp/consensus/ 2>/dev/null
 mkdir -p .DAJIN_temp/consensus/temp
+
+#===========================================================
+#? Generate temporal SAM files
+#===========================================================
+
+cat .DAJIN_temp/clustering/label* |
+    cut -d " " -f 1,2 |
+    sort -u |
+    grep -v abnormal |  #TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+while read -r input; do
+    barcode="$(echo $input | awk '{print $1}')"
+    mapping_alleletype="$(echo $input | awk '{print $2}' | sed "s/normal/wt/g")"
+
+    cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
+        minimap2 -ax map-ont -t "${threads}" \
+            ".DAJIN_temp/fasta/${mapping_alleletype}.fa" - \
+            --cs=long 2>/dev/null |
+        sort |
+    cat > .DAJIN_temp/consensus/temp/"${barcode}"_"${mapping_alleletype}".sam
+done
 
 #===========================================================
 #? Execute consensus.sh
