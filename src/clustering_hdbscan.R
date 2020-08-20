@@ -12,6 +12,15 @@ pacman::p_load(tidyverse, dbscan, parallel, mclust)
 ################################################################################
 
 #===========================================================
+#? TEST Auguments
+#===========================================================
+
+# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode14_target"
+# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode14_target"
+# file_control <- ".DAJIN_temp/clustering/temp/control_score_target"
+# threads <- 14L
+
+#===========================================================
 #? Auguments
 #===========================================================
 
@@ -21,14 +30,6 @@ file_label <- args[2]
 file_control <- args[3]
 threads <- as.integer(args[4])
 
-#===========================================================
-#? TEST Auguments
-#===========================================================
-
-# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode01_abnormal"
-# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode01_abnormal"
-# file_control <- ".DAJIN_temp/clustering/temp/control_score_wt"
-# threads <- 14L
 
 #===========================================================
 #? Inputs
@@ -104,7 +105,7 @@ rm(mids_score, df_control)
 #! PCA
 ################################################################################
 
-pca_res <- prcomp(df_score, scale. = F)
+pca_res <- prcomp(df_score, scale = FALSE)
 
 components <- 1:10
 output_pca <- pca_res$x[, components]
@@ -114,55 +115,62 @@ for (i in components) {
 }
 rm(pca_res)
 
+# ggplot(as.data.frame(output_pca), aes(x=PC1, y=PC2)) +
+# geom_point()
+
 ################################################################################
 #! Clustering
 ################################################################################
 
-modelNames <- c("EII", "VII", "EEI", "EVI", "VEI", "VVI")
-BIC <- mclustBIC(output_pca)
-mclust_models <- mclapply(modelNames,
-    function(x) Mclust(output_pca, x = BIC, modelNames = x),
-    mc.cores = as.integer(threads))
+# pacman::p_load(NbClust, factoextra)
+# myNHCnum = NbClust(output_pca, method = "kmeans", index = "alllong")
+# fig1 = fviz_nbclust(myNHCnum, method = "gap_stat", nboot = 100)
+# plot(fig1)
 
-opt_modelName <- lapply(mclust_models, function(x) summary(x, parameters = TRUE)$classification %>% levels %>% as.integer %>% max) %>%
-    unlist %>%
-    set_names(modelNames)
+# modelNames <- c("EII", "VII", "EEI", "EVI", "VEI", "VVI",
+#     "EEE", "EVE", "VEE", "VVE", "EEV", "VEV", "EVV", "VVV")
 
-opt_modelName <- opt_modelName[opt_modelName==opt_modelName %>%
-    table %>%
-    which.max %>%
-    names][1] %>%
-    names
+# BIC <- mclustBIC(output_pca, G = 1:15, modelNames = modelNames)
+# hdbscan_cl <- Mclust(output_pca, x = BIC, modelName = BIC$modelName)$classification
+# hdbscan_cl %>% table
 
-#print("Mclust start!!")
+# mclust_models <- mclapply(modelNames,
+#     function(x) Mclust(output_pca, x = BIC, modelNames = x),
+#     mc.cores = as.integer(threads))
 
-hdbscan_cl <- Mclust(output_pca, x = BIC, modelNames = opt_modelName)$classification
-#print("Mclust finished!!")
+# opt_modelName <- lapply(mclust_models, function(x) summary(x, parameters = TRUE)$classification %>% levels %>% as.integer %>% max) %>%
+#     unlist %>%
+#     set_names(modelNames)
 
-# if (nrow(output_pca) < 500) {
-#     cl_sizes <- seq(10, nrow(output_pca), length = 10) %>% as.integer
-# } else {
-#     cl_sizes <- seq(25, 500, length = 10) %>% as.integer
-# }
-# cl_nums <- mclapply(cl_sizes,
-#     function(x) hdbscan(output_pca, minPts = x)$cluster %>% table %>% length,
-#     mc.cores = as.integer(threads)) %>% unlist
-# gc();gc()
+# opt_modelName <- opt_modelName[opt_modelName== (opt_modelName %>% table %>% which.max %>% names)][1] %>%
+#     names
 
-# cl_num_opt <- cl_nums %>% table()
-# if ((cl_num_opt %>% names != 1) %>% sum > 0) {
-#     cl_num_opt <- cl_num_opt[names(cl_num_opt) != 1] %>%
-#         which.max() %>%
-#         names()
-# } else {
-#     cl_num_opt <- cl_num_opt %>%
-#         which.max() %>%
-#         names()
-# }
-# cl_num_opt <- which(cl_nums == cl_num_opt) %>% max()
 
-# cl <- hdbscan(output_pca, minPts = cl_sizes[cl_num_opt])
-# hdbscan_cl <- cl$cluster + 1
+if (nrow(output_pca) < 500) {
+    cl_sizes <- seq(10, nrow(output_pca), length = 10) %>% as.integer
+} else {
+    cl_sizes <- seq(25, 500, length = 10) %>% as.integer
+}
+
+cl_nums <- mclapply(cl_sizes,
+    function(x) hdbscan(output_pca, minPts = x)$cluster %>% table %>% length,
+    mc.cores = as.integer(threads/2+1)) %>%
+    unlist
+
+cl_num_opt <- cl_nums %>% table()
+if ((cl_num_opt %>% names != 1) %>% sum > 0) {
+    cl_num_opt <- cl_num_opt[names(cl_num_opt) != 1] %>%
+        which.max() %>%
+        names()
+} else {
+    cl_num_opt <- cl_num_opt %>%
+        which.max() %>%
+        names()
+}
+cl_num_opt <- which(cl_nums == cl_num_opt) %>% max()
+
+cl <- hdbscan(output_pca, minPts = cl_sizes[cl_num_opt])
+hdbscan_cl <- cl$cluster + 1
 
 ################################################################################
 #! Extract mutation frequency scores in each cluster
