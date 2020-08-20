@@ -207,7 +207,7 @@ fi
 #? Make temporal directory
 #===========================================================
 rm -rf ".DAJIN_temp" 2>/dev/null || true
-dirs="fasta fasta_conv fasta_ont NanoSim bam igvjs data clustering/temp seqlogo/temp"
+dirs="fasta fasta_conv fasta_ont NanoSim bam data clustering/temp"
 
 echo "${dirs}" |
     sed "s:^:.DAJIN_temp/:g" |
@@ -499,33 +499,13 @@ mkdir -p .DAJIN_temp/clustering/temp
 # wc -l .DAJIN_temp/clustering/temp/control_score_*
 
 #===========================================================
-#? Calculate samples' score
-#===========================================================
-
-cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    cut -f 2,3 |
-    sort -u |
-    awk '{print "./DAJIN/src/clustering.sh",$1, $2, "&"}' |
-    awk -v th=${threads:-1} '{
-        if (NR%th==0) gsub("&","&\nwait",$0)}1
-        END{print "wait"}' |
-sh - 2>/dev/null
-
-#===========================================================
 #? Clustering
 #===========================================================
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     cut -f 2,3 |
     sort -u |
-    awk -v th=${threads:-1} '{print "./DAJIN/src/clustering_hdbscan.sh", $1, $2, th}' |
-sh - 2>/dev/null
-
-
-cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    cut -f 2,3 |
-    sort -u |
-    awk -v th=${threads:-1} '{print "./DAJIN/src/clustering_re.sh", $1, $2, th}' |
+    awk -v th=${threads:-1} '{print "./DAJIN/src/clustering.sh", $1, $2, th}' |
 sh - 2>/dev/null
 # ls -lh .DAJIN_temp/clustering/temp/hdbscan_*
 # rm .DAJIN_temp/tmp_*
@@ -641,10 +621,6 @@ rm -rf "${output_dir:-DAJIN_results}"/Consensus/temp 2>/dev/null
 #===========================================================
 
 cp .DAJIN_temp/details/* "${output_dir:-DAJIN_results}"/
-
-while ! [ -f  "${output_dir:-DAJIN_results}"/Details.pdf ]; do
-    sleep 3 # wait for outputting pdf file
-done
 
 ################################################################################
 #! Finish call
