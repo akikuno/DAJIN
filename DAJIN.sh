@@ -206,6 +206,7 @@ fi
 #===========================================================
 #? Make temporal directory
 #===========================================================
+
 rm -rf ".DAJIN_temp" 2>/dev/null || true
 dirs="fasta fasta_conv fasta_ont NanoSim bam data clustering/temp"
 
@@ -569,7 +570,6 @@ cat .DAJIN_temp/clustering/label* |
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
 sh - 2>/dev/null
-
 
 ################################################################################
 #! Summarize to Details.csv and Details.pdf
