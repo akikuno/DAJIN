@@ -78,7 +78,7 @@ total_reads=$(
 )
 
 #===========================================================
-#? Retain Target > 1%; others > 5 % (if filter=on)
+#? Retain Target > 3%; others > 5 % (if filter=on)
 #===========================================================
 
 cat "${tmp_clusterid}" |
@@ -89,7 +89,7 @@ cat "${tmp_clusterid}" |
     awk '{$NF=$1/$NF*100}1' |
     if [ "_${filter}" = "_on" ]; then
         awk '($2!~"target" && $NF > 5) ||
-        ($2~"target" && $NF > 1)'
+        ($2~"target" && $NF > 3)'
     else
         cat -
     fi |
