@@ -9,7 +9,7 @@ pacman::p_load(tidyverse)
 #! Argument
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-# que_name <- ".DAJIN_temp/consensus/temp/allele_id_barcode13_target_3"
+# que_name <- ".DAJIN_temp/consensus/temp/allele_id_barcode23_target_3"
 # df_que <- read_csv(que_name, col_names = FALSE, col_types = cols(.default = "c"))
 # df_control <- read_csv(".DAJIN_temp/clustering/temp/control_score_target", col_names = c("score"), col_types = cols())
 # cluster <- 1
@@ -30,15 +30,15 @@ suffix <- args[1] %>% str_remove(".*allele_id_")
 #--------------------------------------
 
 tmp_inserr <- df_que %>%
-    select(which(df_control$score==100)) %>%
+    select(which(df_control$score == 100)) %>%
     lapply(function(x) x %>% table %>% which.max %>% names) %>%
     unlist %>%
     str_detect("M")
 
-tmp_inserr[tmp_inserr==TRUE] <- 2
-tmp_inserr[tmp_inserr==FALSE] <- 1
+tmp_inserr[tmp_inserr == TRUE] <- 2
+tmp_inserr[tmp_inserr == FALSE] <- 1
 
-df_control$score[df_control$score==100] <- tmp_inserr
+df_control$score[df_control$score == 100] <- tmp_inserr
 
 #--------------------------------------
 #* Input sequence error (M/0)
