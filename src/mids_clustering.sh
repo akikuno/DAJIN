@@ -79,6 +79,7 @@ mids_compressed(){
         # insertion/point mutation/inversion
         awk '{id=$1; strand=$3; loc=$4; $0=$5;
         sub("cs:Z:","",$0)
+        sub("D"," D",$0)
         gsub(/[ACGT]/, "M", $0)
         gsub(/\*[acgt][acgt]/, " S", $0)
         gsub("=", " ", $0)

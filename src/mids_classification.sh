@@ -17,7 +17,7 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #? TEST Auguments
 #===========================================================
 
-# input_fa=".DAJIN_temp/fasta_ont/target_simulated_aligned_reads.fasta"
+# input_fa=".DAJIN_temp/fasta_ont/inversion_simulated_aligned_reads.fasta"
 # genotype="wt"
 # label=$(echo "${input_fa}" | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
 # suffix="${label}_${genotype}"
@@ -75,6 +75,7 @@ mids_conv(){
         # insertion/point mutation/inversion
         awk '{id=$1; strand=$3; loc=$4; $0=$5
         sub("cs:Z:","",$0)
+        sub("D"," D",$0)
         gsub(/[ACGT]/, "M", $0)
         gsub(/\*[acgt][acgt]/, " S", $0)
         gsub("=", " ", $0)
