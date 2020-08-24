@@ -547,8 +547,8 @@ cat .DAJIN_temp/clustering/label* |
     sort -u |
     grep -v abnormal |  #TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 while read -r input; do
-    barcode="$(echo $input | awk '{print $1}')"
-    mapping_alleletype="$(echo $input | awk '{print $2}' | sed "s/normal/wt/g")"
+    barcode="${input%% *}"
+    mapping_alleletype="$(echo "${input##* }" | sed "s/ab*normal/wt/g")"
 
     cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
         minimap2 -ax map-ont -t "${threads}" \
