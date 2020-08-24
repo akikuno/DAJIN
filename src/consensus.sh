@@ -16,11 +16,12 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===========================================================
 #? TEST Auguments
 #===========================================================
-# barcode="barcode21"
-# alleletype="wt"
-# cluster=1
+
+# barcode="barcode23"
+# alleletype="target"
+# cluster=4
 # percentage=69.7
-# alleleid=2
+# alleleid=3
 
 #===========================================================
 #? Auguments
@@ -60,7 +61,7 @@ mkdir -p .DAJIN_temp/consensus/temp
 tmp_allele_id=".DAJIN_temp/consensus/temp/allele_id_${out_suffix}"
 mutation_id_loc_type_insnum=".DAJIN_temp/consensus/temp/consensus_${out_suffix}"
 mutation_type_site_nuc=".DAJIN_temp/consensus/temp/mutation_type_site_nuc_${out_suffix}"
-tmp_html=.DAJIN_temp/consensus/temp/tmp_html_"${out_suffix}".html
+tmp_html=.DAJIN_temp/consensus/temp/tmp_html_"${out_suffix}"
 
 mutation_design=$(
     minimap2 -ax splice \
@@ -118,7 +119,6 @@ else
     echo "${cluster} 0 intact 0" > "${mutation_id_loc_type_insnum}"
 fi
 
-
 ################################################################################
 #! Variant call
 ################################################################################
@@ -137,22 +137,12 @@ set $(
 mutation_type=$(echo "$1" | sed "s/_/ /g")
 mutation_site=$(echo "$2" | sed "s/_/ /g")
 insertion_size=$(echo "$3" | sed "s/_/ /g")
-# echo $mutation_type
-# echo $mutation_site
-# echo $insertion_size
-
-cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
-    minimap2 -ax map-ont \
-        ".DAJIN_temp/fasta/${mapping_alleletype}.fa" - \
-        --cs=long 2>/dev/null |
-    sort |
-cat > .DAJIN_temp/consensus/temp/tmp_sam_"${out_suffix}"
 
 cat "${allele_id}" |
     awk -v cl="${cluster}" '$2==cl' |
     cut -f 1 |
     sort -u |
-    join .DAJIN_temp/consensus/temp/tmp_sam_"${out_suffix}" - |
+    join .DAJIN_temp/consensus/temp/"${barcode}"_"${mapping_alleletype}".sam - |
     awk '$2==0 || $2==16' |
     awk '{print $4, $(NF-1)}' |
     sed "s/cs:Z://g" |
@@ -199,6 +189,7 @@ cat "${allele_id}" |
     }' |
     sort |
     uniq -c |
+    grep -v "[ACGT]" |
     sed "s/+//g" |
     awk 'NF==5{
         key=$2"_"$5
@@ -210,6 +201,7 @@ else
     echo "intact 0 0" > "${mutation_type_site_nuc}"
 fi
 
+# echo $out_suffix
 # cat "${mutation_type_site_nuc}" #<<<<<
 
 ################################################################################
@@ -244,7 +236,7 @@ cat .DAJIN_temp/fasta/${mapping_alleletype}.fa |
                 $(site_[i]) = ""
                 }
         }}1' |
-    sed -e "s/ //g" -e "s/_/ /g"|
+    sed -e "s/ //g" -e "s/_/ /g" |
 cat > .DAJIN_temp/consensus/temp/"${out_suffix}"
 
 #===========================================================
@@ -295,6 +287,8 @@ elif [ "$(grep -c intact ${mutation_type_site_nuc})" -eq 1 ]; then
 else
     output_filename="${output_filename}_mutation_${alleletype}"
 fi
+
+# echo "$output_filename"
 
 cat .DAJIN_temp/consensus/temp/"${out_suffix}" |
     fold |
@@ -383,13 +377,13 @@ EOF
 ################################################################################
 
 mkdir -p .DAJIN_temp/consensus/FASTA .DAJIN_temp/consensus/HTML
-mv .DAJIN_temp/consensus/*.fa .DAJIN_temp/consensus/FASTA
-mv .DAJIN_temp/consensus/*.html .DAJIN_temp/consensus/HTML
+mv .DAJIN_temp/consensus/"${output_filename}".fa .DAJIN_temp/consensus/FASTA
+mv .DAJIN_temp/consensus/"${output_filename}".html .DAJIN_temp/consensus/HTML
 
 ################################################################################
 #! Remove temporal files
 ################################################################################
 
-rm "${tmp_allele_id}" "${mutation_id_loc_type_insnum}" "${mutation_type_site_nuc}" "${tmp_html}"
+# rm "${tmp_allele_id}" "${mutation_id_loc_type_insnum}" "${mutation_type_site_nuc}" "${tmp_html}"
 
 exit 0

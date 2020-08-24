@@ -59,13 +59,14 @@ control_score=".DAJIN_temp/clustering/temp/control_score_${alleletype}"
 
 MIDS_ref=".DAJIN_temp/clustering/temp/MIDS_${control}_${alleletype}"
 tmp_MIDS=".DAJIN_temp/clustering/temp/tmp_MIDS_${control}_${alleletype}"
+tmp_mask=".DAJIN_temp/clustering/temp/tmp_mask_${control}_${alleletype}"
 tmp_control=".DAJIN_temp/clustering/temp/tmp_control_${control}_${alleletype}"
 tmp_strecher=".DAJIN_temp/clustering/temp/tmp_strecher_${control}_${alleletype}"
 tmp_strecher_wt=".DAJIN_temp/clustering/temp/tmp_strecher_wt_${control}_${alleletype}"
 tmp_strecher_label=".DAJIN_temp/clustering/temp/tmp_strecher_label${control}_${alleletype}"
 
 ################################################################################
-#! Control scoring
+#! Define sequence error
 ################################################################################
 
 #===========================================================
@@ -75,11 +76,10 @@ tmp_strecher_label=".DAJIN_temp/clustering/temp/tmp_strecher_label${control}_${a
 ./DAJIN/src/mids_clustering.sh "${control}" "${alleletype}" > "${MIDS_ref}"
 
 #===========================================================
-#? Mutation scoring of control samples
+#? Select WT allele
 #===========================================================
 
 cat "${MIDS_ref}" |
-    grep "${control}" |
     sort -k 1,1 |
     join - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk -v alelle="$alleletype" '$NF==alelle' |
@@ -87,25 +87,41 @@ cat "${MIDS_ref}" |
 cat > "${tmp_MIDS}"
 
 #===========================================================
-#? Transpose matrix
+#? Mask repeat sequences
 #===========================================================
+
+cat .DAJIN_temp/fasta/wt.fa |
+    sed 1d |
+    sed "s/\(.\)/\1\n/g" |
+    grep -v "^$" |
+    uniq -c |
+    awk '$1>=6{$2=tolower($2)}{for(i=1;i<=$1;i++) print $2}' |
+cat > "${tmp_mask}"
+
+#===========================================================
+#? Define sequence error
+#===========================================================
+
 nr=$(cat "${tmp_MIDS}" | wc -l)
 
 cat "${tmp_MIDS}" |
+    #----------------------------------------
+    #* Transpose matrix
+    #----------------------------------------
     awk -v nr="${nr}" -F "" \
     '{for(i=1; i<=NF; i++){
             row[i]=row[i] $i
             if(NR==nr) print row[i]
         }
     }' |
+    #----------------------------------------
+    #* Define sequence error when control sample has more than 7% mutations
+    #----------------------------------------
     awk -F "" '{
+        per=7
         INS=gsub(/[1-9]|[a-z]/,"@",$0)
         DEL=gsub("D","D",$0)
         SUB=gsub("S","S",$0)
-        #----------------------------------------
-        #* Define sequence error when control sample has more than 5% mutations
-        #----------------------------------------
-        per=5
         if(INS > NF*per/100 || DEL > NF*per/100 || SUB > NF*per/100)
             num=2
         else
@@ -113,8 +129,12 @@ cat "${tmp_MIDS}" |
 
         print num
     }' |
+    paste - "${tmp_mask}" |
+    #----------------------------------------
+    #* Define sequence error at repeat-masked loci
+    #----------------------------------------
+    awk '$2 ~ /[acgt]/{$1=2}{print $1}' |
 cat > "${control_score}"
-
 
 ################################################################################
 #! Generate scores of other possible alleles
@@ -197,8 +217,8 @@ while read -r label; do
         sort |
         join -a 1 - "${tmp_control}" |
         awk '$2!="-"' | # deletion
-        awk '$1=="-" {$(NF+1)=1}1' | # knockin
-        awk '$2~/[ACGT]/ {$(NF+1)=1}1' | # point mutation
+        awk '$2~/[ACGT]/ {$4=1}1' | # point mutation
+        awk '$1=="-" {$4=100}1' | # knockin
         sort -t " " -k 3,3n |
         awk '{print $NF}'
     fi |

@@ -18,7 +18,7 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #? TEST Auguments
 #===========================================================
 
-# barcode=barcode01
+# barcode=barcode48
 # filter=on
 
 #===========================================================
@@ -50,8 +50,12 @@ tmp_alleleper_before=.DAJIN_temp/clustering/temp/alleleper_before_"${barcode}"
 tmp_alleleper_after=.DAJIN_temp/clustering/temp/alleleper_after_"${barcode}"
 
 ################################################################################
-#! Retain Target > 1%; others > 3 % (if filter=on)
+#! Retain Target > 1%; others > 5 % (if filter=on)
 ################################################################################
+
+#===========================================================
+#? Count total read numbers
+#===========================================================
 
 true > "${tmp_clusterid}"
 
@@ -73,6 +77,10 @@ total_reads=$(
     awk '{sum+=$1} END{print sum}'
 )
 
+#===========================================================
+#? Retain Target > 3%; others > 5 % (if filter=on)
+#===========================================================
+
 cat "${tmp_clusterid}" |
     cut -f 1,3 |
     sort |
@@ -80,14 +88,19 @@ cat "${tmp_clusterid}" |
     sed "s/$/\t${total_reads}/g" |
     awk '{$NF=$1/$NF*100}1' |
     if [ "_${filter}" = "_on" ]; then
-        awk '($2!~"target" && $NF > 3) ||
-        ($2~"target" && $NF > 1)'
+        awk '($2!~"target" && $NF > 5) ||
+        ($2~"target" && $NF > 3)'
     else
         cat -
     fi |
     cut -d " " -f 2- |
     awk '{nr[$1]++; print $1, $2, nr[$1], $3}' |
 cat > "${tmp_alleleper_before}"
+
+
+#===========================================================
+#? Adjust to total 100%
+#===========================================================
 
 total_percentage=$(
     cat "${tmp_alleleper_before}" |

@@ -22,13 +22,9 @@ error_exit() {
 #? TEST Aurguments
 #===========================================================
 
-# barcode="barcode01"
-# alleletype="flox_deletion"
-# suffix="${barcode}"_"${alleletype}"
-
-# mapping_alleletype="${alleletype}"
-# [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
-# [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
+# barcode="barcode14"
+# alleletype="target"
+# threads=12
 
 #===========================================================
 #? Aurguments
@@ -36,15 +32,16 @@ error_exit() {
 
 barcode="${1}"
 alleletype="${2}"
-suffix="${barcode}"_"${alleletype}"
-
-mapping_alleletype="${alleletype}"
-[ "$alleletype" = "normal" ] && mapping_alleletype="wt"
-[ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
+threads="${3}"
 
 #===========================================================
 #? Input
 #===========================================================
+
+suffix="${barcode}"_"${alleletype}"
+mapping_alleletype="${alleletype}"
+[ "$alleletype" = "normal" ] && mapping_alleletype="wt"
+[ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
 
 control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
 query_score=".DAJIN_temp/clustering/temp/query_score_${suffix}"
@@ -67,7 +64,7 @@ elif [ ! -s "${query_label}" ]; then
 elif [ ! -s "${control_score}" ]; then
         error_exit "${control_score} is empty"
 else
-        Rscript DAJIN/src/clustering_hdbscan.R "${query_score}" "${query_label}" "${control_score}"
+        Rscript DAJIN/src/clustering_hdbscan.R "${query_score}" "${query_label}" "${control_score}" "${threads}"
 fi
 
 echo "Clustering ${barcode} ${alleletype} finished..."

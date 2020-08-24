@@ -48,8 +48,8 @@ query=".DAJIN_temp/fasta_ont/${barcode}.fa"
 #? Temporal
 #===========================================================
 
-tmp_query=".DAJIN_temp/tmp_query_${suffix}"_$$
-tmp_seqID=".DAJIN_temp/tmp_seqID_${suffix}"_$$
+tmp_query=".DAJIN_temp/clustering/tmp_query_${suffix}"_$$
+tmp_seqID=".DAJIN_temp/clustering/tmp_seqID_${suffix}"_$$
 
 tmp_all=".DAJIN_temp/tmp_all_${suffix}"_$$
 tmp_primary=".DAJIN_temp/tmp_primary_${suffix}"_$$
@@ -210,6 +210,6 @@ cat "${tmp_primary}" "${tmp_secondary}" |
     sed -e "s/$/\t${barcode}/g" -e "s/ /\t/g" |
 cat
 
-rm "${tmp_seqID}" "${tmp_all}" "${tmp_primary}" "${tmp_secondary}"
+rm "${tmp_query}" "${tmp_seqID}" "${tmp_all}" "${tmp_primary}" "${tmp_secondary}"
 
 exit 0
