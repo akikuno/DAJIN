@@ -448,7 +448,8 @@ cat > .DAJIN_temp/data/mutation_points
 #? MIDS conversion
 #===========================================================
 
-find .DAJIN_temp/fasta_ont -type f | sort |
+find .DAJIN_temp/fasta_ont -type f |
+    sort |
     awk '{print "./DAJIN/src/mids_classification.sh", $0, "wt", "&"}' |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)
