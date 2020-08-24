@@ -99,22 +99,22 @@ Rscript DAJIN/src/consensus.R "${tmp_allele_id}" "${control_score}" "${cluster}"
 #===========================================================
 
 if [ -s ".DAJIN_temp/consensus/temp/mutation_${out_suffix}" ]; then
-cat ".DAJIN_temp/consensus/temp/mutation_${out_suffix}" |
-    sed "s/^/${cluster} /g" |
-    #----------------------------------------------------------
-    #* Converte Insertion character to number
-    #----------------------------------------------------------
-    awk '{
-        if($4 ~ /[a-z]/) {
-            for (i=10; i<=36; i++) {
-                num=i+87
-                ins=sprintf("%c", num)
-                if($4==ins) $4=i
+    cat ".DAJIN_temp/consensus/temp/mutation_${out_suffix}" |
+        sed "s/^/${cluster} /g" |
+        #----------------------------------------------------------
+        #* Converte Insertion character to number
+        #----------------------------------------------------------
+        awk '{
+            if($4 ~ /[a-z]/) {
+                for (i=10; i<=36; i++) {
+                    num=i+87
+                    ins=sprintf("%c", num)
+                    if($4==ins) $4=i
+                }
             }
-        }
-        print $0}' |
-    sed "s/35$/>35/g" |
-cat > "${mutation_id_loc_type_insnum}"
+            print $0}' |
+        sed "s/35$/>35/g" |
+    cat > "${mutation_id_loc_type_insnum}"
 else
     echo "${cluster} 0 intact 0" > "${mutation_id_loc_type_insnum}"
 fi
@@ -268,6 +268,7 @@ if [ "_${mutation_design}" = "_S" ]; then
 
     contaion_target=$(
         cat "${mutation_type_site_nuc}" |
+        awk -v mut="{mutation_design}" '$1==mut' |
         cut -d " " -f 2 |
         awk '{print $0-1}' |
         grep -c ${mutation_point} -
@@ -280,7 +281,7 @@ if [ "${diff_target}" -eq 0 ]; then
     output_filename="${output_filename}_intact_target"
 elif [ "${diff_wt}" -eq 0 ]; then
     output_filename="${output_filename}_intact_wt"
-elif [ "${contaion_target}" -ne 0 ]; then
+elif [ "${contaion_target:-0}" -ne 0 ]; then
     output_filename="${output_filename}_mutation_target"
 elif [ "$(grep -c intact ${mutation_type_site_nuc})" -eq 1 ]; then
     output_filename="${output_filename}_intact_${alleletype}"
