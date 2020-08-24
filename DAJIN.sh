@@ -207,8 +207,8 @@ fi
 #? Make temporal directory
 #===========================================================
 
-rm -rf ".DAJIN_temp" 2>/dev/null || true
-dirs="fasta fasta_conv fasta_ont NanoSim bam data clustering/temp"
+# rm -rf ".DAJIN_temp" 2>/dev/null || true
+dirs="fasta fasta_conv fasta_ont NanoSim data"
 
 echo "${dirs}" |
     sed "s:^:.DAJIN_temp/:g" |
@@ -376,48 +376,47 @@ EOF
 #===========================================================
 #? NanoSim
 #===========================================================
+if ! find .DAJIN_temp/fasta_ont | grep simulated_aligned_reads >/dev/null 2>&1; then
+    ./DAJIN/utils/NanoSim/src/read_analysis.py genome \
+        -i ".DAJIN_temp/fasta_ont/${control}.fa" \
+        -rg .DAJIN_temp/fasta_conv/wt.fa \
+        -t ${threads:-1} \
+        -o .DAJIN_temp/NanoSim/training
 
-./DAJIN/utils/NanoSim/src/read_analysis.py genome \
-    -i ".DAJIN_temp/fasta_ont/${control}.fa" \
-    -rg .DAJIN_temp/fasta_conv/wt.fa \
-    -t ${threads:-1} \
-    -o .DAJIN_temp/NanoSim/training
+    wt_seqlen=$(awk '!/[>|@]/ {print length($0)}' .DAJIN_temp/fasta/wt.fa)
 
-wt_seqlen=$(awk '!/[>|@]/ {print length($0)}' .DAJIN_temp/fasta/wt.fa)
-
-for input in .DAJIN_temp/fasta_conv/*; do
-    printf "${input} is now simulating...\n"
-    output=$(
-        echo "$input" |
-        sed -e "s#fasta_conv/#fasta_ont/#g" \
-            -e "s/.fasta$//g" -e "s/.fa$//g"
-        )
-    ## For deletion allele
-    input_seqlength=$(
-        cat "${input}" |
-        awk '!/[>|@]/ {print length($0)-100}'
-        )
-    if [ "$input_seqlength" -lt "$wt_seqlen" ]; then
-        len=${input_seqlength}
-    else
-        len=${wt_seqlen}
-    fi
-    ##
-    ./DAJIN/utils/NanoSim/src/simulator.py genome \
-        -dna_type linear \
-        -c .DAJIN_temp/NanoSim/training \
-        -rg "${input}" \
-        -n 10000 \
-        -t "${threads:-1}" \
-        -min "${len}" \
-        -o "${output}_simulated" 2>/dev/null
-    ##
-    rm .DAJIN_temp/fasta_ont/*_error_* .DAJIN_temp/fasta_ont/*_unaligned_* 2>/dev/null || true
-done
-
-rm -rf DAJIN/utils/NanoSim/src/__pycache__
-
-printf 'Success!!\nSimulation is finished\n'
+    for input in .DAJIN_temp/fasta_conv/*; do
+        printf "${input} is now simulating...\n"
+        output=$(
+            echo "$input" |
+            sed -e "s#fasta_conv/#fasta_ont/#g" \
+                -e "s/.fasta$//g" -e "s/.fa$//g"
+            )
+        ## For deletion allele
+        input_seqlength=$(
+            cat "${input}" |
+            awk '!/[>|@]/ {print length($0)-100}'
+            )
+        if [ "$input_seqlength" -lt "$wt_seqlen" ]; then
+            len=${input_seqlength}
+        else
+            len=${wt_seqlen}
+        fi
+        ##
+        ./DAJIN/utils/NanoSim/src/simulator.py genome \
+            -dna_type linear \
+            -c .DAJIN_temp/NanoSim/training \
+            -rg "${input}" \
+            -n 10000 \
+            -t "${threads:-1}" \
+            -min "${len}" \
+            -o "${output}_simulated" 2>/dev/null
+        ##
+        rm .DAJIN_temp/fasta_ont/*_error_* .DAJIN_temp/fasta_ont/*_unaligned_* 2>/dev/null || true
+    done
+    rm -rf DAJIN/utils/NanoSim/src/__pycache__
+    printf 'Success!!\nSimulation is finished\n'
+fi
 
 ################################################################################
 #! MIDS conversion
