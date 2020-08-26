@@ -505,7 +505,6 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk -v th=${threads:-1} '{print "./DAJIN/src/clustering.sh", $1, $2, th}' |
 sh - 2>/dev/null
 # ls -lh .DAJIN_temp/clustering/temp/hdbscan_*
-# rm .DAJIN_temp/tmp_*
 
 #===========================================================
 #? Allele percentage
@@ -519,7 +518,7 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
-sh - 2>/dev/null
+sh - # 2>/dev/null
 
 ################################################################################
 #! Get consensus sequence in each cluster
