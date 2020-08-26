@@ -177,7 +177,7 @@ cl_num_opt <- which(cl_nums == cl_num_opt) %>% max()
 
 cl <- h$HDBSCAN(min_samples = 1L,
     min_cluster_size = as.integer(min_cluster_sizes[cl_num_opt]),
-    memory = joblib$Memory(cachedir = ".DAJIN_temp/clustering/temp"))
+    memory = joblib$Memory(cachedir = ".DAJIN_temp/clustering/temp", verbose = 0))
 hdbscan_cl <- cl$fit_predict(output_pca) + 1
 
 # hdbscan_cl %>% table
@@ -213,7 +213,9 @@ rm(df_score)
 # if two sequences are simillar, merge them
 ################################################################################
 
-calc_cosine_sim <- function(a, b) crossprod(a, b) / sqrt(crossprod(a) * crossprod(b))
+calc_cosine_sim <- function(a, b) {
+    crossprod(a, b) / sqrt(crossprod(a) * crossprod(b))
+    }
 
 cossim_merged_cl <- hdbscan_cl
 
@@ -300,7 +302,10 @@ if (length(query_) > 1) {
             df_ <- tibble(
                 one = cl_combn[1, i],
                 two = cl_combn[2, i],
-                score = identical(tmp_seq[[cl_combn[1, i]]], tmp_seq[[cl_combn[2, i]]])
+                score = identical(
+                    tmp_seq[[cl_combn[1, i]]],
+                    tmp_seq[[cl_combn[2, i]]]
+                    )
             )
             df_cossim <- bind_rows(df_cossim, df_)
     }
@@ -348,6 +353,6 @@ write_tsv(result,
 barcode <- output_suffix %>% str_remove("_.*$")
 
 write_tsv(df_control,
-    sprintf(".DAJIN_temp/clustering/temp/control_score_target_%s", barcode),
+    sprintf("%s_%s", file_control, barcode),
     col_names = F
 )
