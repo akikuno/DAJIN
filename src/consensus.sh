@@ -17,11 +17,11 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #? TEST Auguments
 #===========================================================
 
-# barcode="barcode23"
+# barcode="barcode14"
 # alleletype="target"
-# cluster=4
+# cluster=2
 # percentage=69.7
-# alleleid=3
+# alleleid=4
 
 #===========================================================
 #? Auguments
@@ -92,7 +92,7 @@ cat "${allele_id}" |
     awk -F "" 'BEGIN{OFS=","}{$1=$1}1' |
 cat > "${tmp_allele_id}"
 
-Rscript DAJIN/src/consensus.R "${tmp_allele_id}" "${control_score}" "${cluster}"
+Rscript DAJIN/src/consensus.R "${tmp_allele_id}" "${control_score}" "${barcode}"
 
 #===========================================================
 #? Report (1) Cluster ID, (2) Base loc (3) Mutation type (4) Ins num
