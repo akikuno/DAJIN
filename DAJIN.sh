@@ -607,8 +607,9 @@ cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 #? Consensus
 #===========================================================
 
-cp -r .DAJIN_temp/consensus/* "${output_dir:-DAJIN_results}"/Consensus/ 2>/dev/null
-rm -rf "${output_dir:-DAJIN_results}"/Consensus/temp 2>/dev/null
+find .DAJIN_temp/consensus/* -type d |
+grep -v "consensus/temp" |
+xargs -I @ cp -f -r @ "${output_dir:-DAJIN_results}"/Consensus/ 2>/dev/null
 
 #===========================================================
 #? Details
