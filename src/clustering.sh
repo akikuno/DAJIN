@@ -120,10 +120,10 @@ elif [ ! -s "${control_score}" ]; then
     error_exit "${control_score} is empty"
 else
     Rscript DAJIN/src/clustering.R "${query_score}" "${query_label}" "${control_score}" "${threads}"
-    ps -au | grep DAJIN | grep -e clustering -e joblib | awk '{print $2}'| xargs kill
+    ps -au | grep "DAJIN" | grep -e "clustering.R" -e "joblib" | awk '{print $2}'| xargs kill
 fi
 
-reecho "Clustering ${barcode} ${alleletype} finished..." >&2
+echo "Clustering ${barcode} ${alleletype} finished..." >&2
 
 ################################################################################
 #! Clean and Finish
