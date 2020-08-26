@@ -123,7 +123,7 @@ else
     ps -au | grep DAJIN | grep -e clustering -e joblib | awk '{print $2}'| xargs kill
 fi
 
-echo "Clustering ${barcode} ${alleletype} finished..."
+reecho "Clustering ${barcode} ${alleletype} finished..." >&2
 
 ################################################################################
 #! Clean and Finish
