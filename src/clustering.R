@@ -4,7 +4,14 @@
 
 options(repos = "https://cloud.r-project.org/")
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
+if (!requireNamespace("reticulate", quietly = T)) install.packages("reticulate")
 pacman::p_load(tidyverse, dbscan, parallel)
+
+DAJIN_Python <- reticulate:::conda_list()$python %>%
+    str_subset("DAJIN/bin/python")
+Sys.setenv(RETICULATE_PYTHON = DAJIN_Python)
+reticulate::use_condaenv("DAJIN")
+# reticulate::py_config()
 
 ################################################################################
 #! I/O naming
@@ -14,8 +21,8 @@ pacman::p_load(tidyverse, dbscan, parallel)
 #? TEST Auguments
 #===========================================================
 
-# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode01_target"
-# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode01_target"
+# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode14_target"
+# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode14_target"
 # file_control <- ".DAJIN_temp/clustering/temp/control_score_target"
 # threads <- 14L
 
@@ -29,14 +36,21 @@ file_label <- args[2]
 file_control <- args[3]
 threads <- as.integer(args[4])
 
-
 #===========================================================
 #? Inputs
 #===========================================================
 
-df_que <- read_csv(file_que, col_names = FALSE, col_types = cols())
-df_label <- read_csv(file_label, col_names = c("id", "label"), col_types = cols())
-df_control <- read_csv(file_control, col_names = c("score"), col_types = cols())
+df_que <- read_csv(file_que,
+    col_names = FALSE,
+    col_types = cols())
+
+df_label <- read_csv(file_label,
+    col_names = c("id", "label"),
+    col_types = cols())
+
+df_control <- read_csv(file_control,
+    col_names = c("score"),
+    col_types = cols())
 
 #===========================================================
 #? Outputs
@@ -59,7 +73,9 @@ rownames(mids_score) <- mids
 for (row in seq_along(mids)) {
     mids_score[row, ] <-
     mclapply(seq_along(colnames(df_que)) %>% as.list,
-        function(x) pull(df_que[, x]) %>% str_count(pattern = mids[row]) %>% sum(),
+        function(x) {
+            pull(df_que[, x]) %>% str_count(pattern = mids[row]) %>% sum()
+            },
         mc.cores = as.integer(threads)) %>%
         unlist
 }
@@ -82,25 +98,26 @@ rm(mids_score)
 #* Insertion
 #--------------------------------------
 
-tmp <- which(df_control$score == 100)
+tmp_score100 <- which(df_control$score == 100)
 
-if (length(tmp) != 0){
-    df_control$score[seq(tmp[1], tail(tmp, 1))] <- 100
+if (length(tmp_score100) != 0) {
+    df_control$score[seq(tmp_score100[1], tail(tmp_score100, 1))] <- 100
 
-    tmp_inserr <- df_que %>%
-        select(which(df_control$score == 100)) %>%
-        mclapply(
-            function(x) x %>% table %>% which.max %>% names,
-            mc.cores = as.integer(threads)) %>%
-        unlist %>%
-        str_detect("M")
+    tmp_ins_error <- df_que %>%
+    select(which(df_control$score == 100)) %>%
+    mclapply(
+        function(x) x %>% table %>% which.max %>% names,
+        mc.cores = as.integer(threads)) %>%
+    unlist %>%
+    str_replace("M", "2") %>%
+    str_replace("[^M2]", "1") %>%
+    as.numeric
 
-    tmp_inserr[tmp_inserr == TRUE] <- 2
-    tmp_inserr[tmp_inserr == FALSE] <- 1
-
-    df_control$score[df_control$score == 100] <- tmp_inserr
+    df_control$score[df_control$score == 100] <- tmp_ins_error
+    rm(tmp_ins_error)
 }
-rm(tmp, tmp_inserr)
+rm(tmp_score100)
+
 #--------------------------------------
 #* Input sequence error (M/0)
 #--------------------------------------
@@ -128,18 +145,25 @@ rm(pca_res)
 #! Clustering
 ################################################################################
 
-if (nrow(output_pca) < 500) {
-    cl_sizes <- seq(10, nrow(output_pca), length = 10) %>% as.integer
-} else {
-    cl_sizes <- seq(25, 500, length = 10) %>% as.integer
+joblib <- reticulate::import("joblib")
+h <- reticulate::import("hdbscan")
+
+min_cluster_sizes <- seq(nrow(output_pca)/20, nrow(output_pca)/2, length = 10) %>%
+    unique
+min_cluster_sizes <- as.integer(min_cluster_sizes + 2)
+
+hd <- function(x) {
+    cl <- h$HDBSCAN(min_samples = 1L, min_cluster_size = as.integer(x),
+        memory = joblib$Memory(cachedir = ".DAJIN_temp/clustering/temp", verbose = 0))
+    cl$fit_predict(output_pca) %>% table %>% length
 }
 
-cl_nums <- mclapply(cl_sizes,
-    function(x) hdbscan(output_pca, minPts = x)$cluster %>% table %>% length,
-    mc.cores = as.integer(1)) %>%
+cl_nums <- mclapply(min_cluster_sizes, hd,
+    mc.cores = as.integer(threads)) %>%
     unlist
 
 cl_num_opt <- cl_nums %>% table()
+
 if ((cl_num_opt %>% names != 1) %>% sum > 0) {
     cl_num_opt <- cl_num_opt[names(cl_num_opt) != 1] %>%
         which.max() %>%
@@ -151,7 +175,12 @@ if ((cl_num_opt %>% names != 1) %>% sum > 0) {
 }
 cl_num_opt <- which(cl_nums == cl_num_opt) %>% max()
 
-hdbscan_cl <- hdbscan(output_pca, minPts = cl_sizes[cl_num_opt])$cluster + 1
+cl <- h$HDBSCAN(min_samples = 1L,
+    min_cluster_size = as.integer(min_cluster_sizes[cl_num_opt]),
+    memory = joblib$Memory(cachedir = ".DAJIN_temp/clustering/temp"))
+hdbscan_cl <- cl$fit_predict(output_pca) + 1
+
+# hdbscan_cl %>% table
 
 ################################################################################
 #! Extract mutation frequency scores in each cluster
@@ -238,9 +267,15 @@ query_ <- cossim_merged_cl %>%
     order() %>%
     sort()
 
-for (i in seq_along(pattern_)) {
-    cossim_merged_cl[cossim_merged_cl == pattern_[i]] <- query_[i]
-}
+cossim_merged_cl <- lapply(pattern_,
+    function(x) which(x == cossim_merged_cl)) %>%
+    set_names(query_) %>%
+    map2_df(., query_, function(x, y) {
+        tibble(pattern = x,
+        query = rep(y, length(x))
+        )}) %>%
+    arrange(pattern) %>%
+    pull(query)
 
 ################################################################################
 #! Sequence identity to merge similar clusters
@@ -289,9 +324,15 @@ query_ <- cossim_merged_cl %>%
     order() %>%
     sort()
 
-for (i in seq_along(pattern_)) {
-    cossim_merged_cl[cossim_merged_cl == pattern_[i]] <- query_[i]
-}
+cossim_merged_cl <- lapply(pattern_,
+    function(x) which(x == cossim_merged_cl)) %>%
+    set_names(query_) %>%
+    map2_df(., query_, function(x, y) {
+        tibble(pattern = x,
+        query = rep(y, length(x))
+        )}) %>%
+    arrange(pattern) %>%
+    pull(query)
 
 ################################################################################
 #! Output results
