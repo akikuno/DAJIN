@@ -4,7 +4,7 @@
 #! Initialize shell environment
 ################################################################################
 
-set -eu
+set -u
 umask 0022
 export LC_ALL=C
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
@@ -83,7 +83,6 @@ cat > "${query_seq}"
 #? Output query score
 #===========================================================
 
-
 cat "${query_seq}" |
     awk -F '' 'BEGIN{OFS=","} {$1=$1;print $0}' |
     sed "s/[0-9]/I/g" |
@@ -119,11 +118,10 @@ elif [ ! -s "${query_label}" ]; then
 elif [ ! -s "${control_score}" ]; then
     error_exit "${control_score} is empty"
 else
-    Rscript DAJIN/src/clustering.R "${query_score}" "${query_label}" "${control_score}" "${threads}"
-    ps -au | grep "DAJIN" | grep -e "clustering.R" -e "joblib" | awk '{print $2}'| xargs kill
+    echo "Clustering ${barcode} ${alleletype} ..." >&2
+    Rscript DAJIN/src/clustering.R "${query_score}" "${query_label}" "${control_score}" "${threads}" 2>/dev/null || exit 1
+    ps -au | grep -e "clustering.R" -e "joblib" | awk '{print $2}'| xargs kill 2>/dev/null
 fi
-
-echo "Clustering ${barcode} ${alleletype} finished..." >&2
 
 ################################################################################
 #! Clean and Finish
