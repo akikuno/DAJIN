@@ -363,9 +363,6 @@ done
 ################################################################################
 #! NanoSim (v2.5.0)
 ################################################################################
-set +u
-conda activate DAJIN_nanosim
-set -u
 
 cat << EOF >&2
 --------------------------------------------------------------------------------
@@ -377,16 +374,21 @@ EOF
 #? NanoSim
 #===========================================================
 if ! find .DAJIN_temp/fasta_ont | grep simulated_aligned_reads >/dev/null 2>&1; then
+
+    set +u
+    conda activate DAJIN_nanosim
+    set -u
+
     ./DAJIN/utils/NanoSim/src/read_analysis.py genome \
         -i ".DAJIN_temp/fasta_ont/${control}.fa" \
         -rg .DAJIN_temp/fasta_conv/wt.fa \
         -t ${threads:-1} \
-        -o .DAJIN_temp/NanoSim/training
+        -o .DAJIN_temp/NanoSim/training 1>&2
 
-    wt_seqlen=$(awk '!/[>|@]/ {print length($0)}' .DAJIN_temp/fasta/wt.fa)
+    wt_seqlen=$(awk '!/[>|@]/ {print length($0)}' .DAJIN_temp/fasta_conv/wt.fa)
 
     for input in .DAJIN_temp/fasta_conv/*; do
-        printf "${input} is now simulating...\n"
+        printf "${input} is now simulating...\n" 1>&2
         output=$(
             echo "$input" |
             sed -e "s#fasta_conv/#fasta_ont/#g" \
@@ -410,12 +412,11 @@ if ! find .DAJIN_temp/fasta_ont | grep simulated_aligned_reads >/dev/null 2>&1; 
             -n 10000 \
             -t "${threads:-1}" \
             -min "${len}" \
-            -o "${output}_simulated" 2>/dev/null
+            -o "${output}_simulated" 1>&2
         ##
         rm .DAJIN_temp/fasta_ont/*_error_* .DAJIN_temp/fasta_ont/*_unaligned_* 2>/dev/null || true
     done
     rm -rf DAJIN/utils/NanoSim/src/__pycache__
-    printf 'Success!!\nSimulation is finished\n'
 fi
 
 ################################################################################
