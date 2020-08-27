@@ -492,7 +492,7 @@ mkdir -p .DAJIN_temp/clustering/temp
 #? Prepare control's score to define sequencing error
 #===========================================================
 
-./DAJIN/src/clustering_control_score.sh "${control}" "${threads}" 2>/dev/null
+./DAJIN/src/clustering_control_score.sh "${control}" "${threads}" #2>/dev/null
 # wc -l .DAJIN_temp/clustering/temp/control_score_*
 
 #===========================================================
@@ -503,7 +503,7 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     cut -f 2,3 |
     sort -u |
     awk -v th=${threads:-1} '{print "./DAJIN/src/clustering.sh", $1, $2, th}' |
-sh - 2>/dev/null
+sh -
 # ls -lh .DAJIN_temp/clustering/temp/hdbscan_*
 
 #===========================================================
@@ -518,7 +518,7 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
-sh - # 2>/dev/null
+sh -
 
 ################################################################################
 #! Get consensus sequence in each cluster
@@ -568,7 +568,7 @@ cat .DAJIN_temp/clustering/label* |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
-sh - 2>/dev/null
+sh -
 
 ################################################################################
 #! Summarize to Details.csv and Details.pdf
