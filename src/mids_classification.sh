@@ -100,12 +100,11 @@ mids_conv(){
 }
 
 ################################################################################
-#! 変異部から±100塩基を含むリードのみを取り出す
+#! Extract reads containing ±100 bases from the mutation
 ################################################################################
 
 #===========================================================
-#? 変数の定義
-# 切断面から含むべき塩基数
+#? Define variables
 #===========================================================
 
 reference=".DAJIN_temp/fasta_conv/wt.fa"
@@ -126,7 +125,7 @@ second_flank=$(
 [ "${second_flank}" -gt "${reflength}" ] && second_flank="${reflength}"
 
 #===========================================================
-#? 変異部から±100塩基を含むリードのみを取り出す
+#? Extract reads
 #===========================================================
 
 minimap2 -ax splice "${reference}" "${input_fa}" --cs=long 2>/dev/null |
@@ -149,7 +148,7 @@ minimap2 -ax splice "${reference}" "${input_fa}" --cs=long 2>/dev/null |
         if(max[$1]<$3) max[$1]=$3}
         END{for(key in min) print key, min[key], max[key]}' |
     sort -t " " -n |
-    awk -v first=${first_flank} -v second=${second_flank} '{
+    awk -v first="${first_flank}" -v second="${second_flank}" '{
         if($2<=first && $3>=second) print $1}' |
     sort |
 cat > "${tmp_seqID}"
@@ -159,7 +158,7 @@ cat > "${tmp_seqID}"
 ################################################################################
 
 #===========================================================
-#? primaryとsecondaryを分けてMIDS変換を行う
+#? Separate primary and secondary reads
 #===========================================================
 
 cat "${tmp_mapping}" |
@@ -184,7 +183,7 @@ cat "${tmp_all}" |
 cat > "${tmp_secondary}"
 
 #===========================================================
-#? primaryとsecondaryを結合する
+#? Concat primary secondary
 #===========================================================
 
 cat "${tmp_primary}" "${tmp_secondary}" |
@@ -231,7 +230,7 @@ cat "${tmp_primary}" "${tmp_secondary}" |
         if(seqlen>reflen) {print $1,substr($3,1,reflen)}
         else {for(i=seqlen; i < reflen; i++) end=end"M"; print $1,$3""end}
     }' |
-    # 全てが変異になったリードがあれば除去する。
+    # Remove all-mutated reads
     awk '$2 !~ /^[I|D|S]+$/' |
     sed -e "s/$/\t${label}/g" -e "s/ /\t/g" |
 cat > "${output_MIDS}"
