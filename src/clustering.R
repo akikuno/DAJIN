@@ -20,9 +20,9 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode02_inversion"
-# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode02_inversion"
-# file_control <- ".DAJIN_temp/clustering/temp/control_score_inversion"
+# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode33_target"
+# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode33_target"
+# file_control <- ".DAJIN_temp/clustering/temp/control_score_target"
 # threads <- 14L
 
 #===========================================================
@@ -343,16 +343,39 @@ cossim_merged_cl <- lapply(pattern_,
 #! Remove reads with strand specific mutation
 ################################################################################
 
-tmp_cl <-
-    tibble(cl = cossim_merged_cl, strand = df_label$strand) %>%
-    group_by(cl) %>%
+tmp_tibble <- tibble(cl = cossim_merged_cl, strand = df_label$strand)
+
+#===========================================================
+#? Define "dual-end" or "single-end" adaptor
+#===========================================================
+
+tmp_nrow <- tmp_tibble %>%
     count(strand) %>%
     mutate(freq = n / sum(n)) %>%
-    filter(freq < 0.95 & freq > 0.05) %>%
-    pull(cl) %>%
-    unique
+    filter(freq < 0.90 & freq > 0.10) %>%
+    nrow
+
+#===========================================================
+#? Remove reads with strand specific mutation
+#===========================================================
+
+if (tmp_nrow > 0) {
+    tmp_cl <-
+        tmp_tibble %>%
+        group_by(cl) %>%
+        count(strand) %>%
+        mutate(freq = n / sum(n)) %>%
+        filter(freq < 0.95 & freq > 0.05) %>%
+        pull(cl) %>%
+        unique
+
+} else {
+    tmp_cl <- cossim_merged_cl %>% unique
+}
 
 retain_reads <- cossim_merged_cl %in% tmp_cl
+
+rm(tmp_tibble, tmp_nrow, tmp_cl)
 
 ################################################################################
 #! Output results
