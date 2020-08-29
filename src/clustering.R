@@ -5,13 +5,12 @@
 options(repos = "https://cloud.r-project.org/")
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
 if (!requireNamespace("reticulate", quietly = T)) install.packages("reticulate")
-pacman::p_load(tidyverse, dbscan, parallel)
+pacman::p_load(tidyverse, parallel)
 
 DAJIN_Python <- reticulate:::conda_list()$python %>%
     str_subset("DAJIN/bin/python")
 Sys.setenv(RETICULATE_PYTHON = DAJIN_Python)
 reticulate::use_condaenv("DAJIN")
-# reticulate::py_config()
 
 ################################################################################
 #! I/O naming
@@ -21,9 +20,9 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode14_target"
-# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode14_target"
-# file_control <- ".DAJIN_temp/clustering/temp/control_score_target"
+# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode02_inversion"
+# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode02_inversion"
+# file_control <- ".DAJIN_temp/clustering/temp/control_score_inversion"
 # threads <- 14L
 
 #===========================================================
@@ -45,7 +44,7 @@ df_que <- read_csv(file_que,
     col_types = cols())
 
 df_label <- read_csv(file_label,
-    col_names = c("id", "label"),
+    col_names = c("id", "strand", "barcode"),
     col_types = cols())
 
 df_control <- read_csv(file_control,
@@ -178,9 +177,8 @@ cl_num_opt <- which(cl_nums == cl_num_opt) %>% max()
 cl <- h$HDBSCAN(min_samples = 1L,
     min_cluster_size = as.integer(min_cluster_sizes[cl_num_opt]),
     memory = joblib$Memory(cachedir = ".DAJIN_temp/clustering/temp", verbose = 0))
-hdbscan_cl <- cl$fit_predict(output_pca) + 1
 
-# hdbscan_cl %>% table
+hdbscan_cl <- cl$fit_predict(output_pca) + 1
 
 ################################################################################
 #! Extract mutation frequency scores in each cluster
@@ -204,9 +202,11 @@ for (i in unique(hdbscan_cl)) {
 }
 rm(df_score)
 
+#### TEST <<<<<<<<<<<<
 # ggplot(df_cluster, aes(x=loc, y=score)) +
 # geom_point() +
 # facet_wrap(~cluster, nrow=1)
+#### TEST >>>>>>>>>>>>
 
 ################################################################################
 #! Cosine similarity to merge similar clusters
@@ -340,10 +340,26 @@ cossim_merged_cl <- lapply(pattern_,
     pull(query)
 
 ################################################################################
+#! Remove reads with strand specific mutation
+################################################################################
+
+tmp_cl <-
+    tibble(cl = cossim_merged_cl, strand = df_label$strand) %>%
+    group_by(cl) %>%
+    count(strand) %>%
+    mutate(freq = n / sum(n)) %>%
+    filter(freq < 0.95 & freq > 0.05) %>%
+    pull(cl) %>%
+    unique
+
+retain_reads <- cossim_merged_cl %in% tmp_cl
+
+################################################################################
 #! Output results
 ################################################################################
 
-result <- tibble(read_id = df_label$id, cossim_merged_cl)
+result <- tibble(read_id = df_label$id[retain_reads],
+    cluster = cossim_merged_cl[retain_reads])
 
 write_tsv(result,
     sprintf(".DAJIN_temp/clustering/temp/hdbscan_%s", output_suffix),

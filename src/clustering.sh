@@ -19,7 +19,7 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #===============================================================================
 
 # barcode="barcode14"
-# alleletype="target"
+# alleletype="abnormal"
 # threads=14
 
 #===========================================================
@@ -76,7 +76,7 @@ cat "${MIDS_que}" |
     sort -k 1,1 |
     join - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk -v atype="${alleletype}" '$NF==atype' |
-    cut -d " " -f 2 |
+    cut -d " " -f 1,2 |
 cat > "${query_seq}"
 
 #===========================================================
@@ -84,7 +84,8 @@ cat > "${query_seq}"
 #===========================================================
 
 cat "${query_seq}" |
-    awk -F '' 'BEGIN{OFS=","} {$1=$1;print $0}' |
+    cut -d " " -f 2 |
+    awk -F '' 'BEGIN{OFS=","}{$1=$1}1' |
     sed "s/[0-9]/I/g" |
     sed "s/[a-z]/I/g" |
 cat > "${query_score}"
@@ -98,7 +99,7 @@ cat "${MIDS_que}" |
     sort -k 1,1 |
     join - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk -v atype="${alleletype}" '$NF==atype' |
-    cut -d " " -f 1,3 |
+    cut -d " " -f 1,3,4 |
     sed "s/ /,/g" |
 cat > "${query_label}"
 

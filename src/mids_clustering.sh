@@ -18,8 +18,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #? TEST Auguments
 #===========================================================
 
-# barcode=barcode48
-# alleletype="target"
+# barcode=barcode02
+# alleletype="abnormal"
 
 #===========================================================
 #? Auguments
@@ -101,7 +101,7 @@ mids_compressed(){
                 str=""}
             }
         gsub(" ", "", $0)
-        print id, loc, $0}' 2>/dev/null |
+        print id, loc, $0, strand}' 2>/dev/null |
     sort -t " " |
     cat
 }
@@ -133,14 +133,19 @@ cat > "${tmp_query}"
 reflength=$(cat "${reference}" | grep -v "^>" | awk '{print length($0)}')
 
 minimap2 -ax splice "${reference}" "${tmp_query}" --cs=long 2>/dev/null |
-    awk -v mapping_alleletype="${mapping_alleletype}" -v reflen="${reflength}" \
-        '$3 == mapping_alleletype && length($10) < reflen * 1.1' |
+    awk -v allele="${mapping_alleletype}" -v reflen="${reflength}" \
+        '$3 == allele && length($10) < reflen * 1.1' |
     sort |
-    # append alignment info
+    # append flag info
     awk '{
-        if($2==0 || $2==16) {alignment="primary"} else {alignment="secondary"};
+        if($2==0 || $2==16) {flag="primary"} else {flag="secondary"};
         if($2==0 || $2==2048) {strand="plus"} else {strand="minus"};
-        for(i=1;i<=NF;i++) if($i ~ /cs:Z/) print $1,alignment,strand,$4,$i
+        for(i=1;i<=NF;i++) if($i ~ /cs:Z/) print $1,flag,strand,$4,$i
+    }' |
+    # remove all secondary reads
+    awk '{flag[$1]=flag[$1]" "$2
+        num_pri=sub("primary","",flag[$1])
+        if(num_pri>0) print $0
     }' |
 cat > "${tmp_all}"
 
@@ -166,11 +171,11 @@ cat "${tmp_primary}" "${tmp_secondary}" |
     sort -t " " -k 2,2n |
     awk '{seq_[$1]=seq_[$1]" "$2" "$3" "$4}
         END{for(key in seq_) print key,seq_[key]}' |
-    awk 'NF==3
+    awk 'NF==4
     #---------------------------------------
     #* Flox deletion
     #---------------------------------------
-    NF==5{id=$1; minloc=$2; maxloc=$2 ; seq=""; len=0; str=""
+    NF==7{id=$1; minloc=$2; maxloc=$2 ; seq=""; len=0; str=""
         for(i=2; i<=NF; i=i+2){
             seq_[$i]=$(i+1)
             if(minloc>$i){ minloc=$i; len=length($(i+1))}
@@ -185,7 +190,7 @@ cat "${tmp_primary}" "${tmp_secondary}" |
     #---------------------------------------
     #* Inversion
     #---------------------------------------
-    NF==7{id=$1; minloc=$2; maxloc=$2 ; seq=""; len=0; str=""
+    NF==10{id=$1; minloc=$2; maxloc=$2 ; seq=""; len=0; str=""
         for(i=2; i<=NF; i=i+2){
             if(minloc>$i){ minloc=$i; len=length($(i+1))}
             if(maxloc<$i) maxloc=$i
@@ -198,14 +203,18 @@ cat "${tmp_primary}" "${tmp_secondary}" |
     sed "s/D*$//g" |
     # complement seqences to match sequence length (insert "M")
     ## start
-    awk '{start=""; for(i=1; i < $2; i++) start=start"M"; print $1,$2,start""$3}' |
+    awk '{start=""
+        for(i=1; i < $2; i++) start=start"M"
+        $3=start""$3}1' |
+    ## remove start site info
+    awk '{$2=""}1' |
     ## end
     awk -v reflen="${reflength}" '{
-        seqlen=length($3);
+        seqlen=length($2);
         end="";
-        if(seqlen>reflen) {print $1,substr($3,1,reflen)}
-        else {for(i=seqlen; i < reflen; i++) end=end"M"; print $1,$3""end}
-    }' |
+        if(seqlen>reflen) $2=substr($2,1,reflen)
+        else {for(i=seqlen; i < reflen; i++) end=end"M"; $2=$2""end}
+    }1' |
     # Remove all-mutated reads
     awk '$2 !~ /^[I|D|S]+$/' |
     sed -e "s/$/\t${barcode}/g" -e "s/ /\t/g" |
