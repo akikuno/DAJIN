@@ -535,8 +535,8 @@ EOF
 #? Setting directory
 #===========================================================
 
-find .DAJIN_temp/consensus/ -type d |
-grep "temp$" |
+find .DAJIN_temp/consensus/* -type d |
+    grep -v "sam$" |
 xargs -I @ rm -rf @ 2>/dev/null
 mkdir -p .DAJIN_temp/consensus/temp .DAJIN_temp/consensus/sam
 
