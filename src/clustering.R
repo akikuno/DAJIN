@@ -39,7 +39,7 @@ threads <- as.integer(args[4])
 #? Inputs
 #===========================================================
 
-df_que <- read_csv(file_que,
+df_que_raw <- read_csv(file_que,
     col_names = FALSE,
     col_types = cols())
 
@@ -66,14 +66,14 @@ output_suffix <- file_label %>% str_remove(".*labels_")
 #===========================================================
 
 mids <- c("M", "I", "D", "S", "=")
-mids_score <- matrix(NA, length(mids), ncol(df_que))
+mids_score <- matrix(NA, length(mids), ncol(df_que_raw))
 rownames(mids_score) <- mids
 
 for (row in seq_along(mids)) {
     mids_score[row, ] <-
-    mclapply(seq_along(colnames(df_que)) %>% as.list,
+    mclapply(seq_along(colnames(df_que_raw)) %>% as.list,
         function(x) {
-            pull(df_que[, x]) %>% str_count(pattern = mids[row]) %>% sum()
+            pull(df_que_raw[, x]) %>% str_count(pattern = mids[row]) %>% sum()
             },
         mc.cores = as.integer(threads)) %>%
         unlist
@@ -82,8 +82,8 @@ for (row in seq_along(mids)) {
 mids_score["M", ] <- 0
 mids_score["D", ] <- mids_score["D", ] * -1
 
-df_score <- mclapply(seq_along(colnames(df_que)),
-    function(x) pull(df_que[, x]) %>% mids_score[, x][.],
+df_score <- mclapply(seq_along(colnames(df_que_raw)),
+    function(x) pull(df_que_raw[, x]) %>% mids_score[, x][.],
     mc.cores = as.integer(threads)) %>%
     as.data.frame
 
@@ -102,7 +102,7 @@ tmp_score100 <- which(df_control$score == 100)
 if (length(tmp_score100) != 0) {
     df_control$score[seq(tmp_score100[1], tail(tmp_score100, 1))] <- 100
 
-    tmp_ins_error <- df_que %>%
+    tmp_ins_error <- df_que_raw %>%
     select(which(df_control$score == 100)) %>%
     mclapply(
         function(x) x %>% table %>% which.max %>% names,
@@ -121,7 +121,9 @@ rm(tmp_score100)
 #* Input sequence error (M/0)
 #--------------------------------------
 
-df_que <- df_que[, !pull(df_control) == 2]
+df_que <- df_que_raw
+df_que[, pull(df_control) == 2] <- "M"
+#df_que <- df_que_raw[, !pull(df_control) == 2]
 
 df_score[, pull(df_control) == 2] <- 0
 df_score <- df_score[, colSums(df_score) != 0]
@@ -202,11 +204,11 @@ for (i in unique(hdbscan_cl)) {
 }
 rm(df_score)
 
-#### TEST <<<<<<<<<<<<
-# ggplot(df_cluster, aes(x=loc, y=score)) +
+# ## TEST <<<<<<<<<<<<
+# ggplot(df_cluster, aes(x = loc, y = score)) +
 # geom_point() +
-# facet_wrap(~cluster, nrow=1)
-#### TEST >>>>>>>>>>>>
+# facet_wrap(~ cluster, nrow = 1)
+# ## TEST >>>>>>>>>>>>
 
 ################################################################################
 #! Cosine similarity to merge similar clusters
@@ -356,7 +358,7 @@ tmp_nrow <- tmp_tibble %>%
     nrow
 
 #===========================================================
-#? Remove reads with strand specific mutation
+#? Remove clusters with strand specific mutation
 #===========================================================
 
 if (tmp_nrow > 0) {
@@ -377,12 +379,53 @@ retain_reads <- cossim_merged_cl %in% tmp_cl
 
 rm(tmp_tibble, tmp_nrow, tmp_cl)
 
+#===========================================================
+#? Remove clusters with fuzzy mutation
+#===========================================================
+
+tmp_mut_position <- lapply(tmp_seq,
+    function(x) {
+        str_locate_all(x, pattern = "[^M]") %>%
+        as.data.frame %>%
+        pull(start)
+        }) %>%
+    unlist %>%
+    unique
+
+tmp_df_que_mut_position <- df_que[retain_reads, tmp_mut_position]
+tmp_cl_nums <- cossim_merged_cl[retain_reads] %>%
+    sort %>%
+    unique
+
+retain_clusters <-
+    lapply(tmp_cl_nums,
+    function(x) {
+            tmp_df_que_mut_position[cossim_merged_cl[retain_reads] == x, ] %>%
+            table %>%
+            as_tibble %>%
+            mutate(freq = n / sum(n)) %>%
+            filter(freq > 0.8) %>%
+            nrow
+        }) %>%
+    unlist %>%
+    as_tibble_col %>%
+    mutate(cl = tmp_cl_nums) %>%
+    filter(value > 0) %>%
+    pull(cl)
+
+rm(tmp_mut_position, tmp_df_que_mut_position, tmp_cl_nums)
+
 ################################################################################
-#! Output results
+#! Format results
 ################################################################################
 
 result <- tibble(read_id = df_label$id[retain_reads],
-    cluster = cossim_merged_cl[retain_reads])
+    cluster = cossim_merged_cl[retain_reads]) %>%
+    filter(cluster %in% retain_clusters)
+
+################################################################################
+#! Output results
+################################################################################
 
 write_tsv(result,
     sprintf(".DAJIN_temp/clustering/temp/hdbscan_%s", output_suffix),
