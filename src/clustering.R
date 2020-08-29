@@ -20,9 +20,9 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode36_target"
-# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode36_target"
-# file_control <- ".DAJIN_temp/clustering/temp/control_score_target"
+# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode42_wt"
+# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode42_wt"
+# file_control <- ".DAJIN_temp/clustering/temp/control_score_wt"
 # threads <- 14L
 
 #===========================================================
@@ -397,26 +397,31 @@ tmp_cl_nums <- cossim_merged_cl[retain_reads] %>%
     sort %>%
     unique
 
-extract_clear_mutation <- function(x) {
-    x %>%
-        table %>%
-        as_tibble %>%
-        mutate(freq = n / sum(n)) %>%
-        filter(freq > 0.8) %>%
-        nrow
-}
+if (length(tmp_mut_position) > 0) {
 
-retain_clusters <-
-    lapply(tmp_cl_nums, function(x) {
-        tmp_df_que_mut_position[cossim_merged_cl[retain_reads] == x, ] %>%
-        lapply(extract_clear_mutation)
-    }) %>%
-    unlist %>%
-    as_tibble_col %>%
-    mutate(cl = rep(tmp_cl_nums, each = length(tmp_mut_position))) %>%
-    filter(value > 0) %>%
-    pull(cl) %>%
-    unique
+    extract_clear_mutation <- function(x) {
+        x %>%
+            table %>%
+            as_tibble %>%
+            mutate(freq = n / sum(n)) %>%
+            filter(freq > 0.8) %>%
+            nrow
+    }
+
+    retain_clusters <-
+        lapply(tmp_cl_nums, function(x) {
+            tmp_df_que_mut_position[cossim_merged_cl[retain_reads] == x, ] %>%
+            lapply(extract_clear_mutation)
+        }) %>%
+        unlist %>%
+        as_tibble_col %>%
+        mutate(cl = rep(tmp_cl_nums, each = length(tmp_mut_position))) %>%
+        filter(value > 0) %>%
+        pull(cl) %>%
+        unique
+} else {
+    retain_clusters <- tmp_cl_nums
+}
 
 rm(tmp_mut_position, tmp_df_que_mut_position, tmp_cl_nums)
 
