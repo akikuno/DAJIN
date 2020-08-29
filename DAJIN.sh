@@ -535,8 +535,10 @@ EOF
 #? Setting directory
 #===========================================================
 
-rm -rf .DAJIN_temp/consensus/ 2>/dev/null
-mkdir -p .DAJIN_temp/consensus/temp
+find .DAJIN_temp/consensus/ -type d |
+grep -v temp_sam |
+xargs -I @ rm -rf @ 2>/dev/null
+mkdir -p .DAJIN_temp/consensus/temp .DAJIN_temp/consensus/temp_sam
 
 #===========================================================
 #? Generate temporal SAM files
@@ -555,7 +557,7 @@ while read -r input; do
             ".DAJIN_temp/fasta/${mapping_alleletype}.fa" - \
             --cs=long 2>/dev/null |
         sort |
-    cat > .DAJIN_temp/consensus/temp/"${barcode}"_"${mapping_alleletype}".sam
+    cat > .DAJIN_temp/consensus/temp_sam/"${barcode}"_"${mapping_alleletype}".sam
 done
 
 #===========================================================

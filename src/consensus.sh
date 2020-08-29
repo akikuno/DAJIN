@@ -143,7 +143,7 @@ if [ "$(grep -c intact ${mutation_id_loc_type_insnum})" -eq 0 ]; then
         awk -v cl="${cluster}" '$2==cl' |
         cut -f 1 |
         sort -u |
-        join .DAJIN_temp/consensus/temp/"${barcode}"_"${mapping_alleletype}".sam - |
+        join .DAJIN_temp/consensus/temp_sam/"${barcode}"_"${mapping_alleletype}".sam - |
         awk '$2==0 || $2==16' |
         awk '{print $4, $(NF-1)}' |
         sed "s/cs:Z://g" |
