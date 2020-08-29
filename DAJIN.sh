@@ -536,9 +536,9 @@ EOF
 #===========================================================
 
 find .DAJIN_temp/consensus/ -type d |
-grep -v temp_sam |
+grep "temp$" |
 xargs -I @ rm -rf @ 2>/dev/null
-mkdir -p .DAJIN_temp/consensus/temp .DAJIN_temp/consensus/temp_sam
+mkdir -p .DAJIN_temp/consensus/temp .DAJIN_temp/consensus/sam
 
 #===========================================================
 #? Generate temporal SAM files
@@ -552,12 +552,28 @@ while read -r input; do
     barcode="${input%% *}"
     mapping_alleletype="$(echo "${input##* }" | sed "s/ab*normal/wt/g")"
 
+    if ! [ -f .DAJIN_temp/consensus/sam/"${barcode}"_"${mapping_alleletype}".sam ]; then
+
+    cat .DAJIN_temp/clustering/readid_cl_mids_"${barcode}"_"${mapping_alleletype}" |
+        awk '{print ">"$1}' |
+        sort |
+    cat > .DAJIN_temp/consensus/tmp_id
+
     cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
+        awk '{print $1}' |
+        tr "\n" " " |
+        sed "s/>/\n>/g" |
+        sort |
+        join - .DAJIN_temp/consensus/tmp_id |
+        sed "s/ /\n/g" |
+        grep -v "^$" |
         minimap2 -ax map-ont -t "${threads}" \
             ".DAJIN_temp/fasta/${mapping_alleletype}.fa" - \
             --cs=long 2>/dev/null |
         sort |
-    cat > .DAJIN_temp/consensus/temp_sam/"${barcode}"_"${mapping_alleletype}".sam
+    cat > .DAJIN_temp/consensus/sam/"${barcode}"_"${mapping_alleletype}".sam
+    rm .DAJIN_temp/consensus/tmp_id
+    fi
 done
 
 #===========================================================
