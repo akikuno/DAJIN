@@ -18,7 +18,7 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #? TEST Aurguments
 #===============================================================================
 
-# barcode="barcode14"
+# barcode="barcode25"
 # alleletype="abnormal"
 # threads=14
 
@@ -62,6 +62,11 @@ query_label=".DAJIN_temp/clustering/temp/query_labels_${suffix}"
 ################################################################################
 
 ./DAJIN/src/mids_clustering.sh "${barcode}" "${alleletype}" > "${MIDS_que}"
+# #! TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+# echo "${barcode}" "${alleletype}"
+# cat "${MIDS_que}"
+# exit 0
+# #! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 ################################################################################
 #! Query seq (compressed MIDS) and Query score (comma-sep MIDS)
