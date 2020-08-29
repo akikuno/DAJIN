@@ -46,9 +46,9 @@ if [ "$(conda info -e | cut -d " " -f 1 | grep -c DAJIN$)" -eq 0 ]; then
     conda update -y conda >/dev/null 2>&1
     conda create -y -n DAJIN python=3.7 \
         numpy pandas scikit-learn scipy \
-        tensorflow tensorflow-gpu \
+        tensorflow tensorflow-gpu joblib hdbscan \
         wget emboss samtools minimap2 \
-        r-essentials r-base r-dbscan >/dev/null 2>&1
+        r-essentials r-base >/dev/null 2>&1
 fi
 
 #===========================================================

@@ -17,11 +17,11 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #? TEST Auguments
 #===========================================================
 
-# barcode="barcode23"
+# barcode="barcode14"
 # alleletype="target"
-# cluster=4
+# cluster=2
 # percentage=69.7
-# alleleid=3
+# alleleid=4
 
 #===========================================================
 #? Auguments
@@ -92,29 +92,29 @@ cat "${allele_id}" |
     awk -F "" 'BEGIN{OFS=","}{$1=$1}1' |
 cat > "${tmp_allele_id}"
 
-Rscript DAJIN/src/consensus.R "${tmp_allele_id}" "${control_score}" "${cluster}"
+Rscript DAJIN/src/consensus.R "${tmp_allele_id}" "${control_score}" "${barcode}"
 
 #===========================================================
 #? Report (1) Cluster ID, (2) Base loc (3) Mutation type (4) Ins num
 #===========================================================
 
 if [ -s ".DAJIN_temp/consensus/temp/mutation_${out_suffix}" ]; then
-cat ".DAJIN_temp/consensus/temp/mutation_${out_suffix}" |
-    sed "s/^/${cluster} /g" |
-    #----------------------------------------------------------
-    #* Converte Insertion character to number
-    #----------------------------------------------------------
-    awk '{
-        if($4 ~ /[a-z]/) {
-            for (i=10; i<=36; i++) {
-                num=i+87
-                ins=sprintf("%c", num)
-                if($4==ins) $4=i
+    cat ".DAJIN_temp/consensus/temp/mutation_${out_suffix}" |
+        sed "s/^/${cluster} /g" |
+        #----------------------------------------------------------
+        #* Converte Insertion character to number
+        #----------------------------------------------------------
+        awk '{
+            if($4 ~ /[a-z]/) {
+                for (i=10; i<=36; i++) {
+                    num=i+87
+                    ins=sprintf("%c", num)
+                    if($4==ins) $4=i
+                }
             }
-        }
-        print $0}' |
-    sed "s/35$/>35/g" |
-cat > "${mutation_id_loc_type_insnum}"
+            print $0}' |
+        sed "s/35$/>35/g" |
+    cat > "${mutation_id_loc_type_insnum}"
 else
     echo "${cluster} 0 intact 0" > "${mutation_id_loc_type_insnum}"
 fi
@@ -124,79 +124,80 @@ fi
 ################################################################################
 
 if [ "$(grep -c intact ${mutation_id_loc_type_insnum})" -eq 0 ]; then
-set $(
-    cat "${mutation_id_loc_type_insnum}" |
-    awk -v cl="${cluster}" '$1==cl {
-        type=type$3"_"
-        site=site$2"_"
-        size=size$4"_"
-        }
-    END{print type, site, size}'
-    )
 
-mutation_type=$(echo "$1" | sed "s/_/ /g")
-mutation_site=$(echo "$2" | sed "s/_/ /g")
-insertion_size=$(echo "$3" | sed "s/_/ /g")
+    set $(
+        cat "${mutation_id_loc_type_insnum}" |
+        awk -v cl="${cluster}" '$1==cl {
+            type=type$3"_"
+            site=site$2"_"
+            size=size$4"_"
+            }
+        END{print type, site, size}'
+        )
 
-cat "${allele_id}" |
-    awk -v cl="${cluster}" '$2==cl' |
-    cut -f 1 |
-    sort -u |
-    join .DAJIN_temp/consensus/temp/"${barcode}"_"${mapping_alleletype}".sam - |
-    awk '$2==0 || $2==16' |
-    awk '{print $4, $(NF-1)}' |
-    sed "s/cs:Z://g" |
-    awk '{seq=""
-        padding=$1-1
-        for(i=1; i<=padding; i++) seq=seq"-"
-        print seq""$2}' |
-    #-------------------------------------
-    #* Obtain mutation nucreotides
-    #-------------------------------------
-    awk -v type="${mutation_type}" \
-        -v site="${mutation_site}" \
-        -v size="${insertion_size}" \
-    'BEGIN{
-        split(type, type_, " ")
-        split(site, site_, " ")
-        split(size, size_, " ")
-        }
-    {original_seq = $0
-    for(i in type_){
-        $0 = original_seq
-        if(type_[i] == "I"){
-            gsub(/\*[a-z]/, " ", $0)
-            gsub(/\+/, " +", $0)
-            gsub(/[-|=]/, " ", $0)
-            len=0
-            for(j = 1; j<=NF; j++){
-                if(len >= site_[i]-1 && length($j) == size_[i] + 1) {
-                    print type_[i], len, $j, i
-                    break
-                    }
-                else {
-                    if($j !~ /\+/) len+=length($j)
+    mutation_type=$(echo "$1" | sed "s/_/ /g")
+    mutation_site=$(echo "$2" | sed "s/_/ /g")
+    insertion_size=$(echo "$3" | sed "s/_/ /g")
+
+    cat "${allele_id}" |
+        awk -v cl="${cluster}" '$2==cl' |
+        cut -f 1 |
+        sort -u |
+        join .DAJIN_temp/consensus/temp/"${barcode}"_"${mapping_alleletype}".sam - |
+        awk '$2==0 || $2==16' |
+        awk '{print $4, $(NF-1)}' |
+        sed "s/cs:Z://g" |
+        awk '{seq=""
+            padding=$1-1
+            for(i=1; i<=padding; i++) seq=seq"-"
+            print seq""$2}' |
+        #-------------------------------------
+        #* Obtain mutation nucreotides
+        #-------------------------------------
+        awk -v type="${mutation_type}" \
+            -v site="${mutation_site}" \
+            -v size="${insertion_size}" \
+        'BEGIN{
+            split(type, type_, " ")
+            split(site, site_, " ")
+            split(size, size_, " ")
+            }
+        {original_seq = $0
+        for(i in type_){
+            $0 = original_seq
+            if(type_[i] == "I"){
+                gsub(/\*[a-z]/, " ", $0)
+                gsub(/\+/, " +", $0)
+                gsub(/[-|=]/, " ", $0)
+                len=0
+                for(j = 1; j<=NF; j++){
+                    if(len >= site_[i]-1 && length($j) == size_[i] + 1) {
+                        print type_[i], len, $j, i
+                        break
+                        }
+                    else {
+                        if($j !~ /\+/) len+=length($j)
+                        }
                     }
                 }
+            else {
+                gsub(/\*[a-z]/, "=", $0)
+                gsub(/\+[a-z]*/, "", $0)
+                gsub(/[-=]/, "", $0)
+                print type_[i], site_[i], substr($0, site_[i], 1), i
+                }
             }
-        else {
-            gsub(/\*[a-z]/, "=", $0)
-            gsub(/\+[a-z]*/, "", $0)
-            gsub(/[-=]/, "", $0)
-            print type_[i], site_[i], substr($0, site_[i], 1), i
-            }
-        }
-    }' |
-    sort |
-    uniq -c |
-    grep -v "[ACGT]" |
-    sed "s/+//g" |
-    awk 'NF==5{
-        key=$2"_"$5
-        if(max[key] < $1) {max[key] = $1; out[key]=$2" "$3" "$4}}
-        END{for(i in out) print out[i]
         }' |
-cat > "${mutation_type_site_nuc}"
+        sort |
+        uniq -c |
+        grep -v "[ACGT]" |
+        sed "s/+//g" |
+        awk 'NF==5{
+            key=$2"_"$5
+            if(max[key] < $1) {max[key] = $1; out[key]=$2" "$3" "$4}}
+            END{for(i in out) print out[i]
+            }' |
+    cat > "${mutation_type_site_nuc}"
 else
     echo "intact 0 0" > "${mutation_type_site_nuc}"
 fi
@@ -268,6 +269,7 @@ if [ "_${mutation_design}" = "_S" ]; then
 
     contaion_target=$(
         cat "${mutation_type_site_nuc}" |
+        awk -v mut="${mutation_design}" '$1==mut' |
         cut -d " " -f 2 |
         awk '{print $0-1}' |
         grep -c ${mutation_point} -
@@ -280,7 +282,7 @@ if [ "${diff_target}" -eq 0 ]; then
     output_filename="${output_filename}_intact_target"
 elif [ "${diff_wt}" -eq 0 ]; then
     output_filename="${output_filename}_intact_wt"
-elif [ "${contaion_target}" -ne 0 ]; then
+elif [ "${contaion_target:-0}" -ne 0 ]; then
     output_filename="${output_filename}_mutation_target"
 elif [ "$(grep -c intact ${mutation_type_site_nuc})" -eq 1 ]; then
     output_filename="${output_filename}_intact_${alleletype}"

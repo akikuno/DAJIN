@@ -4,6 +4,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
 
 import sys
+import random as rn
 import numpy as np
 import pandas as pd
 
@@ -14,6 +15,12 @@ from sklearn.preprocessing import LabelEncoder, LabelBinarizer
 import tensorflow as tf
 from tensorflow.keras.models import Model
 
+# set random seed
+os.environ['PYTHONHASHSEED'] = '0'
+np.random.seed(42)
+rn.seed(12345)
+tf.random.set_seed(1234)
+
 ################################################################################
 #! I/O naming
 ################################################################################
@@ -22,7 +29,7 @@ from tensorflow.keras.models import Model
 # ? TEST auguments
 # ===========================================================
 
-# file_name = ".DAJIN_temp/data/MIDS_barcode21_wt"
+# file_name = ".DAJIN_temp/data/MIDS_barcode11_wt"
 # mutation_type = "S"
 # threads = 12
 
@@ -86,7 +93,7 @@ clf = pickle.load(open(".DAJIN_temp/data/model_lof.sav", "rb"))
 #! Novelity (Anomaly) detection
 ################################################################################
 # ===========================================================
-# ? FC layer
+# ? Extract layer
 # ===========================================================
 
 model_ = Model(model.get_layer(index=0).input, model.get_layer(index=-2).output)

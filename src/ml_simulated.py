@@ -4,6 +4,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
 
 import sys
+import random as rn
 import numpy as np
 import pandas as pd
 
@@ -16,6 +17,12 @@ from sklearn.neighbors import LocalOutlierFactor
 import tensorflow as tf
 from tensorflow.keras.layers import Input, Conv1D, Dense, Flatten, MaxPooling1D
 from tensorflow.keras.models import Model
+
+# set random seed
+os.environ['PYTHONHASHSEED'] = '0'
+np.random.seed(42)
+rn.seed(12345)
+tf.random.set_seed(1234)
 
 ################################################################################
 #! I/O naming

@@ -363,11 +363,8 @@ done
 ################################################################################
 #! NanoSim (v2.5.0)
 ################################################################################
-set +u
-conda activate DAJIN_nanosim
-set -u
 
-cat << EOF
+cat << EOF >&2
 --------------------------------------------------------------------------------
 NanoSim read simulation
 --------------------------------------------------------------------------------
@@ -377,16 +374,21 @@ EOF
 #? NanoSim
 #===========================================================
 if ! find .DAJIN_temp/fasta_ont | grep simulated_aligned_reads >/dev/null 2>&1; then
+
+    set +u
+    conda activate DAJIN_nanosim
+    set -u
+
     ./DAJIN/utils/NanoSim/src/read_analysis.py genome \
         -i ".DAJIN_temp/fasta_ont/${control}.fa" \
         -rg .DAJIN_temp/fasta_conv/wt.fa \
         -t ${threads:-1} \
-        -o .DAJIN_temp/NanoSim/training
+        -o .DAJIN_temp/NanoSim/training 1>&2
 
-    wt_seqlen=$(awk '!/[>|@]/ {print length($0)}' .DAJIN_temp/fasta/wt.fa)
+    wt_seqlen=$(awk '!/[>|@]/ {print length($0)}' .DAJIN_temp/fasta_conv/wt.fa)
 
     for input in .DAJIN_temp/fasta_conv/*; do
-        printf "${input} is now simulating...\n"
+        printf "${input} is now simulating...\n" 1>&2
         output=$(
             echo "$input" |
             sed -e "s#fasta_conv/#fasta_ont/#g" \
@@ -410,12 +412,11 @@ if ! find .DAJIN_temp/fasta_ont | grep simulated_aligned_reads >/dev/null 2>&1; 
             -n 10000 \
             -t "${threads:-1}" \
             -min "${len}" \
-            -o "${output}_simulated" 2>/dev/null
+            -o "${output}_simulated" 1>&2
         ##
         rm .DAJIN_temp/fasta_ont/*_error_* .DAJIN_temp/fasta_ont/*_unaligned_* 2>/dev/null || true
     done
     rm -rf DAJIN/utils/NanoSim/src/__pycache__
-    printf 'Success!!\nSimulation is finished\n'
 fi
 
 ################################################################################
@@ -425,7 +426,7 @@ set +u
 conda activate DAJIN
 set -u
 
-cat << EOF
+cat << EOF >&2
 --------------------------------------------------------------------------------
 MIDS conversion
 --------------------------------------------------------------------------------
@@ -464,7 +465,7 @@ sh - 2>/dev/null
 #! Prediction
 ################################################################################
 
-cat << EOF
+cat << EOF >&2
 --------------------------------------------------------------------------------
 Allele prediction
 --------------------------------------------------------------------------------
@@ -479,7 +480,7 @@ exit 1
 #! Clustering
 ################################################################################
 
-cat << EOF
+cat << EOF >&2
 --------------------------------------------------------------------------------
 Allele clustering
 --------------------------------------------------------------------------------
@@ -492,7 +493,7 @@ mkdir -p .DAJIN_temp/clustering/temp
 #? Prepare control's score to define sequencing error
 #===========================================================
 
-./DAJIN/src/clustering_control_score.sh "${control}" "${threads}" 2>/dev/null
+./DAJIN/src/clustering_control_score.sh "${control}" "${threads}" #2>/dev/null
 # wc -l .DAJIN_temp/clustering/temp/control_score_*
 
 #===========================================================
@@ -503,9 +504,8 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     cut -f 2,3 |
     sort -u |
     awk -v th=${threads:-1} '{print "./DAJIN/src/clustering.sh", $1, $2, th}' |
-sh - 2>/dev/null
+sh -
 # ls -lh .DAJIN_temp/clustering/temp/hdbscan_*
-# rm .DAJIN_temp/tmp_*
 
 #===========================================================
 #? Allele percentage
@@ -519,13 +519,13 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
-sh - 2>/dev/null
+sh -
 
 ################################################################################
 #! Get consensus sequence in each cluster
 ################################################################################
 
-cat << EOF
+cat << EOF >&2
 --------------------------------------------------------------------------------
 Report consensus sequence
 --------------------------------------------------------------------------------
@@ -547,8 +547,8 @@ cat .DAJIN_temp/clustering/label* |
     sort -u |
     grep -v abnormal |  #TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 while read -r input; do
-    barcode="$(echo $input | awk '{print $1}')"
-    mapping_alleletype="$(echo $input | awk '{print $2}' | sed "s/normal/wt/g")"
+    barcode="${input%% *}"
+    mapping_alleletype="$(echo "${input##* }" | sed "s/ab*normal/wt/g")"
 
     cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
         minimap2 -ax map-ont -t "${threads}" \
@@ -569,7 +569,7 @@ cat .DAJIN_temp/clustering/label* |
     awk -v th=${threads:-1} '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
-sh - 2>/dev/null
+sh -
 
 ################################################################################
 #! Summarize to Details.csv and Details.pdf
@@ -581,7 +581,7 @@ sh - 2>/dev/null
 #! Mapping by minimap2 for IGV visualization
 ################################################################################
 
-cat << EOF
+cat << EOF >&2
 --------------------------------------------------------------------------------
 Generate BAM files
 --------------------------------------------------------------------------------
@@ -607,8 +607,9 @@ cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 #? Consensus
 #===========================================================
 
-cp -r .DAJIN_temp/consensus/* "${output_dir:-DAJIN_results}"/Consensus/ 2>/dev/null
-rm -rf "${output_dir:-DAJIN_results}"/Consensus/temp 2>/dev/null
+find .DAJIN_temp/consensus/* -type d |
+grep -v "consensus/temp" |
+xargs -I @ cp -f -r @ "${output_dir:-DAJIN_results}"/Consensus/ 2>/dev/null
 
 #===========================================================
 #? Details
@@ -625,7 +626,7 @@ cp .DAJIN_temp/details/* "${output_dir:-DAJIN_results}"/
 set +u
 conda deactivate
 
-cat << EOF
+cat << EOF >&2
 --------------------------------------------------------------------------------
 Completed!
 Check ${output_dir:-DAJIN_results} directory

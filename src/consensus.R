@@ -1,50 +1,55 @@
-#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+################################################################################
 #! Install required packages
-#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+################################################################################
+
 options(repos='https://cloud.r-project.org/')
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
 pacman::p_load(tidyverse)
 
-#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-#! Argument
-#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+################################################################################
+#! I/O naming
+################################################################################
 
-# que_name <- ".DAJIN_temp/consensus/temp/allele_id_barcode23_target_3"
-# df_que <- read_csv(que_name, col_names = FALSE, col_types = cols(.default = "c"))
-# df_control <- read_csv(".DAJIN_temp/clustering/temp/control_score_target", col_names = c("score"), col_types = cols())
-# cluster <- 1
-# suffix <- que_name %>% str_remove(".*allele_id_")
+#===========================================================
+#? TEST Auguments
+#===========================================================
+
+# file_que <- ".DAJIN_temp/consensus/temp/allele_id_barcode14_target_4"
+# file_control <- ".DAJIN_temp/clustering/temp/control_score_target"
+# barcode <- "barcode14"
+
+#===========================================================
+#? Auguments
+#===========================================================
 
 args <- commandArgs(trailingOnly = TRUE)
-df_que <- read_csv(args[1], col_names = FALSE, col_types = cols(.default = "c"))
-df_control <- read_csv(args[2], col_names = c("score"), col_types = cols())
-cluster <- args[3]
-suffix <- args[1] %>% str_remove(".*allele_id_")
+file_que <- args[1]
+file_control <- args[2]
+barcode <- args[3]
 
 #===========================================================
-#? Match or 0 at sequence error loci
+#? Inputs
 #===========================================================
 
-#--------------------------------------
-#* Insertion
-#--------------------------------------
+df_que <- read_csv(file_que,
+    col_names = FALSE,
+    col_types = cols(.default = "c"))
 
-tmp_inserr <- df_que %>%
-    select(which(df_control$score == 100)) %>%
-    lapply(function(x) x %>% table %>% which.max %>% names) %>%
-    unlist %>%
-    str_detect("M")
+df_control <- read_csv(sprintf("%s_%s", file_control, barcode),
+    col_names = c("score"),
+    col_types = cols())
 
-tmp_inserr[tmp_inserr == TRUE] <- 2
-tmp_inserr[tmp_inserr == FALSE] <- 1
+#===========================================================
+#? Outputs
+#===========================================================
 
-df_control$score[df_control$score == 100] <- tmp_inserr
+output_suffix <- file_que %>% str_remove(".*allele_id_")
 
-#--------------------------------------
-#* Input sequence error (M/0)
-#--------------------------------------
+################################################################################
+#! Sequence error compensation
+################################################################################
 
-df_que[pull(df_control) == 2] <- "M"
+df_que[, pull(df_control) == 2] <- "M"
 
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 #! MIDS count
@@ -53,18 +58,25 @@ df_que[pull(df_control) == 2] <- "M"
 max_count <- function(x){
     x %>% table() %>% which.max() %>% names()
 }
-df_que <- apply(df_que, 2, max_count)
+
+df_que_max <- lapply(df_que, max_count) %>% unlist
 
 #===========================================================
 #? Summarize mutation position
 #===========================================================
 
-df_mut <- tibble(loc = which(df_que != "M"),
-    mut = df_que[df_que != "M"] %>% as.character()) %>%
+df_mut <- tibble(loc = which(df_que_max != "M"),
+    mut = df_que_max[df_que_max != "M"] %>% as.character) %>%
     mutate(insnum = as.character(mut))
 
 df_mut$insnum[str_detect(df_mut$insnum, pattern = "S|D")] <- 0
 df_mut$mut[!str_detect(df_mut$mut, pattern = "S|D")] <- "I"
 
-write_delim(df_mut, sprintf(".DAJIN_temp/consensus/temp/mutation_%s", suffix),
-    delim=" ", col_names = FALSE)
+################################################################################
+#! Output results
+################################################################################
+
+write_delim(df_mut,
+    sprintf(".DAJIN_temp/consensus/temp/mutation_%s", output_suffix),
+    delim = " ",
+    col_names = FALSE)
