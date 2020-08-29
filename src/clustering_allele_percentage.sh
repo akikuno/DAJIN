@@ -18,7 +18,7 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #? TEST Auguments
 #===========================================================
 
-# barcode=barcode48
+# barcode=barcode14
 # filter=on
 
 #===========================================================
@@ -45,6 +45,7 @@ allele_percentage=.DAJIN_temp/clustering/label_cl_percentage_"${barcode}"
 #===========================================================
 #? Temporal
 #===========================================================
+
 tmp_clusterid=.DAJIN_temp/clustering/temp/clusterid_"${barcode}"
 tmp_alleleper_before=.DAJIN_temp/clustering/temp/alleleper_before_"${barcode}"
 tmp_alleleper_after=.DAJIN_temp/clustering/temp/alleleper_after_"${barcode}"
@@ -134,7 +135,7 @@ while read -r input; do
     query_seq=.DAJIN_temp/clustering/temp/query_seq_"${id}"
     allele_id=.DAJIN_temp/clustering/readid_cl_mids_"${id}"
 
-    paste "${hdbscan_id}" "${query_seq}" |
+    join "${hdbscan_id}" "${query_seq}" |
         awk -v bf="${before}" -v af="${after}" \
         'BEGIN{OFS="\t"
             split(bf,bf_," ")
