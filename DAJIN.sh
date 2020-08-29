@@ -493,8 +493,7 @@ mkdir -p .DAJIN_temp/clustering/temp
 #? Prepare control's score to define sequencing error
 #===========================================================
 
-./DAJIN/src/clustering_control_score.sh "${control}" "${threads}" #2>/dev/null
-# wc -l .DAJIN_temp/clustering/temp/control_score_*
+./DAJIN/src/clustering_control_score.sh "${control}" "${threads}"
 
 #===========================================================
 #? Clustering
@@ -505,7 +504,6 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     sort -u |
     awk -v th=${threads:-1} '{print "./DAJIN/src/clustering.sh", $1, $2, th}' |
 sh -
-# ls -lh .DAJIN_temp/clustering/temp/hdbscan_*
 
 #===========================================================
 #? Allele percentage
@@ -618,6 +616,7 @@ mkdir -p "${output_dir:-DAJIN_results}"/Consensus
 #===========================================================
 #? BAM
 #===========================================================
+
 rm -rf .DAJIN_temp/bam/temp 2>/dev/null
 cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 
@@ -626,7 +625,7 @@ cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 #===========================================================
 
 find .DAJIN_temp/consensus/* -type d |
-grep -v "consensus/temp" |
+grep -v -e "consensus/temp" -e "sam" |
 xargs -I @ cp -f -r @ "${output_dir:-DAJIN_results}"/Consensus/ 2>/dev/null
 
 #===========================================================
