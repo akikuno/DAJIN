@@ -376,6 +376,7 @@ if (tmp_nrow > 0) {
 }
 
 retain_reads <- cossim_merged_cl %in% tmp_cl
+retain_seq_consensus <- seq_consensus[tmp_cl]
 
 rm(tmp_tibble, tmp_nrow, tmp_cl)
 
@@ -383,7 +384,7 @@ rm(tmp_tibble, tmp_nrow, tmp_cl)
 #? Remove clusters with fuzzy mutation
 #===========================================================
 
-tmp_mut_position <- lapply(seq_consensus[tmp_cl],
+tmp_mut_position <- lapply(retain_seq_consensus,
     function(x) {
         str_locate_all(x, pattern = "[^M]") %>%
         as.data.frame %>%
