@@ -48,7 +48,7 @@ if [ "$(conda info -e | cut -d " " -f 1 | grep -c DAJIN$)" -eq 0 ]; then
         numpy pandas scikit-learn scipy \
         tensorflow tensorflow-gpu joblib hdbscan \
         wget emboss samtools minimap2 \
-        r-essentials r-base >/dev/null 2>&1
+        r-essentials r-base r-reticulate >/dev/null 2>&1
 fi
 
 #===========================================================
