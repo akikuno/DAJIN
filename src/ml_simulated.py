@@ -55,7 +55,6 @@ df_sim = pd.read_csv(file_name, header=None, sep="\t")
 df_sim.columns = ["seqID", "seq", "barcodeID"]
 df_sim.seq = "MIDS=" + df_sim.seq
 
-
 ################################################################################
 #! Training model
 ################################################################################
@@ -134,7 +133,6 @@ model = Model(inputs = inputs, outputs = predictions)
 
 model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
 
-# model.summary()
 #===========================================================
 #? Training
 #===========================================================
@@ -145,12 +143,14 @@ model.fit(
     X_train,
     Y_train,
     epochs=200,
-    verbose=1,
+    verbose=0,
     batch_size=32,
     validation_data=(X_val, Y_val),
     callbacks=[callback],
     shuffle=True,
 )
+
+print(model.evaluate(X_val, Y_val), file=sys.stderr)
 
 ################################################################################
 #! Novelity (Anomaly) detection
