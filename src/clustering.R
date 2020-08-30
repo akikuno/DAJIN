@@ -383,7 +383,7 @@ rm(tmp_tibble, tmp_nrow, tmp_cl)
 #? Remove clusters with fuzzy mutation
 #===========================================================
 
-tmp_mut_position <- lapply(seq_consensus,
+tmp_mut_position <- lapply(seq_consensus[tmp_cl],
     function(x) {
         str_locate_all(x, pattern = "[^M]") %>%
         as.data.frame %>%
@@ -416,8 +416,7 @@ if (length(tmp_mut_position) > 0) {
         unlist %>%
         as_tibble_col %>%
         mutate(cl = rep(tmp_cl_nums, each = length(tmp_mut_position))) %>%
-        group_by(cl) %>%
-        filter(all(value) > 0) %>%
+        filter(value > 0) %>%
         pull(cl) %>%
         unique
 } else {
