@@ -286,18 +286,18 @@ cossim_merged_cl <- lapply(pattern_,
 # if two sequences are the same, merge them
 ################################################################################
 
+seq_consensus <- mclapply(cossim_merged_cl %>% unique %>% sort,
+        function(x) {
+            df_que[cossim_merged_cl == x, ] %>%
+            lapply(function(x) x %>% table %>% which.max %>% names) %>%
+            unlist %>%
+            str_c(collapse = "")
+        },
+        mc.cores = as.integer(threads))
+
 if (length(query_) > 1) {
     df_cossim <- NULL
     cl_combn <- combn(query_, 2)
-
-    tmp_seq <- mclapply(cossim_merged_cl %>% unique %>% sort,
-            function(x) {
-                df_que[cossim_merged_cl == x, ] %>%
-                lapply(function(x) x %>% table %>% which.max %>% names) %>%
-                unlist %>%
-                str_c(collapse = "")
-            },
-            mc.cores = as.integer(threads))
 
     df_cossim <- NULL
     for (i in seq(ncol(cl_combn))) {
@@ -305,8 +305,8 @@ if (length(query_) > 1) {
                 one = cl_combn[1, i],
                 two = cl_combn[2, i],
                 score = identical(
-                    tmp_seq[[cl_combn[1, i]]],
-                    tmp_seq[[cl_combn[2, i]]]
+                    seq_consensus[[cl_combn[1, i]]],
+                    seq_consensus[[cl_combn[2, i]]]
                     )
             )
             df_cossim <- bind_rows(df_cossim, df_)
@@ -383,7 +383,7 @@ rm(tmp_tibble, tmp_nrow, tmp_cl)
 #? Remove clusters with fuzzy mutation
 #===========================================================
 
-tmp_mut_position <- lapply(tmp_seq,
+tmp_mut_position <- lapply(seq_consensus,
     function(x) {
         str_locate_all(x, pattern = "[^M]") %>%
         as.data.frame %>%
@@ -416,7 +416,8 @@ if (length(tmp_mut_position) > 0) {
         unlist %>%
         as_tibble_col %>%
         mutate(cl = rep(tmp_cl_nums, each = length(tmp_mut_position))) %>%
-        filter(value > 0) %>%
+        group_by(cl) %>%
+        filter(all(value) > 0) %>%
         pull(cl) %>%
         unique
 } else {
