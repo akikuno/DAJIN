@@ -150,7 +150,11 @@ model.fit(
     shuffle=True,
 )
 
-print(model.evaluate(X_val, Y_val), file=sys.stderr)
+model_eval = model.evaluate(X_val, Y_val)
+
+print(f"""model loss: {model_eval[0]}
+model accuracy: {model_eval[1]}""",
+file=sys.stderr)
 
 ################################################################################
 #! Novelity (Anomaly) detection
