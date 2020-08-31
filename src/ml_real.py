@@ -29,7 +29,7 @@ tf.random.set_seed(1234)
 # ? TEST auguments
 # ===========================================================
 
-# file_name = ".DAJIN_temp/data/MIDS_barcode11_wt"
+# file_name = ".DAJIN_temp/data/MIDS_barcode20_wt"
 # mutation_type = "S"
 # threads = 12
 
