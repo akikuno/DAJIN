@@ -20,8 +20,8 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode42_wt"
-# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode42_wt"
+# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode20_wt"
+# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode20_wt"
 # file_control <- ".DAJIN_temp/clustering/temp/control_score_wt"
 # threads <- 14L
 
@@ -405,7 +405,7 @@ if (length(tmp_mut_position) > 0) {
             table %>%
             as_tibble %>%
             mutate(freq = n / sum(n)) %>%
-            filter(freq > 0.8) %>%
+            filter(freq > 0.75) %>%
             nrow
     }
 
