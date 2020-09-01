@@ -202,7 +202,7 @@ for (i in unique(hdbscan_cl)) {
     )
     df_cluster <- df_cluster %>% bind_rows(tmp_df)
 }
-rm(df_score)
+rm(tmp_df, tmp_df_score, tmp_score)
 
 # ## TEST <<<<<<<<<<<<
 # ggplot(df_cluster, aes(x = loc, y = score)) +
