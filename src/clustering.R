@@ -20,12 +20,14 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# file_que <- ".DAJIN_temp/clustering/temp/query_score_barcode20_wt"
-# file_label <- ".DAJIN_temp/clustering/temp/query_labels_barcode20_wt"
-# file_control <- ".DAJIN_temp/clustering/temp/control_score_wt"
+# barcode <- "barcode09"
+# allele <- "inversion"
+# file_que <- sprintf(".DAJIN_temp/clustering/temp/query_score_%s_%s", barcode, allele)
+# file_label <- sprintf(".DAJIN_temp/clustering/temp/query_labels_%s_%s", barcode, allele)
+# file_control <- sprintf(".DAJIN_temp/clustering/temp/control_score_%s", allele)
 # threads <- 14L
 
-#===========================================================
+# ===========================================================
 #? Auguments
 #===========================================================
 
@@ -97,20 +99,34 @@ rm(mids_score)
 #* Insertion
 #--------------------------------------
 
+define_ins_mutation <- function(x) {
+    x %>%
+    table %>%
+    as_tibble %>%
+    set_names("MIDS", "n") %>%
+    mutate(freq = n / sum(n)) %>%
+    filter(!(MIDS == "M" & freq < 1)) %>%
+    mutate(MIDS = if_else(freq > 0.75, MIDS, "M")) %>%
+    slice_max(freq, n = 1) %>%
+    pull(MIDS) %>%
+    unique
+}
+
 tmp_score100 <- which(df_control$score == 100)
 
 if (length(tmp_score100) != 0) {
+
     df_control$score[seq(tmp_score100[1], tail(tmp_score100, 1))] <- 100
 
-    tmp_ins_error <- df_que_raw %>%
-    select(which(df_control$score == 100)) %>%
-    mclapply(
-        function(x) x %>% table %>% which.max %>% names,
-        mc.cores = as.integer(threads)) %>%
-    unlist %>%
-    str_replace("M", "2") %>%
-    str_replace("[^M2]", "1") %>%
-    as.numeric
+    tmp_ins_error <-
+        df_que_raw %>%
+        select(which(df_control$score == 100)) %>%
+        mclapply(define_ins_mutation,
+            mc.cores = as.integer(threads)) %>%
+        unlist %>%
+        str_replace("M", "2") %>%
+        str_replace("[^M2]", "1") %>%
+        as.numeric
 
     df_control$score[df_control$score == 100] <- tmp_ins_error
     rm(tmp_ins_error)
@@ -123,7 +139,6 @@ rm(tmp_score100)
 
 df_que <- df_que_raw
 df_que[, pull(df_control) == 2] <- "M"
-#df_que <- df_que_raw[, !pull(df_control) == 2]
 
 df_score[, pull(df_control) == 2] <- 0
 df_score <- df_score[, colSums(df_score) != 0]
@@ -361,24 +376,38 @@ tmp_nrow <- tmp_tibble %>%
 #? Remove clusters with strand specific mutation
 #===========================================================
 
+
 if (tmp_nrow > 0) {
-    tmp_cl <-
-        tmp_tibble %>%
+
+    tmp_biased_cl <- tmp_tibble %>%
         group_by(cl) %>%
         count(strand) %>%
         mutate(freq = n / sum(n)) %>%
-        filter(freq < 0.95 & freq > 0.05) %>%
+        mutate(bias = if_else(freq > 0.90, TRUE, FALSE)) %>%
+        filter(bias == TRUE) %>%
         pull(cl) %>%
         unique
 
-} else {
-    tmp_cl <- cossim_merged_cl %>% unique
+    if (length(tmp_biased_cl) > 0) {
+        tmp_max_cl <- tmp_tibble %>%
+            group_by(cl) %>%
+            count() %>%
+            ungroup(cl) %>%
+            filter(!(cl %in% tmp_biased_cl)) %>%
+            slice_max(n, 1) %>%
+            pull(cl)
+        if (length(tmp_max_cl) == 0) {
+            tmp_max_cl <- FALSE
+        }
+    } else {
+        tmp_max_cl <- FALSE
+    }
+
+    cossim_merged_cl[cossim_merged_cl %in% tmp_biased_cl] <- tmp_max_cl
+    rm(tmp_biased_cl, tmp_max_cl)
 }
 
-retain_reads <- cossim_merged_cl %in% tmp_cl
-retain_seq_consensus <- seq_consensus[tmp_cl]
-
-rm(tmp_tibble, tmp_nrow, tmp_cl)
+retain_seq_consensus <- seq_consensus[cossim_merged_cl %>% sort %>% unique]
 
 #===========================================================
 #? Remove clusters with fuzzy mutation
@@ -393,8 +422,8 @@ tmp_mut_position <- lapply(retain_seq_consensus,
     unlist %>%
     unique
 
-tmp_df_que_mut_position <- df_que[retain_reads, tmp_mut_position]
-tmp_cl_nums <- cossim_merged_cl[retain_reads] %>%
+tmp_df_que_mut_position <- df_que[, tmp_mut_position]
+tmp_cl_nums <- cossim_merged_cl %>%
     sort %>%
     unique
 
@@ -411,7 +440,7 @@ if (length(tmp_mut_position) > 0) {
 
     retain_clusters <-
         lapply(tmp_cl_nums, function(x) {
-            tmp_df_que_mut_position[cossim_merged_cl[retain_reads] == x, ] %>%
+            tmp_df_que_mut_position[cossim_merged_cl == x, ] %>%
             lapply(extract_clear_mutation)
         }) %>%
         unlist %>%
@@ -430,8 +459,8 @@ rm(tmp_mut_position, tmp_df_que_mut_position, tmp_cl_nums)
 #! Format results
 ################################################################################
 
-result <- tibble(read_id = df_label$id[retain_reads],
-    cluster = cossim_merged_cl[retain_reads]) %>%
+result <- tibble(read_id = df_label$id,
+    cluster = cossim_merged_cl) %>%
     filter(cluster %in% retain_clusters)
 
 ################################################################################
