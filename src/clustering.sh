@@ -18,8 +18,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #? TEST Aurguments
 #===============================================================================
 
-# barcode="barcode14"
-# alleletype="target"
+# barcode="barcode25"
+# alleletype="abnormal"
 # threads=14
 
 #===========================================================
@@ -62,6 +62,11 @@ query_label=".DAJIN_temp/clustering/temp/query_labels_${suffix}"
 ################################################################################
 
 ./DAJIN/src/mids_clustering.sh "${barcode}" "${alleletype}" > "${MIDS_que}"
+# #! TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+# echo "${barcode}" "${alleletype}"
+# cat "${MIDS_que}"
+# exit 0
+# #! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 ################################################################################
 #! Query seq (compressed MIDS) and Query score (comma-sep MIDS)
@@ -76,7 +81,7 @@ cat "${MIDS_que}" |
     sort -k 1,1 |
     join - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk -v atype="${alleletype}" '$NF==atype' |
-    cut -d " " -f 2 |
+    cut -d " " -f 1,2 |
 cat > "${query_seq}"
 
 #===========================================================
@@ -84,7 +89,8 @@ cat > "${query_seq}"
 #===========================================================
 
 cat "${query_seq}" |
-    awk -F '' 'BEGIN{OFS=","} {$1=$1;print $0}' |
+    cut -d " " -f 2 |
+    awk -F '' 'BEGIN{OFS=","}{$1=$1}1' |
     sed "s/[0-9]/I/g" |
     sed "s/[a-z]/I/g" |
 cat > "${query_score}"
@@ -98,7 +104,7 @@ cat "${MIDS_que}" |
     sort -k 1,1 |
     join - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk -v atype="${alleletype}" '$NF==atype' |
-    cut -d " " -f 1,3 |
+    cut -d " " -f 1,3,4 |
     sed "s/ /,/g" |
 cat > "${query_label}"
 
@@ -118,7 +124,7 @@ elif [ ! -s "${query_label}" ]; then
 elif [ ! -s "${control_score}" ]; then
     error_exit "${control_score} is empty"
 else
-    echo "Clustering ${barcode} ${alleletype} ..." >&2
+    echo "Clustering ${barcode} ${alleletype}..." >&2
     Rscript DAJIN/src/clustering.R "${query_score}" "${query_label}" "${control_score}" "${threads}" 2>/dev/null || exit 1
     ps -au | grep -e "clustering.R" -e "joblib" | awk '{print $2}'| xargs kill 2>/dev/null
 fi

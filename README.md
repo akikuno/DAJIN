@@ -37,13 +37,13 @@ You can use DAJIN with CPU though long computational time.   -->
 ## USAGE
 
 ```sh
-./DAJIN/DAJIN.sh -f [text file] (described at "Input")
+./DAJIN/DAJIN.sh -i [text file] (described at "Input")
 ```
 
 ### Example usage
 
 ```
-./DAJIN/DAJIN.sh -f DAJIN/example/desing.txt
+./DAJIN/DAJIN.sh -i DAJIN/example/desing.txt
 ```
 
 ### Input file
@@ -52,11 +52,11 @@ Input file should be formatted as below:
 
 ```
 design=DAJIN/example/design.txt
-input_dir=DAJIN/example/demultiplex
-control=barcode01
+input_dir=DAJIN/example/fastq
+control=sample01
 genome=mm10
 grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
-output_dir=Cables2
+output_dir=DAJIN_example
 threads=10
 ```
 

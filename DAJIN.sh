@@ -493,8 +493,7 @@ mkdir -p .DAJIN_temp/clustering/temp
 #? Prepare control's score to define sequencing error
 #===========================================================
 
-./DAJIN/src/clustering_control_score.sh "${control}" "${threads}" #2>/dev/null
-# wc -l .DAJIN_temp/clustering/temp/control_score_*
+./DAJIN/src/clustering_control_score.sh "${control}" "${threads}"
 
 #===========================================================
 #? Clustering
@@ -505,7 +504,6 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     sort -u |
     awk -v th=${threads:-1} '{print "./DAJIN/src/clustering.sh", $1, $2, th}' |
 sh -
-# ls -lh .DAJIN_temp/clustering/temp/hdbscan_*
 
 #===========================================================
 #? Allele percentage
@@ -535,8 +533,10 @@ EOF
 #? Setting directory
 #===========================================================
 
-rm -rf .DAJIN_temp/consensus/ 2>/dev/null
-mkdir -p .DAJIN_temp/consensus/temp
+find .DAJIN_temp/consensus/* -type d |
+    grep -v "sam$" |
+xargs -I @ rm -rf @ 2>/dev/null
+mkdir -p .DAJIN_temp/consensus/temp .DAJIN_temp/consensus/sam
 
 #===========================================================
 #? Generate temporal SAM files
@@ -550,12 +550,28 @@ while read -r input; do
     barcode="${input%% *}"
     mapping_alleletype="$(echo "${input##* }" | sed "s/ab*normal/wt/g")"
 
+    if ! [ -f .DAJIN_temp/consensus/sam/"${barcode}"_"${mapping_alleletype}".sam ]; then
+
+    cat .DAJIN_temp/clustering/readid_cl_mids_"${barcode}"_"${mapping_alleletype}" |
+        awk '{print ">"$1}' |
+        sort |
+    cat > .DAJIN_temp/consensus/tmp_id
+
     cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
+        awk '{print $1}' |
+        tr "\n" " " |
+        sed "s/>/\n>/g" |
+        sort |
+        join - .DAJIN_temp/consensus/tmp_id |
+        sed "s/ /\n/g" |
+        grep -v "^$" |
         minimap2 -ax map-ont -t "${threads}" \
             ".DAJIN_temp/fasta/${mapping_alleletype}.fa" - \
             --cs=long 2>/dev/null |
         sort |
-    cat > .DAJIN_temp/consensus/temp/"${barcode}"_"${mapping_alleletype}".sam
+    cat > .DAJIN_temp/consensus/sam/"${barcode}"_"${mapping_alleletype}".sam
+    rm .DAJIN_temp/consensus/tmp_id
+    fi
 done
 
 #===========================================================
@@ -600,6 +616,7 @@ mkdir -p "${output_dir:-DAJIN_results}"/Consensus
 #===========================================================
 #? BAM
 #===========================================================
+
 rm -rf .DAJIN_temp/bam/temp 2>/dev/null
 cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 
@@ -608,7 +625,7 @@ cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 #===========================================================
 
 find .DAJIN_temp/consensus/* -type d |
-grep -v "consensus/temp" |
+grep -v -e "consensus/temp" -e "sam" |
 xargs -I @ cp -f -r @ "${output_dir:-DAJIN_results}"/Consensus/ 2>/dev/null
 
 #===========================================================

@@ -17,11 +17,11 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #? TEST Auguments
 #===========================================================
 
-# barcode="barcode14"
-# alleletype="target"
-# cluster=2
+# barcode="barcode06"
+# alleletype="inversion"
+# cluster=1
 # percentage=69.7
-# alleleid=4
+# alleleid=6
 
 #===========================================================
 #? Auguments
@@ -92,7 +92,7 @@ cat "${allele_id}" |
     awk -F "" 'BEGIN{OFS=","}{$1=$1}1' |
 cat > "${tmp_allele_id}"
 
-Rscript DAJIN/src/consensus.R "${tmp_allele_id}" "${control_score}" "${barcode}"
+Rscript DAJIN/src/consensus.R "${tmp_allele_id}" "${control_score}" "${barcode}" 2>/dev/null
 
 #===========================================================
 #? Report (1) Cluster ID, (2) Base loc (3) Mutation type (4) Ins num
@@ -143,7 +143,7 @@ if [ "$(grep -c intact ${mutation_id_loc_type_insnum})" -eq 0 ]; then
         awk -v cl="${cluster}" '$2==cl' |
         cut -f 1 |
         sort -u |
-        join .DAJIN_temp/consensus/temp/"${barcode}"_"${mapping_alleletype}".sam - |
+        join .DAJIN_temp/consensus/sam/"${barcode}"_"${mapping_alleletype}".sam - |
         awk '$2==0 || $2==16' |
         awk '{print $4, $(NF-1)}' |
         sed "s/cs:Z://g" |
