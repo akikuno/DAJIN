@@ -51,7 +51,7 @@ tmp_alleleper_before=.DAJIN_temp/clustering/temp/alleleper_before_"${barcode}"
 tmp_alleleper_after=.DAJIN_temp/clustering/temp/alleleper_after_"${barcode}"
 
 ################################################################################
-#! Retain Target > 1%; others > 5 % (if filter=on)
+#! Retain Target (if filter=on)
 ################################################################################
 
 #===========================================================
@@ -79,7 +79,7 @@ total_reads=$(
 )
 
 #===========================================================
-#? Retain Target > 5%; others > 5% (if filter=on)
+#? Retain Target > 3%; others > 3% (if filter=on)
 #===========================================================
 
 cat "${tmp_clusterid}" |
@@ -89,8 +89,8 @@ cat "${tmp_clusterid}" |
     sed "s/$/\t${total_reads}/g" |
     awk '{$NF=$1/$NF*100}1' |
     if [ "_${filter}" = "_on" ]; then
-        awk '($2!~"target" && $NF > 5) ||
-        ($2~"target" && $NF > 5)'
+        awk '($2!~"target" && $NF > 3) ||
+        ($2~"target" && $NF > 3)'
     else
         cat -
     fi |
