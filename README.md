@@ -36,12 +36,6 @@ git clone https://github.com/akikuno/DAJIN.git
 ```
 
 
-<!-- ---
-### macOS
-
-macOS is not recommended because [Nvidia CUDA will not support it](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html).  
-You can use DAJIN with CPU though long computational time.   -->
-
 ## USAGE
 
 ```sh
