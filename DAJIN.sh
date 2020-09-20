@@ -33,14 +33,14 @@ Input     : Input file should be formatted as below:
             threads=10
             filter=on
             ------
-            - design: a multi-FASTA file contains sequences of each genotype. ">wt" and ">target" must be included. 
+            - design: a multi-FASTA file contains sequences of each genotype. ">wt" and ">target" must be included.
             - input_dir: a directory contains FASTA or FASTQ files of long-read sequencing
             - control: control barcode ID
             - genome: reference genome. e.g. mm10, hg38
-            - grna: gRNA sequence(s). multiple gRNA sequences must be deliminated by comma.
+            - grna: gRNA sequence(s) including PAM. multiple gRNA sequences must be deliminated by comma.
             - output_dir (optional): output directory name. optional. Default is "DAJIN_results"
-            - threads (optional): Default is two-thirds of available CPU threads.
-            - filter (optional): set filter to remove very minor allele (less than 3%). Default is "on"
+            - threads (optional; integer): Default is two-thirds of available CPU threads.
+            - filter (optional; "on" or "off"): set filter to remove very minor allele (less than 5%). Default is "on"
 USAGE
 }
 
@@ -178,8 +178,10 @@ fi
 #? Define threads
 #===========================================================
 
-expr "${threads}" + 1 >/dev/null 2>&1
-if [ $? -lt 2 ]; then
+max_cpu=$(python -c "import multiprocessing; print(multiprocessing.cpu_count())")
+tmp_threads=$(expr "${threads}" + 1 2>/dev/null)
+
+if [ $? -eq 0 ] && [ "${tmp_threads}" -gt 1 ] && [ "${threads}" -lt "${max_cpu}" ]; then
     :
 else
     unset threads
@@ -324,7 +326,7 @@ if [ "_${mutation_type}" = "_S" ]; then
         sed 's/[^0-9]//g' |
         sed "s/[4-9]//g" |
         sed -e "s/0/A/g" -e "s/1/G/g" -e "s/2/C/g" -e "s/3/T/g" |
-        awk -v seq_length=$seq_length '{print substr($0, 1, seq_length)}'
+        awk -v seq_length="$seq_length" '{print substr($0, 1, seq_length)}'
     )
     # insertion
     cat .DAJIN_temp/fasta_conv/wt.fa |
@@ -533,7 +535,7 @@ EOF
 #? Setting directory
 #===========================================================
 
-find .DAJIN_temp/consensus/* -type d |
+find .DAJIN_temp/consensus/* -type d 2>/dev/null |
     grep -v "sam$" |
 xargs -I @ rm -rf @ 2>/dev/null
 mkdir -p .DAJIN_temp/consensus/temp .DAJIN_temp/consensus/sam

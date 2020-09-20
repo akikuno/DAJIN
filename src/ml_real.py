@@ -17,7 +17,7 @@ from tensorflow.keras.models import Model
 
 # set random seed
 os.environ['PYTHONHASHSEED'] = '0'
-np.random.seed(42)
+np.random.seed(111)
 rn.seed(12345)
 tf.random.set_seed(1234)
 
@@ -29,7 +29,7 @@ tf.random.set_seed(1234)
 # ? TEST auguments
 # ===========================================================
 
-# file_name = ".DAJIN_temp/data/MIDS_barcode20_wt"
+# file_name = ".DAJIN_temp/data/MIDS_barcode05_wt"
 # mutation_type = "S"
 # threads = 12
 
@@ -90,7 +90,7 @@ model = tf.keras.models.load_model(".DAJIN_temp/data/model.h5")
 clf = pickle.load(open(".DAJIN_temp/data/model_lof.sav", "rb"))
 
 ################################################################################
-#! Novelity (Anomaly) detection
+#! Novelty (Anomaly) detection
 ################################################################################
 # ===========================================================
 # ? Extract layer
