@@ -326,7 +326,7 @@ if [ "_${mutation_type}" = "_S" ]; then
         sed 's/[^0-9]//g' |
         sed "s/[4-9]//g" |
         sed -e "s/0/A/g" -e "s/1/G/g" -e "s/2/C/g" -e "s/3/T/g" |
-        awk -v seq_length=$seq_length '{print substr($0, 1, seq_length)}'
+        awk -v seq_length="$seq_length" '{print substr($0, 1, seq_length)}'
     )
     # insertion
     cat .DAJIN_temp/fasta_conv/wt.fa |

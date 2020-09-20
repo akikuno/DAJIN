@@ -20,7 +20,7 @@ from tensorflow.keras.models import Model
 
 # set random seed
 os.environ['PYTHONHASHSEED'] = '0'
-np.random.seed(42)
+np.random.seed(111)
 rn.seed(12345)
 tf.random.set_seed(1234)
 
@@ -152,12 +152,11 @@ model.fit(
 
 model_eval = model.evaluate(X_val, Y_val)
 
-print(f"""model loss: {model_eval[0]}
-model accuracy: {model_eval[1]}""",
-file=sys.stderr)
+print(f"model loss: {model_eval[0]}", file=sys.stderr)
+print(f"model accuracy: {model_eval[1]}", file=sys.stderr)
 
 ################################################################################
-#! Novelity (Anomaly) detection
+#! Novelty (Anomaly) detection
 ################################################################################
 #===========================================================
 #? Extract layer
