@@ -20,8 +20,11 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode09"
-# allele <- "inversion"
+# barcode <- "barcode26"
+# allele <- "abnormal"
+
+# if(allele == "abnormal") control_allele <- "wt"
+# if(allele != "abnormal") control_allele <- allele
 # file_que <- sprintf(".DAJIN_temp/clustering/temp/query_score_%s_%s", barcode, allele)
 # file_label <- sprintf(".DAJIN_temp/clustering/temp/query_labels_%s_%s", barcode, allele)
 # file_control <- sprintf(".DAJIN_temp/clustering/temp/control_score_%s", allele)
@@ -218,12 +221,6 @@ for (i in unique(hdbscan_cl)) {
     df_cluster <- df_cluster %>% bind_rows(tmp_df)
 }
 rm(tmp_df, tmp_df_score, tmp_score)
-
-# ## TEST <<<<<<<<<<<<
-# ggplot(df_cluster, aes(x = loc, y = score)) +
-# geom_point() +
-# facet_wrap(~ cluster, nrow = 1)
-# ## TEST >>>>>>>>>>>>
 
 ################################################################################
 #! Cosine similarity to merge similar clusters
