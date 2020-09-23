@@ -134,7 +134,7 @@ reflength=$(cat "${reference}" | grep -v "^>" | awk '{print length($0)}')
 
 minimap2 -ax splice "${reference}" "${tmp_query}" --cs=long 2>/dev/null |
     awk -v allele="${mapping_alleletype}" -v reflen="${reflength}" \
-        '$3 == allele && length($10) < reflen * 1.1' |
+        '$3 == allele && length($10) < reflen * 1.5' |
     sort |
     # append flag info
     awk '{
@@ -166,15 +166,6 @@ cat > "${tmp_secondary}"
 #===========================================================
 #? Concatenate "primary" and "secondary"
 #===========================================================
-# #! TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-# cat "${tmp_primary}" "${tmp_secondary}" |
-#     sort -t " " -k 2,2n |
-#     awk '{seq_[$1]=seq_[$1]" "$2" "$3" "$4}
-#         END{for(key in seq_) print key,seq_[key]}' |
-#     awk '{print NF}' |
-# sort | uniq -c
-# exit 0
-# #! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 cat "${tmp_primary}" "${tmp_secondary}" |
     sort -t " " -k 2,2n |
