@@ -134,7 +134,7 @@ reflength=$(cat "${reference}" | grep -v "^>" | awk '{print length($0)}')
 
 minimap2 -ax splice "${reference}" "${tmp_query}" --cs=long 2>/dev/null |
     awk -v allele="${mapping_alleletype}" -v reflen="${reflength}" \
-        '$3 == allele && length($10) < reflen * 1.1' |
+        '$3 == allele && length($10) < reflen * 1.5' |
     sort |
     # append flag info
     awk '{

@@ -49,6 +49,8 @@ tmp_prediction=".DAJIN_temp/data/tmp_DAJIN_MIDS_prediction_result.txt"
 #! Train models
 ################################################################################
 
+[ "_${mutation_type}" = "_S" ] && rm .DAJIN_temp/data/MIDS_target* 2>/dev/null || true
+
 cat .DAJIN_temp/data/MIDS_* |
     grep "_sim" |
     sed -e "s/_aligned_reads//g" |

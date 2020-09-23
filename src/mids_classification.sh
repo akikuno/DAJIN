@@ -129,7 +129,8 @@ second_flank=$(
 #===========================================================
 
 minimap2 -ax splice "${reference}" "${input_fa}" --cs=long 2>/dev/null |
-    awk -v ref="${ref}" -v reflen="${reflength}" '$3 == ref && length($10) < reflen * 1.1' |
+    awk -v ref="${ref}" -v reflen="${reflength}" \
+        '$3 == ref && length($10) < reflen * 1.5' |
     tee "${tmp_mapping}" |
     grep -v "^@" |
     # fetch sequence start and end sites

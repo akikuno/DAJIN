@@ -460,9 +460,6 @@ find .DAJIN_temp/fasta_ont -type f |
         END{print "wait"}' |
 sh - 2>/dev/null
 
-[ "_${mutation_type}" = "_S" ] && rm .DAJIN_temp/data/MIDS_target*
-
-
 ################################################################################
 #! Prediction
 ################################################################################
