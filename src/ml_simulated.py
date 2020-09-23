@@ -150,7 +150,7 @@ model.fit(
     shuffle=True,
 )
 
-model_eval = model.evaluate(X_val, Y_val)
+model_eval = model.evaluate(X_val, Y_val, verbose=0)
 
 print(f"model loss: {model_eval[0]}", file=sys.stderr)
 print(f"model accuracy: {model_eval[1]}", file=sys.stderr)
@@ -183,6 +183,10 @@ clf.fit(train_vector)
 ################################################################################
 #! Save models
 ################################################################################
+
+
+print(f"loss: {model_eval[0]}", file=open('.DAJIN_temp/data/model_evaluate.csv', 'a'))
+print(f"accuracy: {model_eval[1]}", file=open('.DAJIN_temp/data/model_evaluate.csv', 'a'))
 
 np.save(".DAJIN_temp/data/labels_index.npy", labels_index)
 
