@@ -178,21 +178,20 @@ fi
 #? Define threads
 #===========================================================
 
-max_cpu=$(python -c "import multiprocessing; print(multiprocessing.cpu_count())")
-tmp_threads=$(expr "${threads}" + 1 2>/dev/null)
+{
+unset max_threads tmp_threads
+max_threads=$(getconf _NPROCESSORS_ONLN)
+[ -z "$max_threads" ] && max_threads=$(getconf NPROCESSORS_ONLN)
+[ -z "$max_threads" ] && max_threads=$(ksh -c 'getconf NPROCESSORS_ONLN')
+[ -z "$max_threads" ] && max_threads=1
+tmp_threads=$(("${threads}" + 0))
+}  2>/dev/null || true
 
-if [ $? -eq 0 ] && [ "${tmp_threads}" -gt 1 ] && [ "${threads}" -lt "${max_cpu}" ]; then
+if [ "${tmp_threads:-0}" -gt 1 ] && [ "${tmp_threads}" -lt "${max_threads}" ]
+then
     :
 else
-    unset threads
-    # Linux and similar...
-    threads=$(getconf _NPROCESSORS_ONLN 2>/dev/null | awk '{print int($0/1.5+0.5)}')
-    # FreeBSD and similar...
-    [ -z "$threads" ] && threads=$(getconf NPROCESSORS_ONLN | awk '{print int($0/1.5)+0.5}')
-    # Solaris and similar...
-    [ -z "$threads" ] && threads=$(ksh93 -c 'getconf NPROCESSORS_ONLN' | awk '{print int($0/1.5+0.5)}')
-    # Give up...
-    [ -z "$threads" ] && threads=1
+    threads=$(echo "${max_threads}" | awk '{print int($0*2/3+0.5)}')
 fi
 
 ################################################################################
@@ -224,8 +223,8 @@ xargs mkdir -p
 cat "${design}" |
     tr -d "\r" |
     awk '{if($1~"^>"){print "\n"$0}
-    else {printf $0}}
-    END {print ""}' |
+        else {printf $0}}
+        END {print ""}' |
     grep -v "^$" |
 cat > .DAJIN_temp/fasta/fasta.fa
 
@@ -235,13 +234,10 @@ design_LF=".DAJIN_temp/fasta/fasta.fa"
 #* Separate multiple-FASTA into FASTA files
 #---------------------------------------
 
-cat ${design_LF} |
-    sed "s/^/@/g" |
-    tr -d "\n" |
-    sed -e "s/@>/\n>/g" \
-        -e "s/@/ /g" \
-        -e "s/$/\n/g" |
-    grep -v "^$" |
+cat "${design_LF}" |
+    tr "\n" " " |
+    awk '{gsub(">", "\n>")}1' |
+    grep -v "^$"
     awk '{id=$1
         gsub(">","",id)
         output=".DAJIN_temp/fasta/"id".fa"
@@ -253,18 +249,15 @@ cat ${design_LF} |
 #? to right flanking than left flanking
 #===========================================================
 
-wt_seqlen=$(awk '!/[>|@]/ {print length($0)}' .DAJIN_temp/fasta/wt.fa)
+wt_seqlen=$(awk '!/[>|@]/ {print length}' .DAJIN_temp/fasta/wt.fa)
 
 convert_revcomp=$(
-    minimap2 -ax splice \
-    .DAJIN_temp/fasta/wt.fa \
-    .DAJIN_temp/fasta/target.fa --cs 2>/dev/null |
+    minimap2 -ax splice .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/target.fa --cs 2>/dev/null |
     awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-    sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
+    sed -e "s/cs:Z:://g" -e "s/:/ /g" -e "s/~/ /g" |
     tr -d "\~\*\-\+atgc" |
     awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
-    awk -v wt_seqlen="$wt_seqlen" \
-    '{if(wt_seqlen-$2>$1) print 0; else print 1}'
+    awk -v wt_seqlen="$wt_seqlen" '{if(wt_seqlen-$2>$1) print 0; else print 1}'
     )
 
 if [ "$convert_revcomp" -eq 1 ] ; then
@@ -278,12 +271,9 @@ fi
 #* Separate multiple-FASTA into FASTA files
 #---------------------------------------
 cat ${design_LF} |
-    sed "s/^/@/g" |
-    tr -d "\n" |
-    sed -e "s/@>/\n>/g" \
-        -e "s/@/ /g" \
-        -e "s/$/\n/g" |
-    grep -v "^$" |
+    tr "\n" " " |
+    awk '{gsub(">", "\n>")}1' |
+    grep -v "^$"
     awk '{id=$1
         gsub(">","",id)
         output=".DAJIN_temp/fasta_conv/"id".fa"
@@ -403,7 +393,7 @@ minimap2 -ax splice \
     ".DAJIN_temp/fasta_conv/wt.fa" ".DAJIN_temp/fasta_conv/target.fa" \
     --cs 2>/dev/null |
     awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-    sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
+    sed -e "s/cs:Z:://g" -e "s/:/ /g" -e "s/~/ /g" |
     tr -d "\~\*\-\+atgc" |
     awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
 cat > .DAJIN_temp/data/mutation_points
@@ -517,13 +507,14 @@ while read -r input; do
         sort |
     cat > .DAJIN_temp/consensus/tmp_id
 
-    cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
+    cat .DAJIN_temp/fasta_ont/"${barcode}".fa | head -n 4 |
         awk '{print $1}' |
         tr "\n" " " |
-        sed "s/>/\n>/g" |
+        awk '{gsub(">", "\n>")}1' |
+        grep -v "^$" |
         sort |
         join - .DAJIN_temp/consensus/tmp_id |
-        sed "s/ /\n/g" |
+        awk '{gsub(" ", "\n")}1' |
         grep -v "^$" |
         minimap2 -ax map-ont -t "${threads}" \
             ".DAJIN_temp/fasta/${mapping_alleletype}.fa" - \
