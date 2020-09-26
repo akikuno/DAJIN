@@ -8,6 +8,7 @@ threads=$2
 #===========================================================
 #? NanoSim
 #===========================================================
+
 ./DAJIN/utils/NanoSim/src/read_analysis.py genome \
     -i ".DAJIN_temp/fasta_ont/${control}.fa" \
     -rg .DAJIN_temp/fasta_conv/wt.fa \

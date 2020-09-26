@@ -37,8 +37,8 @@ mapping_alleletype="${alleletype}"
 [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
 [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
 
-reference=".DAJIN_temp/fasta/${mapping_alleletype}.fa"
-query=".DAJIN_temp/fasta_ont/${barcode}.fa"
+ref_fa=".DAJIN_temp/fasta/${mapping_alleletype}.fa"
+que_fa=".DAJIN_temp/fasta_ont/${barcode}.fa"
 
 #===========================================================
 #? Output
@@ -48,7 +48,7 @@ query=".DAJIN_temp/fasta_ont/${barcode}.fa"
 #? Temporal
 #===========================================================
 
-tmp_query=".DAJIN_temp/clustering/tmp_query_${suffix}"_$$
+tmp_que_fa=".DAJIN_temp/clustering/tmp_que_fa_${suffix}"_$$
 tmp_seqID=".DAJIN_temp/clustering/tmp_seqID_${suffix}"_$$
 
 tmp_all=".DAJIN_temp/tmp_all_${suffix}"_$$
@@ -117,7 +117,7 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     sort |
 cat > "${tmp_seqID}"
 
-cat "${query}" |
+cat "${que_fa}" |
     awk '{printf $1"\t"}' |
     sed "s/>/\n/g" |
     sort |
@@ -125,16 +125,17 @@ cat "${query}" |
     sed "s/^/>/g" |
     sed "s/ /\n/g" |
     grep -v "^$" |
-cat > "${tmp_query}"
+cat > "${tmp_que_fa}"
 
 ################################################################################
 #! Mapping
 ################################################################################
-reflength=$(cat "${reference}" | grep -v "^>" | awk '{print length($0)}')
 
-minimap2 -ax splice "${reference}" "${tmp_query}" --cs=long 2>/dev/null |
-    awk -v allele="${mapping_alleletype}" -v reflen="${reflength}" \
-        '$3 == allele && length($10) < reflen * 1.5' |
+ref_len=$(cat "${ref_fa}" | grep -v "^>" | awk '{print length}')
+
+minimap2 -ax splice "${ref_fa}" "${tmp_que_fa}" --cs=long 2>/dev/null |
+    awk -v allele="${mapping_alleletype}" -v ref_len="${ref_len}" \
+        '$3 == allele && length($10) < ref_len * 1.1' |
     sort |
     # append flag info
     awk '{
@@ -209,7 +210,7 @@ cat "${tmp_primary}" "${tmp_secondary}" |
     ## remove start site info
     awk '{$2=""}1' |
     ## end
-    awk -v reflen="${reflength}" '{
+    awk -v reflen="${ref_len}" '{
         seqlen=length($2);
         end="";
         if(seqlen>reflen) $2=substr($2,1,reflen)
@@ -220,6 +221,6 @@ cat "${tmp_primary}" "${tmp_secondary}" |
     sed -e "s/$/\t${barcode}/g" -e "s/ /\t/g" |
 cat
 
-rm "${tmp_query}" "${tmp_seqID}" "${tmp_all}" "${tmp_primary}" "${tmp_secondary}"
+rm "${tmp_que_fa}" "${tmp_seqID}" "${tmp_all}" "${tmp_primary}" "${tmp_secondary}"
 
 exit 0

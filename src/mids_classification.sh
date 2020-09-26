@@ -4,7 +4,7 @@
 #! Initialize shell environment
 ################################################################################
 
-set -u
+set -eu
 umask 0022
 export LC_ALL=C
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
@@ -17,18 +17,17 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #? TEST Auguments
 #===========================================================
 
-# input_fa=".DAJIN_temp/fasta_ont/inversion_simulated_aligned_reads.fasta"
+# que_fa=".DAJIN_temp/fasta_ont/barcode01.fa"
 # genotype="wt"
-# label=$(echo "${input_fa}" | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
-# suffix="${label}_${genotype}"
 
 #===========================================================
 #? Auguments
 #===========================================================
 
-input_fa=${1}
+que_fa=${1}
 genotype=${2}
-label=$(echo "${input_fa}" | sed -e "s#.*/##g" -e "s#\..*##g" -e "s/_aligned_reads//g")
+
+label=${que_fa%%_aligned*} && label=${label%.*} && label=${label##*/}
 suffix="${label}_${genotype}"
 
 #===========================================================
@@ -43,12 +42,12 @@ output_MIDS=".DAJIN_temp/data/MIDS_${suffix}"
 #===========================================================
 #? Temporal
 #===========================================================
-tmp_mapping=".DAJIN_temp/tmp_mapping_${suffix}"
-tmp_seqID=".DAJIN_temp/tmp_seqID_${suffix}"
+tmp_mapping=".DAJIN_temp/data/tmp_mapping_${suffix}"
+tmp_seqID=".DAJIN_temp/data/tmp_seqID_${suffix}"
 
-tmp_all=".DAJIN_temp/tmp_all_${suffix}"
-tmp_primary=".DAJIN_temp/tmp_primary_${suffix}"
-tmp_secondary=".DAJIN_temp/tmp_secondary_${suffix}"
+tmp_all=".DAJIN_temp/data/tmp_all_${suffix}"
+tmp_primary=".DAJIN_temp/data/tmp_primary_${suffix}"
+tmp_secondary=".DAJIN_temp/data/tmp_secondary_${suffix}"
 
 
 ################################################################################
@@ -74,26 +73,26 @@ mids_conv(){
             printf "\n"}' |
         # insertion/point mutation/inversion
         awk '{id=$1; strand=$3; loc=$4; $0=$5
-        sub("cs:Z:","",$0)
-        sub("D"," D",$0)
-        gsub(/[ACGT]/, "M", $0)
-        gsub(/\*[acgt][acgt]/, " S", $0)
-        gsub("=", " ", $0)
-        gsub("\+", " +", $0)
-        gsub("\-", " -", $0)
-        for(i=1; i<=NF; i++){
-            if($i ~ /^\+/){
-                len=length($i)-1
-                for(len_=1; len_ <= len; len_++) str = "I" str
-                $i=str
-                str=""}
-            else if($i ~ "^-"){
-                len=length($i)-1
-                for(len_=1; len_ <= len; len_++) str = "D" str
-                $i=str
-                str=""}
-            }
-        gsub(" ", "", $0)
+            sub("cs:Z:","",$0)
+            sub("D"," D",$0)
+            gsub(/[ACGT]/, "M", $0)
+            gsub(/\*[acgt][acgt]/, " S", $0)
+            gsub("=", " ", $0)
+            gsub("\+", " +", $0)
+            gsub("\-", " -", $0)
+            for(i=1; i<=NF; i++){
+                if($i ~ /^\+/){
+                    len=length($i)-1
+                    for(len_=1; len_ <= len; len_++) str = "I" str
+                    $i=str
+                    str=""}
+                else if($i ~ "^-"){
+                    len=length($i)-1
+                    for(len_=1; len_ <= len; len_++) str = "D" str
+                    $i=str
+                    str=""}
+                }
+            gsub(" ", "", $0)
         print id, loc, $0}' 2>/dev/null |
     sort -t " " |
     cat
@@ -107,9 +106,9 @@ mids_conv(){
 #? Define variables
 #===========================================================
 
-reference=".DAJIN_temp/fasta_conv/wt.fa"
-reflength=$(cat "${reference}" | grep -v "^>" | awk '{print length($0)}')
-ref=$(cat "${reference}" | grep "^>" | sed "s/>//g")
+ref_fa=".DAJIN_temp/fasta_conv/wt.fa"
+ref_len=$(awk '$1!~/^>/ {print length}' "${ref_fa}")
+ref_label="${ref_fa##*/}" && ref_label="${ref_label%.*}"
 
 ext=${ext:=100}
 first_flank=$(
@@ -122,15 +121,17 @@ second_flank=$(
     cat .DAJIN_temp/data/mutation_points |
     awk -v ext=${ext} '{if(NF==2) print $2+ext; else print $1+ext}'
     )
-[ "${second_flank}" -gt "${reflength}" ] && second_flank="${reflength}"
+[ "${second_flank}" -gt "${ref_len}" ] && second_flank="${ref_len}"
 
 #===========================================================
 #? Extract reads
 #===========================================================
 
-minimap2 -ax splice "${reference}" "${input_fa}" --cs=long 2>/dev/null |
-    awk -v ref="${ref}" -v reflen="${reflength}" \
-        '$3 == ref && length($10) < reflen * 1.5' |
+max_len=$(awk '$1!~/^>/ {if(max<length) max=length} END{print max}' .DAJIN_temp/fasta/fasta.fa)
+
+minimap2 -ax splice "${ref_fa}" "${que_fa}" --cs=long 2>/dev/null |
+    awk -v ref_label="${ref_label}" -v max_len="${max_len}" \
+        '$3 == ref_label && length($10) < max_len * 1.1' |
     tee "${tmp_mapping}" |
     grep -v "^@" |
     # fetch sequence start and end sites
@@ -225,15 +226,16 @@ cat "${tmp_primary}" "${tmp_secondary}" |
     ## start
     awk '{start=""; for(i=1; i < $2; i++) start=start"M"; print $1,$2,start""$3}' |
     ## end
-    awk -v reflen="${reflength}" '{
+    awk -v max_len="${max_len}" '{
         seqlen=length($3);
         end="";
-        if(seqlen>reflen) {print $1,substr($3,1,reflen)}
-        else {for(i=seqlen; i < reflen; i++) end=end"M"; print $1,$3""end}
+        if(seqlen>max_len) {print $1,substr($3,1,max_len)}
+        else {for(i=seqlen; i < max_len; i++) end=end"M"; print $1,$3""end}
     }' |
     # Remove all-mutated reads
     awk '$2 !~ /^[I|D|S]+$/' |
-    sed -e "s/$/\t${label}/g" -e "s/ /\t/g" |
+    sed "s/$/ ${label}/g" |
+    awk '{gsub(" ", "\t")}1' |
 cat > "${output_MIDS}"
 
 rm "${tmp_mapping}" "${tmp_seqID}" "${tmp_all}" "${tmp_primary}" "${tmp_secondary}"
