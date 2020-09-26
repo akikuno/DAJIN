@@ -507,7 +507,7 @@ while read -r input; do
         sort |
     cat > .DAJIN_temp/consensus/tmp_id
 
-    cat .DAJIN_temp/fasta_ont/"${barcode}".fa | head -n 4 |
+    cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
         awk '{print $1}' |
         tr "\n" " " |
         awk '{gsub(">", "\n>")}1' |
