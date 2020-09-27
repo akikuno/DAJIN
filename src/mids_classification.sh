@@ -27,7 +27,9 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 que_fa=${1}
 genotype=${2}
 
-label=${que_fa%%_aligned*} && label=${label%.*} && label=${label##*/}
+label=${que_fa##*/}
+label=${label%%_aligned*}
+label=${label%.fa*}
 suffix="${label}_${genotype}"
 
 #===========================================================
