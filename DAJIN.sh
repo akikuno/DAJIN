@@ -4,7 +4,7 @@
 #! Initialize shell environment
 ################################################################################
 
-set -ue
+set -eu
 umask 0022
 export LC_ALL=C
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
@@ -24,12 +24,12 @@ Example   : ./DAJIN/DAJIN.sh -i DAJIN/example/design.txt
 Input     : Input file should be formatted as below:
             # Example
             ------
-            design=DAJIN/example/design.txt
+            design=DAJIN/example/example.fa
             input_dir=DAJIN/example/fastq
             control=barcode01
             genome=mm10
             grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
-            output_dir=DAJIN_cables2
+            output_dir=DAJIN_example
             threads=10
             filter=on
             ------
@@ -40,7 +40,7 @@ Input     : Input file should be formatted as below:
             - grna: gRNA sequence(s) including PAM. multiple gRNA sequences must be deliminated by comma.
             - output_dir (optional): output directory name. optional. Default is "DAJIN_results"
             - threads (optional; integer): Default is two-thirds of available CPU threads.
-            - filter (optional; "on" or "off"): set filter to remove very minor allele (less than 5%). Default is "on"
+            - filter (optional; "on" or "off"): set filter to remove very minor allele (less than 3%). Default is "on"
 USAGE
 }
 
@@ -160,15 +160,17 @@ done
 #===========================================================
 #? Check output directory name
 #===========================================================
+
 [ $(echo "$output_dir" | sed "s/[_a-zA-Z0-9]*//g" | wc | awk '{print $2}') -ne 0 ] &&
     error_exit "$output_dir: invalid directory name"
 
 #===========================================================
 #? Check "filter"
 #===========================================================
-if [ -z "${filter}" ];then
+
+if [ -z "${filter}" ]; then
     filter=on
-elif [ _"${filter}" = _"off" ];then
+elif [ _"${filter}" = _"on" ] || [ _"${filter}" = _"off" ]; then
     :
 else
     error_exit "${filter}: invalid filter name (on/off)"
@@ -208,12 +210,11 @@ fi
 #? Make temporal directory
 #===========================================================
 
-find .DAJIN_temp/* -type d |
-grep -v fasta_ont |
-xargs rm -rf 2>/dev/null || true
+(find .DAJIN_temp/* -type d |
+# grep -v fasta_ont |
+xargs rm -rf) 2>/dev/null || true
 
 dirs="fasta fasta_conv fasta_ont NanoSim data"
-
 echo "${dirs}" |
     sed "s:^:.DAJIN_temp/:g" |
     sed "s: : .DAJIN_temp/:g" |
@@ -231,29 +232,27 @@ NanoSim read simulation
 --------------------------------------------------------------------------------
 EOF
 
-#===========================================================
-#? NanoSim
-#===========================================================
-
 set +u
 conda activate DAJIN_nanosim
 set -u
 
-find .DAJIN_temp/fasta_ont | grep -q simulated
-[ "$?" -eq 0 ] || ./DAJIN/src/nanosim.sh "${control}" "${threads}"
+if [ "$(find .DAJIN_temp/fasta_ont | grep -c simulated)" -eq 0 ]; then
+    ./DAJIN/src/nanosim.sh "${control}" "${threads}"
+fi
 
 ################################################################################
 #! MIDS conversion
 ################################################################################
-set +u
-conda activate DAJIN
-set -u
 
 cat << EOF >&2
 --------------------------------------------------------------------------------
-MIDS conversion
+Preprocessing
 --------------------------------------------------------------------------------
 EOF
+
+set +u
+conda activate DAJIN
+set -u
 
 #===========================================================
 #? Get mutation loci
@@ -287,7 +286,7 @@ sh - 2>/dev/null
 
 cat << EOF >&2
 --------------------------------------------------------------------------------
-Allele prediction
+Predict allele types
 --------------------------------------------------------------------------------
 EOF
 
@@ -302,11 +301,11 @@ exit 1
 
 cat << EOF >&2
 --------------------------------------------------------------------------------
-Allele clustering
+Clustering alleles
 --------------------------------------------------------------------------------
 EOF
 
-rm -rf .DAJIN_temp/clustering 2>/dev/null
+rm -rf .DAJIN_temp/clustering 2>/dev/null || true
 mkdir -p .DAJIN_temp/clustering/temp
 
 #===========================================================
@@ -353,9 +352,9 @@ EOF
 #? Setting directory
 #===========================================================
 
-find .DAJIN_temp/consensus/* -type d 2>/dev/null |
+(find .DAJIN_temp/consensus/* -type d |
     grep -v "sam$" |
-xargs -I @ rm -rf @ 2>/dev/null
+    xargs -I @ rm -rf @) 2>/dev/null || true
 mkdir -p .DAJIN_temp/consensus/temp .DAJIN_temp/consensus/sam
 
 #===========================================================
@@ -430,7 +429,7 @@ EOF
 #! Move output files
 ################################################################################
 
-rm -rf "${output_dir:=DAJIN_results}" 2>/dev/null
+rm -rf "${output_dir:=DAJIN_results}" 2>/dev/null || true
 mkdir -p "${output_dir:-DAJIN_results}"/BAM
 mkdir -p "${output_dir:-DAJIN_results}"/Consensus
 
@@ -438,16 +437,16 @@ mkdir -p "${output_dir:-DAJIN_results}"/Consensus
 #? BAM
 #===========================================================
 
-rm -rf .DAJIN_temp/bam/temp 2>/dev/null
+rm -rf .DAJIN_temp/bam/temp 2>/dev/null || true
 cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 
 #===========================================================
 #? Consensus
 #===========================================================
 
-find .DAJIN_temp/consensus/* -type d |
+(find .DAJIN_temp/consensus/* -type d |
 grep -v -e "consensus/temp" -e "sam" |
-xargs -I @ cp -f -r @ "${output_dir:-DAJIN_results}"/Consensus/ 2>/dev/null
+xargs -I @ cp -f -r @ "${output_dir:-DAJIN_results}"/Consensus/) 2>/dev/null || true
 
 #===========================================================
 #? Details

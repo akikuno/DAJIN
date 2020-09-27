@@ -4,7 +4,7 @@
 #! Initialize shell environment
 ################################################################################
 
-set -u
+set -eu
 umask 0022
 export LC_ALL=C
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
@@ -122,7 +122,7 @@ cat > "${tmp_alleleper_after}"
 #! Extract reads
 ################################################################################
 
-rm .DAJIN_temp/clustering/readid_cl_mids_"${barcode}"* 2>/dev/null
+rm .DAJIN_temp/clustering/readid_cl_mids_"${barcode}"* 2>/dev/null || true
 
 cat "${tmp_alleleper_after}" |
 while read -r input; do
