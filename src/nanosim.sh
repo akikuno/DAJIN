@@ -18,7 +18,7 @@ threads=$2
 wt_seqlen=$(awk '!/[>|@]/ {print length}' .DAJIN_temp/fasta_conv/wt.fa)
 
 for input in .DAJIN_temp/fasta_conv/*; do
-    echo "${input} is now simulating..."
+    echo "${input} is now simulating..." 1>&2
     output=$(
         echo "${input%.*}" |
         sed "s;fasta_conv;fasta_ont;g"
