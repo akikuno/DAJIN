@@ -64,6 +64,7 @@ cat .DAJIN_temp/data/MIDS_"${control}"_wt |
     sed "s/${control}$/wt_simulated/g" |
 cat >> ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
 
+echo "Model training..." >&2
 python ./DAJIN/src/ml_simulated.py \
     ".DAJIN_temp/data/DAJIN_MIDS_sim.txt" "${threads}" >&2
 

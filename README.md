@@ -20,7 +20,7 @@ A simple, rapid, scalable whole-allelic profile of genome editing organisms usin
 
 or
 
-```sh
+```bash
 # to instal git
 sudo apt install git
 # to install miniconda
@@ -67,8 +67,9 @@ threads=10
 - **control**: control barcode ID
 - **genome**: reference genome. e.g. mm10, hg38
 - **grna**: gRNA sequence(s) including PAM. multiple gRNA sequences must be delimitated by comma.
-- **output_dir** (optional): output directory name. default dirname is `DAJIN_results`
+- **output_dir** (optional): output directory name. default is `DAJIN_results`
 - **threads** (optional; integer): default is two-thirds of available CPU threads.
+- **filter**  (optional; `on` or `off`): set filter to remove very minor allele (less than 3%). default is `on`.
 
 ### Output files
 

@@ -4,7 +4,7 @@
 #! Initialize shell environment
 ################################################################################
 
-set -u
+set -eu
 umask 0022
 export LC_ALL=C
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
@@ -107,27 +107,14 @@ cat > "${query_label}"
 #! Clustering
 ################################################################################
 
-error_exit() {
-    echo "$@" 1>&2
-    exit 1
-}
-
-if [ ! -s "${query_score}" ]; then
-    error_exit "${query_score} is empty"
-elif [ ! -s "${query_label}" ]; then
-    error_exit "${query_label} is empty"
-elif [ ! -s "${control_score}" ]; then
-    error_exit "${control_score} is empty"
-else
-    echo "Clustering ${barcode} ${alleletype}..." >&2
-    Rscript DAJIN/src/clustering.R "${query_score}" "${query_label}" "${control_score}" "${threads}" 2>/dev/null || exit 1
-    ps -au | grep -e "clustering.R" -e "joblib" | awk '{print $2}'| xargs kill 2>/dev/null
-fi
+echo "Clustering ${barcode} ${alleletype}..." >&2
+Rscript DAJIN/src/clustering.R "${query_score}" "${query_label}" "${control_score}" "${threads}" 2>/dev/null || true
+ps -au | grep -e "clustering.R" -e "joblib" | awk '{print $2}'| xargs kill 2>/dev/null || true
 
 ################################################################################
 #! Clean and Finish
 ################################################################################
 
-# rm "${MIDS_que}" "${query_score}" "${query_label}"
+rm "${MIDS_que}" "${query_score}" "${query_label}"
 
 exit 0

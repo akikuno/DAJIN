@@ -4,7 +4,7 @@
 #! Initialize shell environment
 ################################################################################
 
-set -u
+set -eu
 umask 0022
 export LC_ALL=C
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
@@ -24,12 +24,12 @@ Example   : ./DAJIN/DAJIN.sh -i DAJIN/example/design.txt
 Input     : Input file should be formatted as below:
             # Example
             ------
-            design=DAJIN/example/design.txt
+            design=DAJIN/example/example.fa
             input_dir=DAJIN/example/fastq
             control=barcode01
             genome=mm10
             grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
-            output_dir=DAJIN_cables2
+            output_dir=DAJIN_example
             threads=10
             filter=on
             ------
@@ -40,7 +40,7 @@ Input     : Input file should be formatted as below:
             - grna: gRNA sequence(s) including PAM. multiple gRNA sequences must be deliminated by comma.
             - output_dir (optional): output directory name. optional. Default is "DAJIN_results"
             - threads (optional; integer): Default is two-thirds of available CPU threads.
-            - filter (optional; "on" or "off"): set filter to remove very minor allele (less than 5%). Default is "on"
+            - filter (optional; "on" or "off"): set filter to remove very minor allele (less than 3%). Default is "on"
 USAGE
 }
 
@@ -160,15 +160,17 @@ done
 #===========================================================
 #? Check output directory name
 #===========================================================
+
 [ $(echo "$output_dir" | sed "s/[_a-zA-Z0-9]*//g" | wc | awk '{print $2}') -ne 0 ] &&
     error_exit "$output_dir: invalid directory name"
 
 #===========================================================
 #? Check "filter"
 #===========================================================
-if [ -z "${filter}" ];then
+
+if [ -z "${filter}" ]; then
     filter=on
-elif [ _"${filter}" = _"off" ];then
+elif [ _"${filter}" = _"on" ] || [ _"${filter}" = _"off" ]; then
     :
 else
     error_exit "${filter}: invalid filter name (on/off)"
@@ -178,21 +180,20 @@ fi
 #? Define threads
 #===========================================================
 
-max_cpu=$(python -c "import multiprocessing; print(multiprocessing.cpu_count())")
-tmp_threads=$(expr "${threads}" + 1 2>/dev/null)
+{
+unset max_threads tmp_threads
+max_threads=$(getconf _NPROCESSORS_ONLN)
+[ -z "$max_threads" ] && max_threads=$(getconf NPROCESSORS_ONLN)
+[ -z "$max_threads" ] && max_threads=$(ksh -c 'getconf NPROCESSORS_ONLN')
+[ -z "$max_threads" ] && max_threads=1
+tmp_threads=$(("${threads}" + 0))
+}  2>/dev/null || true
 
-if [ $? -eq 0 ] && [ "${tmp_threads}" -gt 1 ] && [ "${threads}" -lt "${max_cpu}" ]; then
+if [ "${tmp_threads:-0}" -gt 1 ] && [ "${tmp_threads}" -lt "${max_threads}" ]
+then
     :
 else
-    unset threads
-    # Linux and similar...
-    threads=$(getconf _NPROCESSORS_ONLN 2>/dev/null | awk '{print int($0/1.5+0.5)}')
-    # FreeBSD and similar...
-    [ -z "$threads" ] && threads=$(getconf NPROCESSORS_ONLN | awk '{print int($0/1.5)+0.5}')
-    # Solaris and similar...
-    [ -z "$threads" ] && threads=$(ksh93 -c 'getconf NPROCESSORS_ONLN' | awk '{print int($0/1.5+0.5)}')
-    # Give up...
-    [ -z "$threads" ] && threads=1
+    threads=$(echo "${max_threads}" | awk '{print int($0*2/3+0.5)}')
 fi
 
 ################################################################################
@@ -209,158 +210,17 @@ fi
 #? Make temporal directory
 #===========================================================
 
-# rm -rf ".DAJIN_temp" 2>/dev/null || true
-dirs="fasta fasta_conv fasta_ont NanoSim data"
+(find .DAJIN_temp/* -type d |
+# grep -v fasta_ont |
+xargs rm -rf) 2>/dev/null || true
 
+dirs="fasta fasta_conv fasta_ont NanoSim data"
 echo "${dirs}" |
     sed "s:^:.DAJIN_temp/:g" |
     sed "s: : .DAJIN_temp/:g" |
 xargs mkdir -p
 
-#===========================================================
-#? Format FASTA file
-#===========================================================
-
-cat "${design}" |
-    tr -d "\r" |
-    awk '{if($1~"^>"){print "\n"$0}
-    else {printf $0}}
-    END {print ""}' |
-    grep -v "^$" |
-cat > .DAJIN_temp/fasta/fasta.fa
-
-design_LF=".DAJIN_temp/fasta/fasta.fa"
-
-#---------------------------------------
-#* Separate multiple-FASTA into FASTA files
-#---------------------------------------
-
-cat ${design_LF} |
-    sed "s/^/@/g" |
-    tr -d "\n" |
-    sed -e "s/@>/\n>/g" \
-        -e "s/@/ /g" \
-        -e "s/$/\n/g" |
-    grep -v "^$" |
-    awk '{id=$1
-        gsub(">","",id)
-        output=".DAJIN_temp/fasta/"id".fa"
-        print $1"\n"toupper($2) > output
-    }'
-
-#===========================================================
-#? Reverse complement if the mutation sites are closer
-#? to right flanking than left flanking
-#===========================================================
-
-wt_seqlen=$(awk '!/[>|@]/ {print length($0)}' .DAJIN_temp/fasta/wt.fa)
-
-convert_revcomp=$(
-    minimap2 -ax splice \
-    .DAJIN_temp/fasta/wt.fa \
-    .DAJIN_temp/fasta/target.fa --cs 2>/dev/null |
-    awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-    sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
-    tr -d "\~\*\-\+atgc" |
-    awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
-    awk -v wt_seqlen="$wt_seqlen" \
-    '{if(wt_seqlen-$2>$1) print 0; else print 1}'
-    )
-
-if [ "$convert_revcomp" -eq 1 ] ; then
-    cat "${design_LF}" |
-        ./DAJIN/src/revcomp.sh - |
-    cat > .DAJIN_temp/fasta/fasta_revcomp.fa
-    design_LF=".DAJIN_temp/fasta/fasta_revcomp.fa"
-fi
-
-#---------------------------------------
-#* Separate multiple-FASTA into FASTA files
-#---------------------------------------
-cat ${design_LF} |
-    sed "s/^/@/g" |
-    tr -d "\n" |
-    sed -e "s/@>/\n>/g" \
-        -e "s/@/ /g" \
-        -e "s/$/\n/g" |
-    grep -v "^$" |
-    awk '{id=$1
-        gsub(">","",id)
-        output=".DAJIN_temp/fasta_conv/"id".fa"
-        print $1"\n"toupper($2) > output
-    }'
-
-#===========================================================
-#? Define mutation type
-#? Insertion = I; Deletion = D; Substitution = S
-#===========================================================
-
-mutation_type=$(
-    minimap2 -ax splice \
-        .DAJIN_temp/fasta/wt.fa \
-        .DAJIN_temp/fasta/target.fa \
-        --cs 2>/dev/null |
-    grep -v "^@" |
-    awk '{
-        cstag=$(NF-1)
-        if(cstag ~ "~") print "D"
-        else if(cstag ~ "\+") print "I"
-        else if(cstag ~ "\*") print "S"
-        }' 2>/dev/null
-)
-
-#---------------------------------------
-#* In the case of Point mutation:
-#* Generate randome insertion and deletion at gRNA sites as abnormal alleles
-#---------------------------------------
-
-if [ "_${mutation_type}" = "_S" ]; then
-    grna_len=$(awk -v grna="$grna" 'BEGIN{print length(grna)}')
-    grna_firsthalf=$(awk -v grna="$grna" 'BEGIN{print substr(grna, 1, int(length(grna)/2))}')
-    grna_secondhalf=$(awk -v grna="$grna" 'BEGIN{print substr(grna, int(length(grna)/2)+1, length(grna))}')
-    # Randome sequence
-    ins_seq=$(
-        seq_length="$grna_len" &&
-        od -A n  -t u4 -N $(($seq_length*100)) /dev/urandom |
-        tr -d "\n" |
-        sed 's/[^0-9]//g' |
-        sed "s/[4-9]//g" |
-        sed -e "s/0/A/g" -e "s/1/G/g" -e "s/2/C/g" -e "s/3/T/g" |
-        awk -v seq_length="$seq_length" '{print substr($0, 1, seq_length)}'
-    )
-    # insertion
-    cat .DAJIN_temp/fasta_conv/wt.fa |
-        sed "s/$grna/$grna_firsthalf,$grna_secondhalf/g" |
-        sed "s/,/$ins_seq/g" |
-        sed "s/>wt/>wt_ins/g" |
-    cat > .DAJIN_temp/fasta_conv/wt_ins.fa
-    # deletion
-    cat .DAJIN_temp/fasta_conv/wt.fa |
-        sed "s/$grna//g" |
-        sed "s/>wt/>wt_del/g" |
-    cat > .DAJIN_temp/fasta_conv/wt_del.fa
-fi
-
-#===========================================================
-#? Format ONT reads into FASTA file
-#===========================================================
-
-for input in ${input_dir}/* ; do
-    output=$(
-        echo "${input}" |
-        sed -e "s#.*/#.DAJIN_temp/fasta_ont/#g" \
-            -e "s#\.f.*#.fa#g")
-    # Check wheather the files are binary:
-    if [ "$(file ${input} | grep -c compressed)" -eq 1 ]
-    then
-        gzip -dc "${input}"
-    else
-        cat "${input}"
-    fi |
-    awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' |
-    sed "s/^@/>/g" |
-    cat > "${output}"
-done
+./DAJIN/src/format_fasta.sh "$design" "$input_dir" "$grna"
 
 ################################################################################
 #! NanoSim (v2.5.0)
@@ -372,67 +232,27 @@ NanoSim read simulation
 --------------------------------------------------------------------------------
 EOF
 
-#===========================================================
-#? NanoSim
-#===========================================================
-if ! find .DAJIN_temp/fasta_ont | grep simulated_aligned_reads >/dev/null 2>&1; then
+set +u
+conda activate DAJIN_nanosim
+set -u
 
-    set +u
-    conda activate DAJIN_nanosim
-    set -u
-
-    ./DAJIN/utils/NanoSim/src/read_analysis.py genome \
-        -i ".DAJIN_temp/fasta_ont/${control}.fa" \
-        -rg .DAJIN_temp/fasta_conv/wt.fa \
-        -t ${threads:-1} \
-        -o .DAJIN_temp/NanoSim/training 1>&2
-
-    wt_seqlen=$(awk '!/[>|@]/ {print length($0)}' .DAJIN_temp/fasta_conv/wt.fa)
-
-    for input in .DAJIN_temp/fasta_conv/*; do
-        printf "${input} is now simulating...\n" 1>&2
-        output=$(
-            echo "$input" |
-            sed -e "s#fasta_conv/#fasta_ont/#g" \
-                -e "s/.fasta$//g" -e "s/.fa$//g"
-            )
-        ## For deletion allele
-        input_seqlength=$(
-            cat "${input}" |
-            awk '!/[>|@]/ {print length($0)-100}'
-            )
-        if [ "$input_seqlength" -lt "$wt_seqlen" ]; then
-            len=${input_seqlength}
-        else
-            len=${wt_seqlen}
-        fi
-        ##
-        ./DAJIN/utils/NanoSim/src/simulator.py genome \
-            -dna_type linear \
-            -c .DAJIN_temp/NanoSim/training \
-            -rg "${input}" \
-            -n 10000 \
-            -t "${threads:-1}" \
-            -min "${len}" \
-            -o "${output}_simulated" 1>&2
-        ##
-        rm .DAJIN_temp/fasta_ont/*_error_* .DAJIN_temp/fasta_ont/*_unaligned_* 2>/dev/null || true
-    done
-    rm -rf DAJIN/utils/NanoSim/src/__pycache__
+if [ "$(find .DAJIN_temp/fasta_ont | grep -c simulated)" -eq 0 ]; then
+    ./DAJIN/src/nanosim.sh "${control}" "${threads}"
 fi
 
 ################################################################################
 #! MIDS conversion
 ################################################################################
-set +u
-conda activate DAJIN
-set -u
 
 cat << EOF >&2
 --------------------------------------------------------------------------------
-MIDS conversion
+Preprocessing
 --------------------------------------------------------------------------------
 EOF
+
+set +u
+conda activate DAJIN
+set -u
 
 #===========================================================
 #? Get mutation loci
@@ -442,7 +262,7 @@ minimap2 -ax splice \
     ".DAJIN_temp/fasta_conv/wt.fa" ".DAJIN_temp/fasta_conv/target.fa" \
     --cs 2>/dev/null |
     awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-    sed -e "s/cs:Z:://g" -e "s/:/\t/g" -e "s/~/\t/g" |
+    sed -e "s/cs:Z:://g" -e "s/:/ /g" -e "s/~/ /g" |
     tr -d "\~\*\-\+atgc" |
     awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
 cat > .DAJIN_temp/data/mutation_points
@@ -466,7 +286,7 @@ sh - 2>/dev/null
 
 cat << EOF >&2
 --------------------------------------------------------------------------------
-Allele prediction
+Predict allele types
 --------------------------------------------------------------------------------
 EOF
 
@@ -481,11 +301,11 @@ exit 1
 
 cat << EOF >&2
 --------------------------------------------------------------------------------
-Allele clustering
+Clustering alleles
 --------------------------------------------------------------------------------
 EOF
 
-rm -rf .DAJIN_temp/clustering 2>/dev/null
+rm -rf .DAJIN_temp/clustering 2>/dev/null || true
 mkdir -p .DAJIN_temp/clustering/temp
 
 #===========================================================
@@ -532,9 +352,9 @@ EOF
 #? Setting directory
 #===========================================================
 
-find .DAJIN_temp/consensus/* -type d 2>/dev/null |
+(find .DAJIN_temp/consensus/* -type d |
     grep -v "sam$" |
-xargs -I @ rm -rf @ 2>/dev/null
+    xargs -I @ rm -rf @) 2>/dev/null || true
 mkdir -p .DAJIN_temp/consensus/temp .DAJIN_temp/consensus/sam
 
 #===========================================================
@@ -559,10 +379,11 @@ while read -r input; do
     cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
         awk '{print $1}' |
         tr "\n" " " |
-        sed "s/>/\n>/g" |
+        awk '{gsub(">", "\n>")}1' |
+        grep -v "^$" |
         sort |
         join - .DAJIN_temp/consensus/tmp_id |
-        sed "s/ /\n/g" |
+        awk '{gsub(" ", "\n")}1' |
         grep -v "^$" |
         minimap2 -ax map-ont -t "${threads}" \
             ".DAJIN_temp/fasta/${mapping_alleletype}.fa" - \
@@ -608,7 +429,7 @@ EOF
 #! Move output files
 ################################################################################
 
-rm -rf "${output_dir:=DAJIN_results}" 2>/dev/null
+rm -rf "${output_dir:=DAJIN_results}" 2>/dev/null || true
 mkdir -p "${output_dir:-DAJIN_results}"/BAM
 mkdir -p "${output_dir:-DAJIN_results}"/Consensus
 
@@ -616,16 +437,16 @@ mkdir -p "${output_dir:-DAJIN_results}"/Consensus
 #? BAM
 #===========================================================
 
-rm -rf .DAJIN_temp/bam/temp 2>/dev/null
+rm -rf .DAJIN_temp/bam/temp 2>/dev/null || true
 cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 
 #===========================================================
 #? Consensus
 #===========================================================
 
-find .DAJIN_temp/consensus/* -type d |
+(find .DAJIN_temp/consensus/* -type d |
 grep -v -e "consensus/temp" -e "sam" |
-xargs -I @ cp -f -r @ "${output_dir:-DAJIN_results}"/Consensus/ 2>/dev/null
+xargs -I @ cp -f -r @ "${output_dir:-DAJIN_results}"/Consensus/) 2>/dev/null || true
 
 #===========================================================
 #? Details
