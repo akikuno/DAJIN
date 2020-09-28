@@ -13,7 +13,7 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 ################################################################################
 #! Define the functions for printing usage and error message
 ################################################################################
-VERSION=0.2
+VERSION=0.3
 
 usage(){
 cat <<- USAGE
