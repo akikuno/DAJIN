@@ -53,7 +53,7 @@ git clone https://github.com/akikuno/DAJIN.git
 Input file should be formatted as below:
 
 ```
-design=DAJIN/example/design.txt
+design=DAJIN/example/example.fa
 input_dir=DAJIN/example/fastq
 control=barcode01
 genome=mm10
