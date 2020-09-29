@@ -75,5 +75,3 @@ if samtools --version 2>&1 | grep libcrypto >/dev/null; then
     (cd "${CONDA_ENV}"/lib/ && ln -s libcrypto.so.1.1 libcrypto.so.1.0.0)
 fi
 samtools --version >/dev/null 2>&1 || error_exit 'Command "samtools" installation has failed'
-
-exit 0
