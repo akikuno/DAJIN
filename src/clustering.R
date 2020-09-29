@@ -391,7 +391,7 @@ if (tmp_nrow > 0) {
             count() %>%
             ungroup(cl) %>%
             filter(!(cl %in% tmp_biased_cl)) %>%
-            slice_max(n, 1) %>%
+            slice_max(n, n = 1) %>%
             pull(cl)
         if (length(tmp_max_cl) == 0) {
             tmp_max_cl <- FALSE
