@@ -67,6 +67,9 @@ minimap2 --version >/dev/null 2>&1 || error_exit 'Command "minimap2" installatio
 python -c "import tensorflow as tf" >/dev/null 2>&1 ||
 error_exit '"Tensorflow" not found'
 
+tf_ver="$(conda list -n DAJIN | awk '$1~/tensorflow/ && $2>1.99')"
+[ -z "$tf_ver" ] && error_exit '"Tensorflow 2.x" not found'
+
 if samtools --version 2>&1 | grep libcrypto >/dev/null; then
     CONDA_ENV=$(conda info -e | awk '$2=="*"{print $NF}')
     (cd "${CONDA_ENV}"/lib/ && ln -s libcrypto.so.1.1 libcrypto.so.1.0.0)
