@@ -111,10 +111,5 @@ echo "Clustering ${barcode} ${alleletype}..." >&2
 Rscript DAJIN/src/clustering.R "${query_score}" "${query_label}" "${control_score}" "${threads}" 2>/dev/null || true
 ps -au | grep -e "clustering.R" -e "joblib" | awk '{print $2}'| xargs kill 2>/dev/null || true
 
-################################################################################
-#! Clean and Finish
-################################################################################
-
-rm "${MIDS_que}" "${query_score}" "${query_label}"
 
 exit 0
