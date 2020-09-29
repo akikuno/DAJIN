@@ -211,8 +211,8 @@ fi
 #===========================================================
 
 (find .DAJIN_temp/* -type d |
-# grep -v fasta_ont |
-xargs rm -rf) 2>/dev/null || true
+    grep -v fasta_ont |
+    xargs rm -rf) 2>/dev/null || true
 
 dirs="fasta fasta_conv fasta_ont NanoSim data"
 echo "${dirs}" |
