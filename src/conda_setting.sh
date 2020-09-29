@@ -20,11 +20,11 @@ conda config --add channels bioconda 2>/dev/null
 conda config --add channels conda-forge 2>/dev/null
 
 if [ "$(conda info -e | grep -c DAJIN_nanosim)" -eq 0 ]; then
-    echo Create "DAJIN_nanosim" environment...
-    conda update -y conda >/dev/null 2>&
-    conda create -y -n DAJIN_nanosim python=3.6 >/dev/null 2>&
-    conda install -y -n DAJIN_nanosim --file ./DAJIN/utils/NanoSim/requirements.txt >/dev/null 2>&
-    conda install -y -n DAJIN_nanosim minimap2 >/dev/null 2>&
+    echo Create "DAJIN_nanosim" environment... >&2
+    conda update -y conda >/dev/null 2>&1
+    conda create -y -n DAJIN_nanosim python=3.6 >/dev/null 2>&1
+    conda install -y -n DAJIN_nanosim --file ./DAJIN/utils/NanoSim/requirements.txt >/dev/null 2>&1
+    conda install -y -n DAJIN_nanosim minimap2 >/dev/null 2>&1
 fi
 
 conda activate DAJIN_nanosim
@@ -42,7 +42,7 @@ conda deactivate
 #===========================================================
 
 if [ "$(conda info -e | cut -d " " -f 1 | grep -c DAJIN$)" -eq 0 ]; then
-    echo Create "DAJIN" environment...
+    echo Create "DAJIN" environment... >&2
     conda update -y conda >/dev/null 2>&1
     conda create -y -n DAJIN python=3.7 \
         numpy pandas scikit-learn joblib hdbscan \
