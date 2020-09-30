@@ -19,19 +19,13 @@ wt_seqlen=$(awk '!/[>|@]/ {print length}' .DAJIN_temp/fasta_conv/wt.fa)
 
 for input in .DAJIN_temp/fasta_conv/*; do
     echo "${input} is now simulating..." 1>&2
-    output=$(
-        echo "${input%.*}" |
-        sed "s;fasta_conv;fasta_ont;g"
-        )
+    output=$(echo "${input%.*}" | sed "s;fasta_conv;fasta_ont;g")
     ## For deletion allele
-    input_seqlength=$(
-        cat "${input}" |
-        awk '!/[>|@]/ {print length-100}'
-        )
+    input_seqlength=$(awk '!/[>|@]/ {print length-100}' "${input}")
     if [ "$input_seqlength" -lt "$wt_seqlen" ]; then
-        len=${input_seqlength}
+        len="${input_seqlength}"
     else
-        len=${wt_seqlen}
+        len="${wt_seqlen}"
     fi
     ##
     ./DAJIN/utils/NanoSim/src/simulator.py genome \
