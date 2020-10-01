@@ -92,8 +92,7 @@ cat > "${tmp_MIDS}"
 
 cat .DAJIN_temp/fasta/wt.fa |
     sed 1d |
-    sed "s/\(.\)/\1\n/g" |
-    grep -v "^$" |
+    awk -F "" '{for(i=1;i<=NF;i++) print $i}' |
     uniq -c |
     awk '$1>=6{$2=tolower($2)}{for(i=1;i<=$1;i++) print $2}' |
 cat > "${tmp_mask}"
@@ -226,7 +225,8 @@ while read -r label; do
 
 done
 
-[ _"${mutation_type}" = "_S" ] && mv ".DAJIN_temp/clustering/temp/control_score_target" "${control_score}"
+[ _"${mutation_type}" = "_S" ] &&
+mv ".DAJIN_temp/clustering/temp/control_score_target" "${control_score}"
 
 ################################################################################
 #! remove temporal files
