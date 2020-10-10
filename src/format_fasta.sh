@@ -143,6 +143,23 @@ fi
 #! Format ONT reads into FASTA file
 ################################################################################
 
+find ${input_dir}/* -type f |
+awk -F "/" 'NF==2' |
+grep -e ".fq" -e ".fastq" |
+while read -r input; do
+    output=$(echo ${input%.f*}.fa | sed "s;${input_dir};.DAJIN_temp/fasta_ont;")
+    # Check wheather the files are binary:
+    if [ "$(file ${input} | grep -c compressed)" -eq 1 ]
+    then
+        gzip -dc "${input}"
+    else
+        cat "${input}"
+    fi |
+    awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' |
+    sed "s/^@/>/" |
+    cat > "${output}"
+done
+
 for input in ${input_dir}/* ; do
     output=$(
         echo "${input}" |
