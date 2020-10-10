@@ -160,21 +160,4 @@ while read -r input; do
     cat > "${output}"
 done
 
-for input in ${input_dir}/* ; do
-    output=$(
-        echo "${input}" |
-        sed -e "s#.*/#.DAJIN_temp/fasta_ont/#g" \
-            -e "s#\.f.*#.fa#g")
-    # Check wheather the files are binary:
-    if [ "$(file ${input} | grep -c compressed)" -eq 1 ]
-    then
-        gzip -dc "${input}"
-    else
-        cat "${input}"
-    fi |
-    awk '{if((4+NR)%4==1 || (4+NR)%4==2) print $0}' |
-    sed "s/^@/>/g" |
-    cat > "${output}"
-done
-
 exit 0
