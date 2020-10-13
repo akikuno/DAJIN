@@ -20,8 +20,8 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode26"
-# allele <- "abnormal"
+# barcode <- "barcode04"
+# allele <- "wt"
 
 # if(allele == "abnormal") control_allele <- "wt"
 # if(allele != "abnormal") control_allele <- allele
@@ -259,7 +259,7 @@ if (length(cluster) > 1) {
         )
         df_cossim <- bind_rows(df_cossim, df_)
     }
-    df_cossim_extracted <- df_cossim %>% filter(score > 0.6)
+    df_cossim_extracted <- df_cossim %>% filter(score > 0.5)
 
     if (nrow(df_cossim_extracted) != 0) {
         for (i in seq_along(rownames(df_cossim_extracted))) {
