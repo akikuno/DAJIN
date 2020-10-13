@@ -18,8 +18,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #? TEST Aurguments
 #===============================================================================
 
-# barcode="barcode25"
-# alleletype="abnormal"
+# barcode="barcode43"
+# alleletype="wt"
 # threads=14
 
 #===========================================================
@@ -110,11 +110,3 @@ cat > "${query_label}"
 echo "Clustering ${barcode} ${alleletype}..." >&2
 Rscript DAJIN/src/clustering.R "${query_score}" "${query_label}" "${control_score}" "${threads}" 2>/dev/null || true
 ps -au | grep -e "clustering.R" -e "joblib" | awk '{print $2}'| xargs kill 2>/dev/null || true
-
-################################################################################
-#! Clean and Finish
-################################################################################
-
-rm "${MIDS_que}" "${query_score}" "${query_label}"
-
-exit 0

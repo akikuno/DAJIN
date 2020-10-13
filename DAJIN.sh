@@ -119,8 +119,12 @@ done
 [ -d "${input_dir}" ] ||
     error_exit "$input_dir: No such directory"
 
-[ -z "$(ls $input_dir)" ] &&
-    error_exit "$input_dir: Empty directory"
+fastq_num=$(
+    find ${input_dir}/* -type f |
+    awk -F "/" 'NF==2' |
+    grep -c -e ".fq" -e ".fastq")
+[ "$fastq_num" -eq 0 ] &&
+    error_exit "$input_dir: No FASTQ file in directory"
 
 #===========================================================
 #? Check control
@@ -211,8 +215,8 @@ fi
 #===========================================================
 
 (find .DAJIN_temp/* -type d |
-# grep -v fasta_ont |
-xargs rm -rf) 2>/dev/null || true
+    grep -v fasta_ont |
+    xargs rm -rf) 2>/dev/null || true
 
 dirs="fasta fasta_conv fasta_ont NanoSim data"
 echo "${dirs}" |
@@ -321,7 +325,7 @@ mkdir -p .DAJIN_temp/clustering/temp
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     cut -f 2,3 |
     sort -u |
-    awk -v th=${threads:-1} '{print "./DAJIN/src/clustering.sh", $1, $2, th}' |
+    awk -v th="${threads:-1}" '{print "./DAJIN/src/clustering.sh", $1, $2, th}' |
 sh -
 
 #===========================================================
@@ -333,7 +337,7 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     sort -u |
     awk -v filter="${filter:-on}" \
     '{print "./DAJIN/src/clustering_allele_percentage.sh", $1, filter, "&"}' |
-    awk -v th=${threads:-1} '{
+    awk -v th="${threads:-1}" '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
 sh -
@@ -402,7 +406,7 @@ cat .DAJIN_temp/clustering/label* |
     awk '{nr[$1]++; print $0, nr[$1]}' |
     grep -v abnormal |  #TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     awk '{print "./DAJIN/src/consensus.sh", $0, "&"}' |
-    awk -v th=${threads:-1} '{
+    awk -v th="${threads:-1}" '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
 sh -

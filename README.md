@@ -7,7 +7,7 @@
 
 [日本語はこちら](https://github.com/akikuno/DAJIN/blob/master/misc/README_JP.md)
 
-A simple, rapid, scalable whole-allelic profile of genome editing organisms using long-read sequencer
+A simple, rapid, scalable whole-allelic profiling of genome editing organisms using long-read sequencer
 
 ## SETUP
 
@@ -53,7 +53,7 @@ git clone https://github.com/akikuno/DAJIN.git
 Input file should be formatted as below:
 
 ```
-design=DAJIN/example/design.txt
+design=DAJIN/example/example.fa
 input_dir=DAJIN/example/fastq
 control=barcode01
 genome=mm10
@@ -62,8 +62,8 @@ output_dir=DAJIN_example
 threads=10
 ```
 
-- **desing**: a multi-FASTA file contains sequences of each genotype. ">wt" and ">target" must be included.
-- **input_dir**: a directory contains FASTA or FASTQ files of long-read sequencing
+- **desing**: PATH to a multi-FASTA file contains sequences of each genotype. ">wt" and ">target" must be included.
+- **input_dir**: PATH to a directory contains FASTA or FASTQ files of long-read sequencing
 - **control**: control barcode ID
 - **genome**: reference genome. e.g. mm10, hg38
 - **grna**: gRNA sequence(s) including PAM. multiple gRNA sequences must be delimitated by comma.
@@ -97,21 +97,19 @@ This is an example result of three samples.
 
 <img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/Details.png" width="75%">  
 
-The barcode01 is a wild-type mice as a control, whereas the barcode02 and barcode03 are founder mice. The target allele is a flox.
+The barcode01 is a wild-type mice as a control, whereas the barcode02 and barcode03 are genome-edited founder mice with a flox knock-in design.
 
-This result shows all of Nanopore reads from barcode02 are labeled as "intact target" (flox), and indicates it is the desired sample that has homozygous flox allele.
+This result shows the most of Nanopore reads of barcode02 are labeled as "intact target" (flox), and indicates the barcode02 has the desired homozygous flox allele.
 
 #### Consensus
 
 The `Conseusus` folder includes FASTA and HTML files which display consensus sequence in each allele.
 
-> in preparation
-
 #### BAM
 
 The `BAM` folder includes BAM files from all and each allele.
 
-> in preparation
+The `BAM` files can be visualized by [IGV](http://software.broadinstitute.org/software/igv/).
 
 ## License
 
