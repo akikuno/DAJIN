@@ -4,7 +4,7 @@
 #! Initialize shell environment
 ################################################################################
 
-set -u
+set -eu
 umask 0022
 export LC_ALL=C
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
@@ -90,11 +90,22 @@ cat > "${tmp_MIDS}"
 #? Mask repeat sequences
 #===========================================================
 
+
 cat .DAJIN_temp/fasta/wt.fa |
     sed 1d |
+    sed "s/A[CGT]A/AAA/g" |
+    sed "s/C[AGT]C/CCC/g" |
+    sed "s/G[ACT]G/GGG/g" |
+    sed "s/T[ACG]T/TTT/g" |
+    #
+    sed "s/\(AA*\)/\1 /g" |
+    sed "s/\(CC*\)/\1 /g" |
+    sed "s/\(TT*\)/\1 /g" |
+    sed "s/\(GG*\)/\1 /g" |
+    #
+    awk '{for(i=1;i<=NF;i++) if(length($i) > 5) $i=tolower($i)}1' |
+    sed "s/ //g" |
     awk -F "" '{for(i=1;i<=NF;i++) print $i}' |
-    uniq -c |
-    awk '$1>=6{$2=tolower($2)}{for(i=1;i<=$1;i++) print $2}' |
 cat > "${tmp_mask}"
 
 #===========================================================
@@ -114,14 +125,14 @@ cat "${tmp_MIDS}" |
         }
     }' |
     #----------------------------------------
-    #* Define sequence error when control sample has more than 7% mutations
+    #* Define sequence error when control sample has more than 5% mutations
     #----------------------------------------
     awk -F "" '{
-        per=7
+        percentage=5
         INS=gsub(/[1-9]|[a-z]/,"@",$0)
         DEL=gsub("D","D",$0)
         SUB=gsub("S","S",$0)
-        if(INS > NF*per/100 || DEL > NF*per/100 || SUB > NF*per/100)
+        if(INS > NF*percentage/100 || DEL > NF*percentage/100 || SUB > NF*percentage/100)
             num=2
         else
             num=1
@@ -228,15 +239,5 @@ done
 [ _"${mutation_type}" = "_S" ] &&
 mv ".DAJIN_temp/clustering/temp/control_score_target" "${control_score}"
 
-################################################################################
-#! remove temporal files
-################################################################################
-
-rm "${MIDS_ref}"
-rm "${tmp_MIDS}"
-rm "${tmp_control}"
-rm "${tmp_strecher}"
-rm "${tmp_strecher_wt}"
-rm "${tmp_strecher_label}"
 
 exit 0
