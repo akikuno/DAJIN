@@ -70,8 +70,8 @@ query_label=".DAJIN_temp/clustering/temp/query_labels_${suffix}"
 if [ _"$alleletype" = "_abnormal" ] ; then
 cat "${MIDS_que}" |
     awk '$2 ~ /[a-z]/ || $2 ~ "DDDDDDDDDD" || $2 ~ "SSSSSSSSSS"' |
-cat > .DAJIN_temp/clustering/temp/MIDS_"${suffix}"
-mv .DAJIN_temp/clustering/temp/MIDS_"${suffix}" "${MIDS_que}"
+cat > .DAJIN_temp/clustering/temp/_MIDS_"${suffix}"
+mv .DAJIN_temp/clustering/temp/_MIDS_"${suffix}" "${MIDS_que}"
 fi
 
 ################################################################################
