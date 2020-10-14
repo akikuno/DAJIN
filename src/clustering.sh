@@ -18,8 +18,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #? TEST Aurguments
 #===============================================================================
 
-# barcode="barcode43"
-# alleletype="wt"
+# barcode="barcode26"
+# alleletype="abnormal"
 # threads=14
 
 #===========================================================
@@ -62,6 +62,17 @@ query_label=".DAJIN_temp/clustering/temp/query_labels_${suffix}"
 ################################################################################
 
 ./DAJIN/src/mids_clustering.sh "${barcode}" "${alleletype}" > "${MIDS_que}"
+
+################################################################################
+#! Filter abnormal reads
+################################################################################
+
+if [ _"$alleletype" = "_abnormal" ] ; then
+cat "${MIDS_que}" |
+    awk '$2 ~ /[a-z]/ || $2 ~ "DDDDDDDDDD" || $2 ~ "SSSSSSSSSS"' |
+cat > .DAJIN_temp/clustering/temp/MIDS_"${suffix}"
+mv .DAJIN_temp/clustering/temp/MIDS_"${suffix}" "${MIDS_que}"
+fi
 
 ################################################################################
 #! Query seq (compressed MIDS) and Query score (comma-sep MIDS)
