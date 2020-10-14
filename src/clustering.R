@@ -20,7 +20,7 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode04"
+# barcode <- "barcode17"
 # allele <- "wt"
 
 # if(allele == "abnormal") control_allele <- "wt"
@@ -308,10 +308,10 @@ seq_consensus <- mclapply(cossim_merged_cl %>% unique %>% sort,
         mc.cores = as.integer(threads))
 
 if (length(query_) > 1) {
-    df_cossim <- NULL
+    df_consensus <- NULL
     cl_combn <- combn(query_, 2)
 
-    df_cossim <- NULL
+    df_consensus <- NULL
     for (i in seq(ncol(cl_combn))) {
             df_ <- tibble(
                 one = cl_combn[1, i],
@@ -321,15 +321,15 @@ if (length(query_) > 1) {
                     seq_consensus[[cl_combn[2, i]]]
                     )
             )
-            df_cossim <- bind_rows(df_cossim, df_)
+            df_consensus <- bind_rows(df_consensus, df_)
     }
 
-    df_cossim_extracted <- df_cossim %>% filter(score == TRUE)
+    df_consensus_extracted <- df_consensus %>% filter(score == TRUE)
 
-    if (nrow(df_cossim_extracted) != 0) {
-        for (i in seq_along(rownames(df_cossim_extracted))) {
-            pattern_ <- df_cossim_extracted[i, ]$one
-            query_ <- df_cossim_extracted[i, ]$two
+    if (nrow(df_consensus_extracted) != 0) {
+        for (i in seq_along(rownames(df_consensus_extracted))) {
+            pattern_ <- df_consensus_extracted[i, ]$one
+            query_ <- df_consensus_extracted[i, ]$two
             cossim_merged_cl[cossim_merged_cl == pattern_] <- query_
         }
     }
