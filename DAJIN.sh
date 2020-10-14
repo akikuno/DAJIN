@@ -357,7 +357,6 @@ EOF
 #===========================================================
 
 (find .DAJIN_temp/consensus/* -type d |
-    grep -v "sam$" |
     xargs -I @ rm -rf @) 2>/dev/null || true
 mkdir -p .DAJIN_temp/consensus/temp .DAJIN_temp/consensus/sam
 
@@ -371,9 +370,7 @@ cat .DAJIN_temp/clustering/label* |
     grep -v abnormal |  #TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 while read -r input; do
     barcode="${input%% *}"
-    mapping_alleletype="$(echo "${input##* }" | sed "s/ab*normal/wt/g")"
-
-    if ! [ -f .DAJIN_temp/consensus/sam/"${barcode}"_"${mapping_alleletype}".sam ]; then
+    mapping_alleletype="$(echo "${input##* }" | sed "s/abnormal/wt/g" | sed "s/normal/wt/g")"
 
     cat .DAJIN_temp/clustering/readid_cl_mids_"${barcode}"_"${mapping_alleletype}" |
         awk '{print ">"$1}' |
@@ -395,7 +392,6 @@ while read -r input; do
         sort |
     cat > .DAJIN_temp/consensus/sam/"${barcode}"_"${mapping_alleletype}".sam
     rm .DAJIN_temp/consensus/tmp_id
-    fi
 done
 
 #===========================================================
