@@ -90,7 +90,6 @@ cat > "${tmp_MIDS}"
 #? Mask repeat sequences
 #===========================================================
 
-
 cat .DAJIN_temp/fasta/wt.fa |
     sed 1d |
     sed "s/A[CGT]A/AAA/g" |
@@ -106,6 +105,13 @@ cat .DAJIN_temp/fasta/wt.fa |
     awk '{for(i=1;i<=NF;i++) if(length($i) > 5) $i=tolower($i)}1' |
     sed "s/ //g" |
     awk -F "" '{for(i=1;i<=NF;i++) print $i}' |
+cat > "${tmp_mask}"_
+
+cat .DAJIN_temp/fasta/wt.fa |
+    sed 1d |
+    awk -F "" '{for(i=1;i<=NF;i++) print $i}' |
+    paste - "${tmp_mask}"_ |
+    awk '$2~/[acgt]/ {$1=tolower($1)} {print $1}' |
 cat > "${tmp_mask}"
 
 #===========================================================
@@ -125,10 +131,10 @@ cat "${tmp_MIDS}" |
         }
     }' |
     #----------------------------------------
-    #* Define sequence error when control sample has more than 5% mutations
+    #* Define sequence error when control sample has more than 7% mutations
     #----------------------------------------
     awk -F "" '{
-        percentage=5
+        percentage=7
         INS=gsub(/[1-9]|[a-z]/,"@",$0)
         DEL=gsub("D","D",$0)
         SUB=gsub("S","S",$0)
