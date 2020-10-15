@@ -20,8 +20,8 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode17"
-# allele <- "wt"
+# barcode <- "barcode38"
+# allele <- "target"
 
 # if(allele == "abnormal") control_allele <- "wt"
 # if(allele != "abnormal") control_allele <- allele
@@ -150,7 +150,7 @@ df_score <- df_score[, colSums(df_score) != 0]
 #! PCA
 ################################################################################
 
-pca_res <- prcomp(df_score, scale = FALSE)
+pca_res <- prcomp(df_score, scale = TRUE)
 
 components <- 1:10
 output_pca <- pca_res$x[, components]
