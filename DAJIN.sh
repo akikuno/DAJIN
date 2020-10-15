@@ -316,7 +316,7 @@ mkdir -p .DAJIN_temp/clustering/temp
 #? Prepare control's score to define sequencing error
 #===========================================================
 
-./DAJIN/src/clustering_control_score.sh "${control}" "${threads}"
+./DAJIN/src/clustering_control_scoring.sh "${control}" "${threads}"
 
 #===========================================================
 #? Clustering

@@ -84,6 +84,7 @@ cat "${MIDS_ref}" |
     join - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk -v alelle="$alleletype" '$NF==alelle' |
     cut -d " " -f 2 |
+    awk -F "" 'BEGIN{OFS=","}{$1=$1}1' |
 cat > "${tmp_MIDS}"
 
 ################################################################################
@@ -119,39 +120,11 @@ cat .DAJIN_temp/fasta/wt.fa |
 cat > "${tmp_mask}"
 
 #----------------------------------------
-#? Define sequence error when control sample has more than 7% mutations
+#? Sequence error detection
+# Sequence error is defined by 90% or less for M or 5% or more for each IDS.
 #----------------------------------------
 
-nr=$(cat "${tmp_MIDS}" | wc -l)
-
-cat "${tmp_MIDS}" |
-    #----------------------------------------
-    #* Transpose matrix
-    #----------------------------------------
-    awk -v nr="${nr}" -F "" \
-    '{for(i=1; i<=NF; i++){
-            row[i]=row[i] $i
-            if(NR==nr) print row[i]
-        }
-    }' |
-    awk -F "" '{
-        percentage=7
-        INS=gsub(/[1-9]|[a-z]/,"@",$0)
-        DEL=gsub("D","D",$0)
-        SUB=gsub("S","S",$0)
-        if(INS > NF*percentage/100 || DEL > NF*percentage/100 || SUB > NF*percentage/100)
-            num=2
-        else
-            num=1
-
-        print num
-    }' |
-    paste - "${tmp_mask}" |
-    #----------------------------------------
-    #* Define sequence error at repeat-masked loci
-    #----------------------------------------
-    awk '$2 ~ /[acgt]/{$1=2}{print $1}' |
-cat > "${control_score}"
+Rscript DAJIN/src/clustering_control_scoring.R "${tmp_MIDS}" "${tmp_mask}" "${control_score}" "${threads}"
 
 ################################################################################
 #! Generate scores of other possible alleles
