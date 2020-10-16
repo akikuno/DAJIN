@@ -356,8 +356,7 @@ EOF
 #? Setting directory
 #===========================================================
 
-(find .DAJIN_temp/consensus/* -type d |
-    xargs -I @ rm -rf @) 2>/dev/null || true
+rm -rf .DAJIN_temp/consensus 2>/dev/null || true
 mkdir -p .DAJIN_temp/consensus/temp .DAJIN_temp/consensus/sam
 
 #===========================================================
