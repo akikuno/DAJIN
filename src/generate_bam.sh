@@ -25,7 +25,7 @@ threads="${2}"
 #? Variable
 #===========================================================
 
-mutation_type=$(
+target_mutation_type=$(
     minimap2 -ax splice \
         .DAJIN_temp/fasta/wt.fa \
         .DAJIN_temp/fasta/target.fa \
@@ -51,14 +51,14 @@ mkdir -p .DAJIN_temp/bam/temp .DAJIN_temp/bam/reads100
 #! Generate BAM files
 ################################################################################
 
-if [ "_$mutation_type" = "_S" ]; then
+if [ "_$target_mutation_type" = "_S" ]; then
     mv .DAJIN_temp/fasta_ont/wt_ins* .DAJIN_temp/
     mv .DAJIN_temp/fasta_ont/wt_del* .DAJIN_temp/
 fi
 
 ./DAJIN/src/mapping.sh "${genome:-mm10}" "${threads:-1}" || exit 1
 
-if [ "_$mutation_type" = "_S" ]; then
+if [ "_$target_mutation_type" = "_S" ]; then
     mv .DAJIN_temp/wt_ins* .DAJIN_temp/fasta_ont/
     mv .DAJIN_temp/wt_del* .DAJIN_temp/fasta_ont/
 fi

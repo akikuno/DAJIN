@@ -63,7 +63,7 @@ mutation_id_loc_type_insnum=".DAJIN_temp/consensus/temp/consensus_${out_suffix}"
 mutation_type_site_nuc=".DAJIN_temp/consensus/temp/mutation_type_site_nuc_${out_suffix}"
 tmp_html=.DAJIN_temp/consensus/temp/tmp_html_"${out_suffix}"
 
-mutation_design=$(
+target_mutation_type=$(
     minimap2 -ax splice \
         .DAJIN_temp/fasta/wt.fa \
         .DAJIN_temp/fasta/target.fa \
@@ -264,12 +264,12 @@ diff_wt=$(
 #* Annotate "target" when including targetted point mutation
 #-------------------------------------
 
-if [ "_${mutation_design}" = "_S" ]; then
+if [ "_${target_mutation_type}" = "_S" ]; then
     mutation_point=$(cut -d " " -f 1 .DAJIN_temp/data/mutation_points)
 
     contaion_target=$(
         cat "${mutation_type_site_nuc}" |
-        awk -v mut="${mutation_design}" '$1==mut' |
+        awk -v mut="${target_mutation_type}" '$1==mut' |
         cut -d " " -f 2 |
         awk '{print $0-1}' |
         grep -c ${mutation_point} -

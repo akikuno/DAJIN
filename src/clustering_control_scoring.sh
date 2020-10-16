@@ -33,7 +33,7 @@ threads="${2}"
 
 alleletype="wt"
 
-mutation_type=$(
+target_mutation_type=$(
     minimap2 -ax splice \
         .DAJIN_temp/fasta/wt.fa \
         .DAJIN_temp/fasta/target.fa \
@@ -216,7 +216,7 @@ while read -r label; do
 
 done
 
-[ _"${mutation_type}" = "_S" ] &&
+[ _"${target_mutation_type}" = "_S" ] &&
 mv ".DAJIN_temp/clustering/temp/control_score_target" "${control_score}"
 
 
