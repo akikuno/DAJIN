@@ -18,7 +18,6 @@ pacman::p_load(tidyverse, parallel)
 # control <- "barcode43"
 # file_control_mids <- sprintf(".DAJIN_temp/clustering/temp/tmp_MIDS_%s_wt", control)
 # threads <- 14L
-# plan(multisession, workers = threads)
 
 # ===========================================================
 #? Auguments
@@ -27,7 +26,6 @@ pacman::p_load(tidyverse, parallel)
 args <- commandArgs(trailingOnly = TRUE)
 file_control_mids <- args[1]
 threads <- as.integer(args[2])
-plan(multisession, workers = threads)
 
 #===========================================================
 #? Inputs
