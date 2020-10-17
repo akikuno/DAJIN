@@ -68,6 +68,7 @@ cat "${MIDS_ref}" |
     join - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk -v alelle="$alleletype" '$NF==alelle' |
     cut -d " " -f 2 |
+    sed "s/[1-9a-z]/I/g" |
     awk -F "" 'BEGIN{OFS=","}{$1=$1}1' |
 cat > "${tmp_MIDS}"
 
