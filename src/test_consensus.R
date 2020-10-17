@@ -36,7 +36,7 @@ df_que_mids <- read_csv(file_que_mids,
     col_names = FALSE,
     col_types = cols())
 
-df_mutation_score <- read_csv(file_mutation_score,
+df_mutation_score <- read_tsv(file_mutation_score,
     col_names = c("score", "loc"),
     col_types = cols())
 
