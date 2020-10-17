@@ -45,25 +45,12 @@ colnames(df_control_mids) <- 1:ncol(df_control_mids)
 df_control_freq_wt <-
     df_control_mids %>%
     pivot_longer(col = everything(), names_to = "loc", values_to = "MIDS") %>%
-    group_by(loc) %>%
-    nest() %>%
-    ungroup(loc) %>%
-    mutate(tb_MIDS = map(data,
-        ~ .x %>% mutate(MIDS = case_when(
-            MIDS %in% 1:9 ~ "I",
-            MIDS %>% str_detect("[a-z]") ~ "I",
-            TRUE ~ as.character(MIDS)
-        ))
+    nest(nest = c(MIDS)) %>%
+    mutate(control_freq = future_map(nest,
+        ~ .x %>% count(MIDS) %>% mutate(Freq = n / sum(n) * 100) %>% select(-n)
     )) %>%
-    mutate(tb_MIDS = map(
-        tb_MIDS, ~ .x %>% group_by(MIDS) %>% count() %>% ungroup(MIDS)
-        )) %>%
-    mutate(control_freq = map(tb_MIDS,
-        ~ .x %>% mutate(Freq = n / sum(n) * 100) %>% select(-n)
-        )) %>%
+    mutate(loc = as.double(loc)) %>%
     select(loc, control_freq)
-
-df_control_freq_wt$loc <- as.double(df_control_freq_wt$loc)
 
 ################################################################################
 #! Save results
