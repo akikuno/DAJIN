@@ -316,7 +316,7 @@ mkdir -p .DAJIN_temp/clustering/temp
 #? Prepare control's score to define sequencing error
 #===========================================================
 
-./DAJIN/src/clustering_control_scoring.sh "${control}" "${threads}"
+./DAJIN/src/test_control_scoring.sh "${control}" "${threads}"
 
 #===========================================================
 #? Clustering
@@ -325,7 +325,7 @@ mkdir -p .DAJIN_temp/clustering/temp
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     cut -f 2,3 |
     sort -u |
-    awk -v th="${threads:-1}" '{print "./DAJIN/src/clustering.sh", $1, $2, th}' |
+    awk -v th="${threads:-1}" '{print "./DAJIN/src/test_clustering.sh", $1, $2, th}' |
 sh -
 
 #===========================================================
@@ -400,7 +400,7 @@ done
 cat .DAJIN_temp/clustering/label* |
     awk '{nr[$1]++; print $0, nr[$1]}' |
     grep -v abnormal |  #TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    awk '{print "./DAJIN/src/consensus.sh", $0, "&"}' |
+    awk '{print "./DAJIN/src/test_consensus.sh", $0, "&"}' |
     awk -v th="${threads:-1}" '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
