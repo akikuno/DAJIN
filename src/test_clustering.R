@@ -23,9 +23,9 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode35"
+# barcode <- "barcode19"
 # control <- "barcode43"
-# allele <- "left_loxp"
+# allele <- "flox_deletion"
 
 # if(allele == "abnormal") control_allele <- "wt"
 # if(allele != "abnormal") control_allele <- allele
@@ -85,8 +85,9 @@ df_que_score <-
     select(loc, que_freq)
 
 ################################################################################
-#! Sequence subtraction
+#! MIDS subtraction
 ################################################################################
+
 tmp <-
     inner_join(df_que_score, df_control_score, by = "loc")
 
@@ -148,9 +149,9 @@ h <- reticulate::import("hdbscan")
 
 min_cluster_sizes <-
     seq(nrow(input_hdbscan)/20, nrow(input_hdbscan)/2, length = 10) %>%
-    unique %>%
     as.integer %>%
-    `+`(2)
+    `+`(2) %>%
+    unique
 
 hd <- function(x) {
     cl <- h$HDBSCAN(min_samples = 1L, min_cluster_size = as.integer(x),
@@ -287,14 +288,12 @@ merged_clusters <- lapply(pattern_,
     arrange(pattern) %>%
     pull(query)
 
-int_cluster_num <- merged_clusters %>% unique %>% sort
-
 ################################################################################
 #! Sequence identity to merge similar clusters
 # if two sequences are the same, merge them
 ################################################################################
 
-seq_consensus <- mclapply(int_cluster_num,
+seq_consensus <- mclapply(merged_clusters %>% unique %>% sort,
         function(x) {
             df_que_mids[merged_clusters == x, ] %>%
             lapply(function(x) x %>% table %>% which.max %>% names) %>%
@@ -394,6 +393,72 @@ if (logic_dual) {
     merged_clusters <-
         ifelse(merged_clusters %in% tmp_biased_cl, tmp_cl_max, merged_clusters)
 }
+
+#===========================================================
+#? Merge clusters with fuzzy mutations
+#===========================================================
+
+possible_true_mut <-
+    inner_join(df_que_score, df_control_score, by = "loc") %>%
+    unnest(que_freq, control_freq) %>%
+    filter(MIDS != "M") %>%
+    mutate(score = Freq - Freq1) %>%
+    filter(score > 5) %>%
+    select(loc, MIDS)
+
+retain_seq_consensus <-
+    seq_consensus[merged_clusters %>% unique %>% sort]
+
+retain_seq_consensus <-
+    map(retain_seq_consensus, function(x) {
+        map_chr(possible_true_mut$loc, function(y) str_sub(x, start = y, end = y))
+    })
+
+query_ <- merged_clusters %>% unique %>% sort
+if (length(query_) > 1) {
+    df_consensus <- NULL
+    cl_combn <- combn(query_, 2)
+
+    for (i in seq(ncol(cl_combn))) {
+            df_ <- tibble(
+                one = cl_combn[1, i],
+                two = cl_combn[2, i],
+                score = identical(
+                    retain_seq_consensus[[cl_combn[1, i]]],
+                    retain_seq_consensus[[cl_combn[2, i]]]
+                    )
+            )
+            df_consensus <- bind_rows(df_consensus, df_)
+    }
+
+    df_consensus_extracted <- df_consensus %>% filter(score == TRUE)
+
+    if (nrow(df_consensus_extracted) != 0) {
+        for (i in seq_along(rownames(df_consensus_extracted))) {
+            pattern_ <- df_consensus_extracted[i, ]$one
+            query_ <- df_consensus_extracted[i, ]$two
+            merged_clusters[merged_clusters == pattern_] <- query_
+        }
+    }
+}
+
+pattern_ <- merged_clusters %>%
+    unique() %>%
+    sort()
+query_ <- merged_clusters %>%
+    unique() %>%
+    order() %>%
+    sort()
+
+merged_clusters <- lapply(pattern_,
+    function(x) which(x == merged_clusters)) %>%
+    set_names(query_) %>%
+    map2_df(., query_, function(x, y) {
+        tibble(pattern = x,
+        query = rep(y, length(x))
+        )}) %>%
+    arrange(pattern) %>%
+    pull(query)
 
 ################################################################################
 #! Format df_readid_cluster
