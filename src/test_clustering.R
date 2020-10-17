@@ -23,9 +23,9 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode01"
+# barcode <- "barcode19"
 # control <- "barcode43"
-# allele <- "abnormal"
+# allele <- "flox_deletion"
 
 # if(allele == "abnormal") control_allele <- "wt"
 # if(allele != "abnormal") control_allele <- allele
@@ -406,7 +406,7 @@ possible_true_mut <-
     mutate(Freq_x = replace_na(Freq_x, 0)) %>%
     mutate(Freq_y = replace_na(Freq_y, 0)) %>%
     filter(MIDS != "M") %>%
-    mutate(score = abs(Freq_x - Freq_y)) %>%
+    mutate(score = Freq_x - Freq_y) %>%
     filter(score > 5) %>%
     select(loc, MIDS)
 
@@ -416,7 +416,7 @@ retain_seq_consensus <-
         map_chr(possible_true_mut$loc, function(y) str_sub(x, start = y, end = y))
     })
 
-query_ <- merged_clusters %>% unique %>% sort
+query_ <- merged_clusters %>% unique %>% order
 if (length(query_) > 1) {
     df_consensus <- NULL
     cl_combn <- combn(query_, 2)
