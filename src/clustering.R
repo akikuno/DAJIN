@@ -404,11 +404,12 @@ if (tmp_nrow > 0) {
     rm(tmp_biased_cl, tmp_max_cl)
 }
 
-retain_seq_consensus <- seq_consensus[cossim_merged_cl %>% sort %>% unique]
 
 #===========================================================
 #? Remove clusters with fuzzy mutation
 #===========================================================
+
+retain_seq_consensus <- seq_consensus[cossim_merged_cl %>% sort %>% unique]
 
 tmp_mut_position <- lapply(retain_seq_consensus,
     function(x) {
