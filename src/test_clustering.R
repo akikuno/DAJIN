@@ -23,9 +23,9 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode19"
+# barcode <- "barcode01"
 # control <- "barcode43"
-# allele <- "flox_deletion"
+# allele <- "abnormal"
 
 # if(allele == "abnormal") control_allele <- "wt"
 # if(allele != "abnormal") control_allele <- allele
@@ -398,19 +398,21 @@ if (logic_dual) {
 #? Merge clusters with fuzzy mutations
 #===========================================================
 
+tmp_que_score <- df_que_score %>% unnest(que_freq)
+tmp_control_score <- df_control_score %>% unnest(control_freq)
+
 possible_true_mut <-
-    inner_join(df_que_score, df_control_score, by = "loc") %>%
-    unnest(que_freq, control_freq) %>%
+    full_join(tmp_que_score, tmp_control_score, by = c("loc","MIDS"), suffix = c("_x", "_y")) %>%
+    mutate(Freq_x = replace_na(Freq_x, 0)) %>%
+    mutate(Freq_y = replace_na(Freq_y, 0)) %>%
     filter(MIDS != "M") %>%
-    mutate(score = Freq - Freq1) %>%
+    mutate(score = abs(Freq_x - Freq_y)) %>%
     filter(score > 5) %>%
     select(loc, MIDS)
 
 retain_seq_consensus <-
-    seq_consensus[merged_clusters %>% unique %>% sort]
-
-retain_seq_consensus <-
-    map(retain_seq_consensus, function(x) {
+    seq_consensus[merged_clusters %>% unique %>% sort] %>%
+    map(function(x) {
         map_chr(possible_true_mut$loc, function(y) str_sub(x, start = y, end = y))
     })
 
