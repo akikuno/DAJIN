@@ -325,8 +325,13 @@ mkdir -p .DAJIN_temp/clustering/temp
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     cut -f 2,3 |
     sort -u |
+    awk -v ctrl="$control" '$1 $2 != ctrl "wt"' |
     awk -v th="${threads:-1}" '{print "./DAJIN/src/test_clustering.sh", $1, $2, th}' |
 sh -
+
+cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
+    awk -v ctrl="$control" '$2 $3 == ctrl "wt" {print $1"\t"1}' |
+cat > ".DAJIN_temp/clustering/temp/hdbscan_${control}_wt"
 
 #===========================================================
 #? Allele percentage
