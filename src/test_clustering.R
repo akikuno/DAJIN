@@ -23,9 +23,9 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode08"
+# barcode <- "barcode35"
 # control <- "barcode43"
-# allele <- "wt"
+# allele <- "left_loxp"
 
 # if(allele == "abnormal") control_allele <- "wt"
 # if(allele != "abnormal") control_allele <- allele
@@ -76,24 +76,13 @@ df_que_score <-
     df_que_mids %>%
     pivot_longer(col = everything(), names_to = "loc", values_to = "MIDS") %>%
     group_by(loc) %>%
-    nest() %>%
-    ungroup(loc) %>%
-    mutate(tb_MIDS = map(data,
-        ~ .x %>% mutate(MIDS = case_when(
-            MIDS %in% 1:9 ~ "I",
-            MIDS %>% str_detect("[a-z]") ~ "I",
-            TRUE ~ as.character(MIDS)
-        ))
-    )) %>%
-    mutate(tb_MIDS = map(
-        tb_MIDS, ~ .x %>% group_by(MIDS) %>% count() %>% ungroup(MIDS)
-        )) %>%
-    mutate(que_freq = map(tb_MIDS,
-        ~ .x %>% mutate(Freq = n / sum(n) * 100) %>% select(-n)
-        )) %>%
+    nest(nest = c(MIDS)) %>%
+    mutate(que_freq = mclapply(nest,
+        function(x)
+            x %>% count(MIDS) %>% mutate(Freq = n / sum(n) * 100) %>% select(-n),
+        mc.cores = threads)) %>%
+    mutate(loc = as.double(loc)) %>%
     select(loc, que_freq)
-
-df_que_score$loc <- as.double(df_que_score$loc)
 
 ################################################################################
 #! Sequence subtraction
@@ -406,60 +395,6 @@ if (logic_dual) {
         ifelse(merged_clusters %in% tmp_biased_cl, tmp_cl_max, merged_clusters)
 }
 
-int_cluster_num <- merged_clusters %>% unique %>% sort
-
-# #===========================================================
-# #? Merge clusters with fuzzy mutation into a major cluster
-# #===========================================================
-
-# retain_seq_consensus <-
-#     mclapply(int_cluster_num,
-#         function(x) {
-#             df_que_mids[merged_clusters == x, ] %>%
-#             lapply(function(x) x %>% table %>% which.max %>% names) %>%
-#             unlist %>%
-#             str_c(collapse = "")
-#         },
-#         mc.cores = as.integer(threads))
-
-# int_mut_position <-
-#     lapply(retain_seq_consensus,
-#         function(x) {
-#             str_locate_all(x, pattern = "[^M]") %>%
-#             as.data.frame %>%
-#             pull(start)
-#             }) %>%
-#     unlist %>%
-#     unique
-
-# if (length(int_mut_position) > 0) {
-
-#     extract_clear_mutation <- function(x) {
-#         x %>%
-#             table %>%
-#             as_tibble %>%
-#             mutate(freq = n / sum(n)) %>%
-#             filter(freq > 0.75) %>%
-#             nrow
-#     }
-
-#     int_merge_clusters <-
-#         lapply(int_cluster_num, function(x) {
-#             df_que_mut_position[merged_clusters == x, ] %>%
-#             lapply(extract_clear_mutation)
-#         }) %>%
-#         unlist %>%
-#         as_tibble_col %>%
-#         mutate(cl = rep(int_cluster_num, each = length(int_mut_position))) %>%
-#         group_by(cl) %>%
-#         filter(all(value == 0)) %>%
-#         pull(cl) %>%
-#         unique
-# }
-
-# merged_clusters <-
-#     ifelse(merged_clusters %in% int_merge_clusters, tmp_cl_max, merged_clusters)
-
 ################################################################################
 #! Format df_readid_cluster
 ################################################################################
@@ -481,8 +416,6 @@ df_mutation_score <-
         }
     ) %>%
     mutate(num = row_number())
-
-
 
 ################################################################################
 #! Output results
