@@ -43,7 +43,7 @@ mapping_alleletype="${alleletype}"
 [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
 [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
 
-control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
+control_score=".DAJIN_temp/clustering/temp/control_score_${in_suffix}"
 allele_id=".DAJIN_temp/clustering/readid_cl_mids_${in_suffix}"
 
 #===========================================================
