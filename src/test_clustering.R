@@ -408,6 +408,7 @@ possible_true_mut <-
     filter(MIDS != "M") %>%
     mutate(score = Freq_x - Freq_y) %>%
     filter(Freq_y < 5 & score > 5) %>%
+    filter(Freq_y != 0) %>%
     select(loc, MIDS)
 
 retain_seq_consensus <-
