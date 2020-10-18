@@ -15,9 +15,8 @@ pacman::p_load(tidyverse, parallel, furrr)
 #? TEST Auguments
 #===========================================================
 
-# file_que_mids <- ".DAJIN_temp/consensus/temp/allele_id_barcode38_target_1"
-# file_mutation_score <- ".DAJIN_temp/clustering/temp/control_score_barcode38_target"
-# barcode <- "barcode38"
+# file_que_mids <- ".DAJIN_temp/consensus/temp/allele_id_barcode05_target_4"
+# file_mutation_loc <- ".DAJIN_temp/clustering/temp/possible_true_mut_barcode05_target"
 
 #===========================================================
 #? Auguments
@@ -25,8 +24,7 @@ pacman::p_load(tidyverse, parallel, furrr)
 
 args <- commandArgs(trailingOnly = TRUE)
 file_que_mids <- args[1]
-file_mutation_score <- args[2]
-barcode <- args[3]
+file_mutation_loc <- args[2]
 
 #===========================================================
 #? Inputs
@@ -36,8 +34,8 @@ df_que_mids <- read_csv(file_que_mids,
     col_names = FALSE,
     col_types = cols())
 
-df_mutation_score <- read_tsv(file_mutation_score,
-    col_names = c("score", "loc"),
+df_mutation_loc <- read_tsv(file_mutation_loc,
+    col_names = c("loc", "mids"),
     col_types = cols())
 
 #===========================================================
@@ -81,8 +79,7 @@ df_mut <-
 
 df_mut <-
     df_mut %>%
-    inner_join(df_mutation_score, by = "loc") %>%
-    filter(score > 5)
+    inner_join(df_mutation_loc, by = "loc")
 
 ################################################################################
 #! Output results
