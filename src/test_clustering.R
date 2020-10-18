@@ -23,9 +23,9 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode19"
+# barcode <- "barcode05"
 # control <- "barcode43"
-# allele <- "flox_deletion"
+# allele <- "target"
 
 # if(allele == "abnormal") control_allele <- "wt"
 # if(allele != "abnormal") control_allele <- allele
@@ -407,7 +407,7 @@ possible_true_mut <-
     mutate(Freq_y = replace_na(Freq_y, 0)) %>%
     filter(MIDS != "M") %>%
     mutate(score = Freq_x - Freq_y) %>%
-    filter(score > 5) %>%
+    filter(Freq_y < 5 & score > 5) %>%
     select(loc, MIDS)
 
 retain_seq_consensus <-
