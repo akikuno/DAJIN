@@ -92,7 +92,7 @@ cat "${allele_id}" |
     awk -F "" 'BEGIN{OFS=","}{$1=$1}1' |
 cat > "${tmp_allele_id}"
 
-Rscript DAJIN/src/test_consensus.R "${tmp_allele_id}" "${control_score}" "${barcode}" #! RENAME ================
+Rscript DAJIN/src/test_consensus.R "${tmp_allele_id}" "${control_score}" #! RENAME ================
 
 #===========================================================
 #? Report (1) Cluster ID, (2) Base loc (3) Mutation type (4) Ins num
