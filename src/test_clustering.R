@@ -464,37 +464,19 @@ merged_clusters <- lapply(pattern_,
     pull(query)
 
 ################################################################################
-#! Format df_readid_cluster
+#! Output results
 ################################################################################
 
 df_readid_cluster <-
     tibble(read_id = df_que_label$id,
     cluster = merged_clusters)
 
-################################################################################
-#! Generate df_mutation_score
-################################################################################
-
-df_mutation_score <-
-    future_map_dfr(list_mids_score,
-    function(x) {
-        x %>%
-        summarize(sum = sum(score)) %>%
-        mutate(sum = replace_na(sum, 0))
-        }
-    ) %>%
-    mutate(num = row_number())
-
-################################################################################
-#! Output results
-################################################################################
-
 write_tsv(df_readid_cluster,
     sprintf(".DAJIN_temp/clustering/temp/hdbscan_%s", output_suffix),
     col_names = F
 )
 
-write_tsv(df_mutation_score,
-    sprintf(".DAJIN_temp/clustering/temp/control_score_%s", output_suffix),
+write_tsv(possible_true_mut,
+    sprintf(".DAJIN_temp/clustering/temp/possible_true_mut_%s", output_suffix),
     col_names = F
 )
