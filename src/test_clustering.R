@@ -23,9 +23,9 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode32"
+# barcode <- "barcode21"
 # control <- "barcode21"
-# allele <- "target"
+# allele <- "abnormal"
 
 # if(allele == "abnormal") control_allele <- "wt"
 # if(allele != "abnormal") control_allele <- allele
@@ -356,6 +356,7 @@ if (logic_dual) {
 
 #===========================================================
 #? Merge clusters with solid/fuzzy mutations
+#? if there is a possible true mutation locus
 #===========================================================
 
 tmp_que_score <- df_que_score %>% unnest(que_freq)
@@ -371,96 +372,105 @@ tmp_possible_true_mut <-
     filter(!(Freq_y == 0 & Freq_x < 20)) %>%
     pull(loc)
 
-possible_true_mut <-
-    df_que_mids[, tmp_possible_true_mut] %>%
-    mutate(cl = merged_clusters) %>%
-    pivot_longer(-cl, names_to = "loc", values_to = "MIDS") %>%
-    group_by(cl, loc) %>%
-    count(MIDS) %>%
-    mutate(Freq = n / sum(n) * 100) %>%
-    filter(MIDS != "M") %>%
-    filter(Freq > 75) %>%
-    ungroup() %>%
-    select(loc, MIDS) %>%
-    unique
-
-solid_clusters <-
-    map_lgl(merged_clusters %>% unique, function(x){
-    df_que_mids[merged_clusters == x, possible_true_mut$loc] %>%
-    rename(MIDS = names(.)) %>%
-    count(MIDS) %>%
-    mutate(Freq = n / sum(n) * 100) %>%
-    mutate(tf = if_else(Freq > 75, TRUE, FALSE)) %>%
-    pull(tf) %>%
-    unique()
-    })
-
-solid_cluster_numbers <- unique(merged_clusters)[solid_clusters]
-fuzzy_cluster_numbers <- unique(merged_clusters)[!solid_clusters]
-
-#--------------------------------------
-#* Merge clusters with solid mutations
-#* if their mutations are the same
-#--------------------------------------
-
-retain_seq_consensus <-
-    mclapply(solid_cluster_numbers,
-        function(x) {
-            df_que_mids[merged_clusters == x, ] %>%
-            lapply(function(x) x %>% table %>% which.max %>% names) %>%
-            unlist %>%
-            str_c(collapse = "")
-        },
-        mc.cores = as.integer(threads)) %>%
-    map(function(x) {
-        map_chr(possible_true_mut$loc, function(y) str_sub(x, start = y, end = y))
-    }) %>%
-    set_names(solid_cluster_numbers)
-
-
-query_ <- solid_cluster_numbers %>% unique
-if (length(query_) > 1) {
-    df_consensus <- NULL
-    cl_combn <- combn(query_, 2)
-
-    for (i in seq(ncol(cl_combn))) {
-            df_ <- tibble(
-                one = cl_combn[1, i],
-                two = cl_combn[2, i],
-                score = identical(
-                    retain_seq_consensus[[as.character(cl_combn[1, i])]],
-                    retain_seq_consensus[[as.character(cl_combn[2, i])]]
-                    )
-            )
-            df_consensus <- bind_rows(df_consensus, df_)
-    }
-
-    df_consensus_extracted <- df_consensus %>% filter(score == TRUE)
-
-    if (nrow(df_consensus_extracted) != 0) {
-        for (i in seq_along(rownames(df_consensus_extracted))) {
-            pattern_ <- df_consensus_extracted[i, ]$one
-            query_ <- df_consensus_extracted[i, ]$two
-            merged_clusters[merged_clusters == pattern_] <- query_
-        }
-    }
+if(length(tmp_possible_true_mut) > 0) {
+    possible_true_mut <-
+        df_que_mids[, tmp_possible_true_mut] %>%
+        cbind(cl = merged_clusters) %>%
+        pivot_longer(-cl, names_to = "loc", values_to = "MIDS") %>%
+        group_by(cl, loc) %>%
+        count(MIDS) %>%
+        mutate(Freq = n / sum(n) * 100) %>%
+        filter(MIDS != "M") %>%
+        filter(Freq > 75) %>%
+        ungroup() %>%
+        select(loc, MIDS) %>%
+        unique
+} else {
+    possible_true_mut <- tibble()
 }
 
-#--------------------------------------
-#* Merge clusters with fuzzy mutations into a major cluster
-#--------------------------------------
+if(nrow(possible_true_mut) > 0) {
+    solid_clusters <-
+        map_lgl(merged_clusters %>% unique, function(x){
+            df_que_mids[merged_clusters == x, possible_true_mut$loc] %>%
+            pivot_longer(col = everything(), names_to = "loc", values_to = "MIDS") %>%
+            group_by(loc) %>%
+            count(MIDS) %>%
+            mutate(Freq = n / sum(n) * 100) %>%
+            filter(MIDS != "M") %>%
+            mutate(tf = if_else(Freq > 75, TRUE, FALSE)) %>%
+            pull(tf) %>%
+            any()
+        })
 
-tmp_cl_max <-
-    merged_clusters %>%
-    as_tibble() %>%
-    count(value) %>%
-    filter(!(value %in% fuzzy_cluster_numbers)) %>%
-    slice_max(n, n = 1) %>%
-    pull(value)
+    solid_cluster_numbers <- unique(merged_clusters)[solid_clusters]
+    fuzzy_cluster_numbers <- unique(merged_clusters)[!solid_clusters]
 
-merged_clusters <-
-    ifelse(merged_clusters %in% fuzzy_cluster_numbers, tmp_cl_max, merged_clusters)
+    #--------------------------------------
+    #* Merge clusters with solid mutations
+    #* if their mutations are the same
+    #--------------------------------------
 
+    retain_seq_consensus <-
+        mclapply(solid_cluster_numbers,
+            function(x) {
+                df_que_mids[merged_clusters == x, ] %>%
+                lapply(function(x) x %>% table %>% which.max %>% names) %>%
+                unlist %>%
+                str_c(collapse = "")
+            },
+            mc.cores = as.integer(threads)) %>%
+        map(function(x) {
+            map_chr(possible_true_mut$loc, function(y) str_sub(x, start = y, end = y))
+        }) %>%
+        set_names(solid_cluster_numbers)
+
+    query_ <- solid_cluster_numbers %>% unique
+    if (length(query_) > 1) {
+        df_consensus <- NULL
+        cl_combn <- combn(query_, 2)
+
+        for (i in seq(ncol(cl_combn))) {
+                df_ <- tibble(
+                    one = cl_combn[1, i],
+                    two = cl_combn[2, i],
+                    score = identical(
+                        retain_seq_consensus[[as.character(cl_combn[1, i])]],
+                        retain_seq_consensus[[as.character(cl_combn[2, i])]]
+                        )
+                )
+                df_consensus <- bind_rows(df_consensus, df_)
+        }
+
+        df_consensus_extracted <- df_consensus %>% filter(score == TRUE)
+
+        if (nrow(df_consensus_extracted) != 0) {
+            for (i in seq_along(rownames(df_consensus_extracted))) {
+                pattern_ <- df_consensus_extracted[i, ]$one
+                query_ <- df_consensus_extracted[i, ]$two
+                merged_clusters[merged_clusters == pattern_] <- query_
+            }
+        }
+    }
+
+    #--------------------------------------
+    #* Merge clusters with fuzzy mutations into a major cluster
+    #--------------------------------------
+
+    tmp_cl_max <-
+        merged_clusters %>%
+        as_tibble() %>%
+        count(value) %>%
+        filter(!(value %in% fuzzy_cluster_numbers)) %>%
+        slice_max(n, n = 1) %>%
+        pull(value)
+
+    merged_clusters <-
+        ifelse(merged_clusters %in% fuzzy_cluster_numbers, tmp_cl_max, merged_clusters)
+} else {
+    merged_clusters <-
+        rep(1, length(merged_clusters))
+}
 
 ################################################################################
 #! Output results
