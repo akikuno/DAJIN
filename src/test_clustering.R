@@ -23,8 +23,8 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode07"
-# allele <- "wt"
+# barcode <- "barcode04"
+# allele <- "target"
 
 # if(allele == "abnormal") control_allele <- "wt"
 # if(allele != "abnormal") control_allele <- allele
@@ -199,13 +199,13 @@ int_hdbscan_clusters <- cl$fit_predict(input_hdbscan) + 1
 
 df_cluster <- tibble(loc = integer(), cluster = integer(), score = double())
 
-tmp_df_score <- df_score %>% colSums / nrow(df_score)
+# tmp_df_score <- df_score %>% colSums / nrow(df_score)
 for (i in unique(int_hdbscan_clusters)) {
     tmp_score <-
         df_score[int_hdbscan_clusters == i, ] %>%
         colSums / sum(int_hdbscan_clusters == i)
 
-    tmp_score <- abs(tmp_df_score - tmp_score)
+    # tmp_score <- tmp_df_score - tmp_score
 
     tmp_df <- tibble(
         loc = seq_along(colnames(df_score)),
@@ -356,10 +356,9 @@ if(nrow(possible_true_mut) > 0) {
             group_by(loc) %>%
             count(MIDS) %>%
             mutate(Freq = n / sum(n) * 100) %>%
-            filter(MIDS != "M") %>%
             mutate(tf = if_else(Freq > 75, TRUE, FALSE)) %>%
             pull(tf) %>%
-            any()
+            all()
         })
 
     solid_cluster_numbers <- unique(merged_clusters)[solid_clusters]
