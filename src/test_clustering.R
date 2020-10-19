@@ -23,16 +23,15 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode21"
-# control <- "barcode21"
-# allele <- "abnormal"
+# barcode <- "barcode14"
+# allele <- "wt"
 
 # if(allele == "abnormal") control_allele <- "wt"
 # if(allele != "abnormal") control_allele <- allele
 # file_que_mids <- sprintf(".DAJIN_temp/clustering/temp/query_score_%s_%s", barcode, allele)
 # file_que_label <- sprintf(".DAJIN_temp/clustering/temp/query_labels_%s_%s", barcode, allele)
 # file_control_score <- sprintf(".DAJIN_temp/clustering/temp/df_control_freq_%s.RDS", control_allele)
-# threads <- 14L
+# threads <- 2L
 # plan(multisession, workers = threads)
 
 # ===========================================================
@@ -273,47 +272,6 @@ if (length(cluster) > 1) {
         }
     }
 }
-
-#===========================================================
-#? Sequence identity to merge similar clusters
-# if two sequences are the same, merge them
-#===========================================================
-
-# seq_consensus <- mclapply(merged_clusters %>% unique %>% sort,
-#         function(x) {
-#             df_que_mids[merged_clusters == x, ] %>%
-#             lapply(function(x) x %>% table %>% which.max %>% names) %>%
-#             unlist %>%
-#             str_c(collapse = "")
-#         },
-#         mc.cores = as.integer(threads))
-
-# if (length(query_) > 1) {
-#     df_consensus <- NULL
-#     cl_combn <- combn(query_, 2)
-
-#     for (i in seq(ncol(cl_combn))) {
-#             df_ <- tibble(
-#                 one = cl_combn[1, i],
-#                 two = cl_combn[2, i],
-#                 score = identical(
-#                     seq_consensus[[cl_combn[1, i]]],
-#                     seq_consensus[[cl_combn[2, i]]]
-#                     )
-#             )
-#             df_consensus <- bind_rows(df_consensus, df_)
-#     }
-
-#     df_consensus_extracted <- df_consensus %>% filter(score == TRUE)
-
-#     if (nrow(df_consensus_extracted) != 0) {
-#         for (i in seq_along(rownames(df_consensus_extracted))) {
-#             pattern_ <- df_consensus_extracted[i, ]$one
-#             query_ <- df_consensus_extracted[i, ]$two
-#             merged_clusters[merged_clusters == pattern_] <- query_
-#         }
-#     }
-# }
 
 #===========================================================
 #? Merge clusters with strand specific mutation into a major cluster
