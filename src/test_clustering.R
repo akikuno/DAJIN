@@ -23,7 +23,7 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode14"
+# barcode <- "barcode07"
 # allele <- "wt"
 
 # if(allele == "abnormal") control_allele <- "wt"
@@ -201,10 +201,11 @@ df_cluster <- tibble(loc = integer(), cluster = integer(), score = double())
 
 tmp_df_score <- df_score %>% colSums / nrow(df_score)
 for (i in unique(int_hdbscan_clusters)) {
-    tmp_score <- df_score[int_hdbscan_clusters == i, ] %>%
+    tmp_score <-
+        df_score[int_hdbscan_clusters == i, ] %>%
         colSums / sum(int_hdbscan_clusters == i)
 
-    tmp_score <- tmp_df_score - tmp_score
+    tmp_score <- abs(tmp_df_score - tmp_score)
 
     tmp_df <- tibble(
         loc = seq_along(colnames(df_score)),
