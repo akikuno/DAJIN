@@ -31,7 +31,7 @@ reticulate::use_condaenv("DAJIN")
 # file_que_mids <- sprintf(".DAJIN_temp/clustering/temp/query_score_%s_%s", barcode, allele)
 # file_que_label <- sprintf(".DAJIN_temp/clustering/temp/query_labels_%s_%s", barcode, allele)
 # file_control_score <- sprintf(".DAJIN_temp/clustering/temp/df_control_freq_%s.RDS", control_allele)
-# threads <- 2L
+# threads <- 12L
 # plan(multisession, workers = threads)
 
 # ===========================================================
@@ -199,13 +199,13 @@ int_hdbscan_clusters <- cl$fit_predict(input_hdbscan) + 1
 
 df_cluster <- tibble(loc = integer(), cluster = integer(), score = double())
 
-# tmp_df_score <- df_score %>% colSums / nrow(df_score)
+tmp_df_score <- df_score %>% colSums / nrow(df_score)
 for (i in unique(int_hdbscan_clusters)) {
     tmp_score <-
         df_score[int_hdbscan_clusters == i, ] %>%
         colSums / sum(int_hdbscan_clusters == i)
 
-    # tmp_score <- tmp_df_score - tmp_score
+    tmp_score <- tmp_df_score - tmp_score
 
     tmp_df <- tibble(
         loc = seq_along(colnames(df_score)),
@@ -340,7 +340,7 @@ if(length(tmp_possible_true_mut) > 0) {
         count(MIDS) %>%
         mutate(Freq = n / sum(n) * 100) %>%
         filter(MIDS != "M") %>%
-        filter(Freq > 75) %>%
+        filter(Freq > 50) %>%
         ungroup() %>%
         select(loc, MIDS) %>%
         unique
@@ -356,9 +356,11 @@ if(nrow(possible_true_mut) > 0) {
             group_by(loc) %>%
             count(MIDS) %>%
             mutate(Freq = n / sum(n) * 100) %>%
-            mutate(tf = if_else(Freq > 75, TRUE, FALSE)) %>%
+            group_by(MIDS) %>%
+            slice_max(n, n = 1) %>%
+            mutate(tf = if_else(Freq > 50, TRUE, FALSE)) %>%
             pull(tf) %>%
-            all()
+            any()
         })
 
     solid_cluster_numbers <- unique(merged_clusters)[solid_clusters]
