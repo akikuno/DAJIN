@@ -15,9 +15,9 @@ pacman::p_load(tidyverse, parallel, furrr)
 #? TEST Auguments
 #===========================================================
 
-# label <- "flox_deletion"
+# label <- "target"
 # file_name <- sprintf(".DAJIN_temp/clustering/temp/control_score_%s", label)
-# threads <- 14L
+# threads <- 2L
 # plan(multisession, workers = threads)
 
 #===========================================================
@@ -58,13 +58,6 @@ logic_deletion <-
     (length(df_label$loc) == length(df_wt$loc)) &&
     !any(df_label$mut == 2)
 
-# chr_alleletype <- case_when(
-#     logic_point_mutation ~ "point_mutation",
-#     logic_inversion ~ "inversion",
-#     logic_insertion ~ "insertion",
-#     logic_deletion ~ "deletion"
-#     )
-
 ################################################################################
 #! 
 ################################################################################
@@ -73,6 +66,25 @@ logic_deletion <-
 #? Point mutation
 #===========================================================
 
+if(logic_point_mutation) {
+    outout_label <- "wt"
+
+    mut_loc <- df_label %>%
+        filter(mut == 1) %>%
+        pull(loc)
+
+    df_control_freq_label <- df_label
+
+    for(num_label_loc in df_label$loc){
+        if(num_label_loc != mut_loc) {
+            df_control_freq_label$mut[num_label_loc] <- df_wt$control_freq[num_label_loc]
+        }
+    }
+
+    df_control_freq_label <-
+        df_control_freq_label %>%
+        rename(control_freq = mut)
+}
 
 #===========================================================
 #? Inversion
@@ -100,15 +112,16 @@ if(logic_inversion) {
 if(logic_insertion) {
     df_control_freq_label <- df_label
 
-    num_refloc <- 1
-    for(num_labelloc in df_label$loc){
-        if(df_label$mut[num_labelloc] == 0) {
-            df_control_freq_label$mut[num_labelloc] <- df_wt$control_freq[num_refloc]
-            num_refloc <- num_refloc + 1
+    num_ref_loc <- 1
+    for(num_label_loc in df_label$loc){
+        if(df_label$mut[num_label_loc] == 0) {
+            df_control_freq_label$mut[num_label_loc] <- df_wt$control_freq[num_ref_loc]
+            num_ref_loc <- num_ref_loc + 1
         }
     }
     df_control_freq_label <-
-        df_control_freq_label %>% rename(control_freq = mut)
+        df_control_freq_label %>%
+        rename(control_freq = mut)
 }
 
 #===========================================================

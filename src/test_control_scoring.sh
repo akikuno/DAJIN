@@ -147,19 +147,13 @@ while read -r label; do
         sort |
         join -a 1 - "${tmp_control}" |
         awk '$2=="-" {$4=1}1' | # deletion
-        awk '$2~/[ACGT]/ {$4=0}1' | # point mutation
+        awk '$2~/[ACGT]/ {$4=1}1' | # point mutation
         awk '$1=="-" {$4=1}1' | # knockin
         sort -t " " -k 3,3n |
         awk '{print $3","$4}'
     fi |
     cat > ".DAJIN_temp/clustering/temp/control_score_${label}"
 done
-
-# #!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-# # このcontrol_scoreはいらなくなるかも. rsdで全部代用できる可能性がある. 
-# [ _"${mutation_type}" = "_S" ] &&
-# mv ".DAJIN_temp/clustering/temp/control_score_target" "${control_score}"
-# #!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 #===========================================================
 #? Generate mutation scoring of other alleles
