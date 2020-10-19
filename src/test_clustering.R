@@ -23,8 +23,8 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode26"
-# allele <- "abnormal"
+# barcode <- "barcode32"
+# allele <- "target"
 
 # if(allele == "abnormal") control_allele <- "wt"
 # if(allele != "abnormal") control_allele <- allele
@@ -182,6 +182,9 @@ int_cluster_nums_opt <-
     slice_max(count) %>%
     slice_min(id) %>%
     pull(id)
+
+if(length(int_cluster_nums_opt) == 0)
+    int_cluster_nums_opt <- which.max(min_cluster_sizes)
 
 #===========================================================
 #? Clustering with optimized cluster sizes
