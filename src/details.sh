@@ -30,6 +30,7 @@ mkdir -p .DAJIN_temp/details
 
 find .DAJIN_temp/consensus/* -type f |
     grep html |
+    grep -v tmp |
     sed "s:.*/::g" |
     sed "s/.html//g" |
     sed "s/_/ /g" |
@@ -37,7 +38,7 @@ find .DAJIN_temp/consensus/* -type f |
     sort |
 cat > .DAJIN_temp/details/tmp_nameid
 
-cat .DAJIN_temp/clustering/label* |
+cat .DAJIN_temp/clustering/allele_per/label* |
     awk '{nr[$1]++; print $0, nr[$1]}' |
     awk '{print $1"_allele"$5, $4, $2}' |
     sort |

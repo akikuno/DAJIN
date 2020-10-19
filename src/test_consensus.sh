@@ -17,11 +17,11 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #? TEST Auguments
 #===========================================================
 
-# barcode="barcode38"
+# barcode="barcode31"
 # alleletype="target"
 # cluster=1
 # percentage=69.7
-# alleleid=6
+# alleleid=4
 
 #===========================================================
 #? Auguments
@@ -44,7 +44,7 @@ mapping_alleletype="${alleletype}"
 [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
 
 control_score=".DAJIN_temp/clustering/temp/possible_true_mut_${in_suffix}"
-allele_id=".DAJIN_temp/clustering/readid_cl_mids_${in_suffix}"
+allele_id=".DAJIN_temp/clustering/allele_per/readid_cl_mids_${in_suffix}"
 
 #===========================================================
 #? Output
@@ -92,8 +92,11 @@ cat "${allele_id}" |
     awk -F "" 'BEGIN{OFS=","}{$1=$1}1' |
 cat > "${tmp_allele_id}"
 
-Rscript DAJIN/src/test_consensus.R "${tmp_allele_id}" "${control_score}" #! RENAME ================
-
+if [ -s "${control_score}" ]; then
+    Rscript DAJIN/src/test_consensus.R "${tmp_allele_id}" "${control_score}" #! RENAME ================
+else
+    true > ".DAJIN_temp/consensus/temp/mutation_${out_suffix}"
+fi
 #===========================================================
 #? Report (1) Cluster ID, (2) Base loc (3) Mutation type (4) Ins num
 #===========================================================
