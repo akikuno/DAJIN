@@ -67,7 +67,7 @@ fi
 #? Generate BAM files on each cluster
 #===========================================================
 
-cat .DAJIN_temp/clustering/label* |
+cat .DAJIN_temp/clustering/allele_per/label* |
     awk '{nr[$1]++; print $0, nr[$1]}' |
 while read -r allele
 do
@@ -79,7 +79,7 @@ do
     input_bam="${barcode}_${alleletype}"
     output_bam="${barcode}_allele${alleleid}"
     #
-    find .DAJIN_temp/clustering/readid_cl_mids* |
+    find .DAJIN_temp/clustering/allele_per/readid_cl_mids* |
         grep "${input_bam}" |
         xargs cat |
         awk -v cl="${cluster}" '$2==cl' |
