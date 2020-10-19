@@ -95,7 +95,6 @@ do
         samtools sort -@ "${threads:-1}" 2>/dev/null |
     cat > .DAJIN_temp/bam/"${output_bam}".bam
     samtools index .DAJIN_temp/bam/"${output_bam}".bam
-
 done
 
 #===========================================================

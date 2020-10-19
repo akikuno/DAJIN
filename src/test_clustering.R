@@ -23,8 +23,8 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode04"
-# allele <- "target"
+# barcode <- "barcode26"
+# allele <- "abnormal"
 
 # if(allele == "abnormal") control_allele <- "wt"
 # if(allele != "abnormal") control_allele <- allele
@@ -95,13 +95,13 @@ list_mids_score <-
     if (y == 1) {
         x %>%
         rename(score = Freq) %>%
-        mutate(score = if_else(MIDS == "M", 0, score)) %>%
+        # mutate(score = if_else(MIDS == "M", 0, score)) %>%
         mutate(score = replace_na(score, 0))
     } else {
         full_join(x, y, by = "MIDS", suffix = c("_x", "_y")) %>%
         mutate(score = Freq_x - Freq_y) %>%
         select(-contains("Freq")) %>%
-        mutate(score = if_else(MIDS == "M", 0, score)) %>%
+        # mutate(score = if_else(MIDS == "M", 0, score)) %>%
         mutate(score = replace_na(score, 0))
     }
 })
