@@ -332,10 +332,15 @@ sh -
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk -v ctrl="$control" '$2 $3 == ctrl "wt" {print $1"\t"1}' |
 cat > ".DAJIN_temp/clustering/temp/hdbscan_${control}_wt"
+cat ".DAJIN_temp/clustering/temp/hdbscan_${control}_wt" > .DAJIN_temp/clustering/temp/query_seq_${control}_wt
+true > ".DAJIN_temp/clustering/temp/possible_true_mut_${control}_wt"
 
 #===========================================================
 #? Allele percentage
 #===========================================================
+
+rm -rf ".DAJIN_temp/clustering/allele_per/" 2>/dev/null
+mkdir -p ".DAJIN_temp/clustering/allele_per/"
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     cut -f 2 |
@@ -368,7 +373,7 @@ mkdir -p .DAJIN_temp/consensus/temp .DAJIN_temp/consensus/sam
 #? Generate temporal SAM files
 #===========================================================
 
-cat .DAJIN_temp/clustering/label* |
+cat .DAJIN_temp/clustering/allele_per/label* |
     cut -d " " -f 1,2 |
     sort -u |
     grep -v abnormal |  #TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -376,7 +381,7 @@ while read -r input; do
     barcode="${input%% *}"
     mapping_alleletype="$(echo "${input##* }" | sed "s/abnormal/wt/g" | sed "s/normal/wt/g")"
 
-    cat .DAJIN_temp/clustering/readid_cl_mids_"${barcode}"_"${mapping_alleletype}" |
+    cat .DAJIN_temp/clustering/allele_per/readid_cl_mids_"${barcode}"_"${mapping_alleletype}" |
         awk '{print ">"$1}' |
         sort |
     cat > .DAJIN_temp/consensus/tmp_id
@@ -402,7 +407,7 @@ done
 #? Execute consensus.sh
 #===========================================================
 
-cat .DAJIN_temp/clustering/label* |
+cat .DAJIN_temp/clustering/allele_per/label* |
     awk '{nr[$1]++; print $0, nr[$1]}' |
     grep -v abnormal |  #TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     awk '{print "./DAJIN/src/test_consensus.sh", $0, "&"}' |
