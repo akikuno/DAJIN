@@ -120,8 +120,8 @@ cat > "${query_label}"
 
 echo "Clustering ${barcode} ${alleletype}..." >&2
 if [ "$(cat ${query_label} | wc -l)" -gt 50 ]; then
-    Rscript DAJIN/src/test_clustering.R "${query_score}" "${query_label}" "${control_RDS}" "${threads}" 2>&1 | grep -v "joblib" #2>/dev/null || echo "TERMINATED" #! RENAME =================
+    Rscript DAJIN/src/test_clustering.R "${query_score}" "${query_label}" "${control_RDS}" "${threads}" 2>&1 | grep -v "joblib" || true #2>/dev/null || echo "TERMINATED" #! RENAME =================
     ps -au | grep -e "clustering.R" -e "joblib" | awk '{print $2}'| xargs kill 2>/dev/null || true
 fi
 
-echo "finished ${barcode} ${alleletype}..." >&2
+echo "finished ${barcode} ${alleletype}..."
