@@ -15,7 +15,7 @@ pacman::p_load(tidyverse, parallel)
 #? TEST Auguments
 #===========================================================
 
-# control <- "barcode32"
+# control <- "barcode42"
 # file_control_mids <- sprintf(".DAJIN_temp/clustering/temp/tmp_MIDS_%s_wt", control)
 # threads <- 14L
 
@@ -34,7 +34,8 @@ threads <- as.integer(args[2])
 df_control_mids <- read_csv(file_control_mids,
     col_names = FALSE,
     col_types = cols())
-colnames(df_control_mids) <- 1:ncol(df_control_mids)
+colnames(df_control_mids) <-
+    seq_len(ncol(df_control_mids))
 
 ################################################################################
 #! MIDS scoring

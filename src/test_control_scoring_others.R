@@ -5,7 +5,7 @@
 options(repos = "https://cloud.r-project.org/")
 options(readr.show_progress = FALSE)
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
-pacman::p_load(tidyverse, parallel, furrr)
+pacman::p_load(tidyverse)
 
 ################################################################################
 #! I/O naming
@@ -18,7 +18,6 @@ pacman::p_load(tidyverse, parallel, furrr)
 # label <- "target"
 # file_name <- sprintf(".DAJIN_temp/clustering/temp/control_score_%s", label)
 # threads <- 2L
-# plan(multisession, workers = threads)
 
 #===========================================================
 #? Auguments
@@ -27,7 +26,6 @@ pacman::p_load(tidyverse, parallel, furrr)
 args <- commandArgs(trailingOnly = TRUE)
 file_name <- args[1]
 threads <- as.integer(args[2])
-plan(multisession, workers = threads)
 
 #===========================================================
 #? Inputs
