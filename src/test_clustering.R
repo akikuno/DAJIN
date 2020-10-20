@@ -25,8 +25,8 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode05"
-# allele <- "flox_deletion"
+# barcode <- "barcode23"
+# allele <- "target"
 
 # if(allele == "abnormal") control_allele <- "wt"
 # if(allele != "abnormal") control_allele <- allele
@@ -326,12 +326,13 @@ tmp_que_score <- df_que_score %>% unnest(que_freq)
 tmp_control_score <- df_control_score %>% unnest(control_freq)
 
 tmp_possible_true_mut <-
-    full_join(tmp_que_score, tmp_control_score, by = c("loc","MIDS"), suffix = c("_x", "_y")) %>%
+    full_join(tmp_que_score, tmp_control_score,
+        by = c("loc","MIDS"), suffix = c("_x", "_y")) %>%
     mutate(Freq_x = replace_na(Freq_x, 0)) %>%
     mutate(Freq_y = replace_na(Freq_y, 0)) %>%
     filter(MIDS != "M") %>%
     mutate(score = Freq_x - Freq_y) %>%
-    filter((Freq_y < 5 & score > 5)) %>%
+    filter((score > 75) | (Freq_y < 5 & score > 5)) %>%
     filter(!(Freq_y == 0 & Freq_x < 20)) %>%
     pull(loc)
 
@@ -355,7 +356,7 @@ if(length(tmp_possible_true_mut) > 0) {
 cl_nums <- length(unique(merged_clusters))
 common_true_mut <- as.integer()
 
-if(cl_nums > 1 && nrow(possible_true_mut) != 0) {
+if(cl_nums > 1 && nrow(possible_true_mut) > 0) {
     common_true_mut <-
         map_dfr(merged_clusters %>% unique, function(x){
             df_que_mids[merged_clusters == x, possible_true_mut$loc] %>%
@@ -458,5 +459,3 @@ write_tsv(possible_true_mut,
     sprintf(".DAJIN_temp/clustering/temp/possible_true_mut_%s", output_suffix),
     col_names = F
 )
-print("FINISHED!???")
-q("no")
