@@ -51,16 +51,20 @@ outout_label <-
 #! Detect allele type
 ################################################################################
 
-logic_point_mutation <- sum(df_label$mut) == 1
-logic_inversion <- any(df_label$mut == 2)
-logic_insertion <- length(df_label$loc) > length(df_wt$loc)
-logic_deletion <-
-    (length(df_label$loc) == length(df_wt$loc)) &&
-    !any(df_label$mut == 2)
+logic_point_mutation <- FALSE
+logic_inversion <- FALSE
+logic_insertion <- FALSE
+logic_deletion <- FALSE
 
-################################################################################
-#! 
-################################################################################
+if(sum(df_label$mut) == 1) {
+    logic_point_mutation <- TRUE
+} else if (any(df_label$mut == 2)) {
+    logic_inversion <- TRUE
+} else if (length(df_label$loc) > length(df_wt$loc)) {
+    logic_insertion <- TRUE
+} else {
+    logic_deletion <- TRUE
+}
 
 #===========================================================
 #? Point mutation
