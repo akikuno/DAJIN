@@ -124,3 +124,4 @@ if [ "$(cat ${query_label} | wc -l)" -gt 50 ]; then
     ps -au | grep -e "clustering.R" -e "joblib" | awk '{print $2}'| xargs kill 2>/dev/null || true
 fi
 
+echo "finished ${barcode} ${alleletype}..." >&2
