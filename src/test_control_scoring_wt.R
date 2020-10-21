@@ -47,7 +47,7 @@ df_control_freq_wt <-
     nest(nest = c(MIDS)) %>%
     mutate(control_freq = mclapply(nest,
         function(x)
-            x %>% count(MIDS) %>% mutate(Freq = n / sum(n) * 100),
+            x %>% count(MIDS) %>% mutate(freq = n / sum(n) * 100),
         mc.cores = threads)) %>%
     mutate(loc = as.double(loc)) %>%
     select(loc, control_freq)

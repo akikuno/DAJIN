@@ -25,8 +25,8 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode02"
-# allele <- "wt"
+# barcode <- "barcode23"
+# allele <- "target"
 
 # if(allele == "abnormal") control_allele <- "wt"
 # if(allele != "abnormal") control_allele <- allele
@@ -80,7 +80,7 @@ df_que_score <-
     nest(nest = c(MIDS)) %>%
     mutate(que_freq = mclapply(nest,
         function(x)
-            x %>% count(MIDS) %>% mutate(Freq = n / sum(n) * 100) %>% select(-n),
+            x %>% count(MIDS) %>% mutate(freq = n / sum(n) * 100) %>% select(-n),
         mc.cores = threads)) %>%
     mutate(loc = as.double(loc)) %>%
     select(loc, que_freq)
@@ -96,13 +96,13 @@ list_mids_score <-
     future_map2(tmp$que_freq, tmp$control_freq, function(x, y) {
     if (y == 1) {
         x %>%
-        rename(score = Freq) %>%
+        rename(score = freq) %>%
         # mutate(score = if_else(MIDS == "M", 0, score)) %>%
         mutate(score = replace_na(score, 0))
     } else {
         full_join(x, y, by = "MIDS", suffix = c("_x", "_y")) %>%
-        mutate(score = Freq_x - Freq_y) %>%
-        select(-contains("Freq")) %>%
+        mutate(score = freq_x - freq_y) %>%
+        select(-contains("freq")) %>%
         # mutate(score = if_else(MIDS == "M", 0, score)) %>%
         mutate(score = replace_na(score, 0))
     }
@@ -327,7 +327,7 @@ if (logic_dual) {
 #? Merge clusters with the same mutations
 #===========================================================
 
-possible_true_mut <-
+hotelling_mut <-
     prcomp_loading %>%
     mutate(loc = row_number()) %>%
     pivot_longer(-loc, names_to = "PC", values_to = "score") %>%
@@ -339,7 +339,33 @@ possible_true_mut <-
     summarize(anomaly_score = (score - mean)^2 / var) %>%
     mutate(loc = row_number(), threshold = qchisq(0.99, 1)) %>%
     filter(anomaly_score > threshold) %>%
+    select(loc)
+
+possible_true_mut <-
+    inner_join(hotelling_mut, df_control_score, by = "loc") %>%
+    unnest(control_freq) %>%
+    filter(MIDS != "M") %>%
+    group_by(loc) %>%
+    slice_max(freq, n = 1) %>%
+    filter(freq < 10) %>%
     pull(loc)
+
+# df_cluster %>%
+# ggplot(aes(x = loc, y = score)) +
+# geom_point() +
+# facet_wrap(~cluster)
+
+# df_que_mids %>%
+#     select(possible_true_mut) %>%
+#     mutate(cl = merged_clusters) %>%
+#     pivot_longer(-cl, names_to = "loc", values_to = "MIDS") %>%
+#     group_by(loc, cl) %>%
+#     count(MIDS) %>%
+#     mutate(freq = n / sum(n) * 100) %>%
+#     slice_max(freq, n = 1) %>%
+#     filter(freq > 75) %>%
+#     count(n = )
+#     filter(loc == 2158)
 
 # tmp_que_score <- df_que_score %>% unnest(que_freq)
 # tmp_control_score <- df_control_score %>% unnest(control_freq)
@@ -383,11 +409,12 @@ if(cl_nums > 1 && length(possible_true_mut) > 0) {
             pivot_longer(col = everything(), names_to = "loc", values_to = "MIDS") %>%
             group_by(loc) %>%
             count(MIDS) %>%
-            mutate(Freq = n / sum(n) * 100) %>%
+            mutate(freq = n / sum(n) * 100) %>%
             group_by(loc) %>%
             slice_max(n, n = 1) %>%
             mutate(cl = x)
         }) %>%
+        filter(freq > 75) %>%
         select(loc, cl, MIDS) %>%
         distinct(loc, MIDS, .keep_all = TRUE) %>%
         arrange(loc) %>%

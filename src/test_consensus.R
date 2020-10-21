@@ -35,7 +35,7 @@ df_que_mids <- read_csv(file_que_mids,
     col_types = cols())
 
 df_mutation_loc <- read_tsv(file_mutation_loc,
-    col_names = c("loc", "mids"),
+    col_names = c("loc"),
     col_types = cols())
 
 #===========================================================
