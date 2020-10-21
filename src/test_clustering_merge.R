@@ -18,7 +18,7 @@ pacman::p_load(tidyverse, parallel)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode02"
+# barcode <- "barcode32"
 # allele <- "wt"
 
 # if(allele == "abnormal") control_allele <- "wt"

@@ -230,17 +230,17 @@ rm(tmp_df, tmp_df_score, tmp_score)
 #! Output results
 ################################################################################
 
-write_tsv(df_cluster,
+write_csv(df_cluster,
     sprintf(".DAJIN_temp/clustering/temp/df_cluster_%s", output_suffix),
     col_names = F
 )
 
-write_tsv(tibble(cl = int_hdbscan_clusters),
+write_csv(tibble(cl = int_hdbscan_clusters),
     sprintf(".DAJIN_temp/clustering/temp/int_hdbscan_clusters_%s", output_suffix),
     col_names = F
 )
 
-write_tsv(prcomp_loading,
+write_csv(prcomp_loading,
     sprintf(".DAJIN_temp/clustering/temp/prcomp_loading_%s", output_suffix),
     col_names = F
 )
