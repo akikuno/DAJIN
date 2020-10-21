@@ -15,7 +15,7 @@ pacman::p_load(tidyverse, parallel)
 #? TEST Auguments
 #===========================================================
 
-# control <- "barcode42"
+# control <- "barcode32"
 # file_control_mids <- sprintf(".DAJIN_temp/clustering/temp/tmp_MIDS_%s_wt", control)
 # threads <- 14L
 
@@ -49,8 +49,8 @@ df_control_freq_wt <-
         function(x)
             x %>% count(MIDS) %>% mutate(freq = n / sum(n) * 100),
         mc.cores = threads)) %>%
-    mutate(loc = as.double(loc)) %>%
-    select(loc, control_freq)
+    mutate(loc = as.double(loc), mut = 0) %>%
+    select(loc, control_freq, mut)
 
 ################################################################################
 #! Save results

@@ -18,8 +18,8 @@ pacman::p_load(tidyverse, parallel)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode32"
-# allele <- "abnormal"
+# barcode <- "barcode12"
+# allele <- "wt"
 
 # if (allele == "abnormal") control_allele <- "wt"
 # if (allele != "abnormal") control_allele <- allele
@@ -207,6 +207,12 @@ if (nrow(hotelling_mut) > 0){
         unique()
 } else {
     possible_true_mut <- as.integer()
+}
+
+if (sum(df_control_score$mut) == 1) {
+    possible_true_mut <-
+        c(possible_true_mut, which(df_control_score$mut == 1)) %>%
+        unique()
 }
 
 cl_nums <- length(unique(merged_clusters))
