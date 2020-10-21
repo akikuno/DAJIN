@@ -19,10 +19,10 @@ pacman::p_load(tidyverse, parallel)
 #===========================================================
 
 # barcode <- "barcode32"
-# allele <- "wt"
+# allele <- "abnormal"
 
-# if(allele == "abnormal") control_allele <- "wt"
-# if(allele != "abnormal") control_allele <- allele
+# if (allele == "abnormal") control_allele <- "wt"
+# if (allele != "abnormal") control_allele <- allele
 # file_que_mids <- sprintf(".DAJIN_temp/clustering/temp/query_score_%s_%s", barcode, allele)
 # file_que_label <- sprintf(".DAJIN_temp/clustering/temp/query_labels_%s_%s", barcode, allele)
 # file_control_score <- sprintf(".DAJIN_temp/clustering/temp/df_control_freq_%s.RDS", control_allele)
@@ -195,24 +195,30 @@ hotelling_mut <-
     filter(anomaly_score > threshold) %>%
     select(loc)
 
-possible_true_mut <-
-    inner_join(hotelling_mut, df_control_score, by = "loc") %>%
-    unnest(control_freq) %>%
-    filter(MIDS != "M") %>%
-    group_by(loc) %>%
-    slice_max(freq, n = 1) %>%
-    filter(freq < 10) %>%
-    pull(loc) %>%
-    unique()
+if (nrow(hotelling_mut) > 0){
+    possible_true_mut <-
+        inner_join(hotelling_mut, df_control_score, by = "loc") %>%
+        unnest(control_freq) %>%
+        filter(MIDS != "M") %>%
+        group_by(loc) %>%
+        slice_max(freq, n = 1) %>%
+        filter(freq < 10) %>%
+        pull(loc) %>%
+        unique()
+} else {
+    possible_true_mut <- as.integer()
+}
 
 cl_nums <- length(unique(merged_clusters))
 shared_true_mut <- as.integer()
 
-if(cl_nums > 1 && length(possible_true_mut) > 0) {
+if (cl_nums > 1 && length(possible_true_mut) > 0) {
     shared_true_mut <-
         map_dfr(merged_clusters %>% unique, function(x){
             df_que_mids[merged_clusters == x, possible_true_mut] %>%
-            pivot_longer(col = everything(), names_to = "loc", values_to = "MIDS") %>%
+            pivot_longer(col = everything(),
+                names_to = "loc",
+                values_to = "MIDS") %>%
             group_by(loc) %>%
             count(MIDS) %>%
             mutate(freq = n / sum(n) * 100) %>%
@@ -231,7 +237,7 @@ if(cl_nums > 1 && length(possible_true_mut) > 0) {
         unique
 }
 
-if(length(shared_true_mut) > 0) {
+if (length(shared_true_mut) > 0) {
 
     retain_seq_consensus <-
         mclapply(merged_clusters %>% unique,
