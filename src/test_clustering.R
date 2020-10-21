@@ -25,15 +25,15 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode23"
-# allele <- "target"
+# barcode <- "barcode02"
+# allele <- "wt"
 
 # if(allele == "abnormal") control_allele <- "wt"
 # if(allele != "abnormal") control_allele <- allele
 # file_que_mids <- sprintf(".DAJIN_temp/clustering/temp/query_score_%s_%s", barcode, allele)
 # file_que_label <- sprintf(".DAJIN_temp/clustering/temp/query_labels_%s_%s", barcode, allele)
 # file_control_score <- sprintf(".DAJIN_temp/clustering/temp/df_control_freq_%s.RDS", control_allele)
-# threads <- 2L
+# threads <- 12L
 # plan(multiprocess, workers = threads)
 
 # ===========================================================
@@ -123,7 +123,7 @@ df_score <-
             pull(score)
     })
 
-df_score <- df_score[, colSums(df_score) != 0]
+df_score[, colSums(df_score) == 0] <- 10^-100
 
 ################################################################################
 #! PCA
@@ -132,6 +132,11 @@ df_score <- df_score[, colSums(df_score) != 0]
 prcomp_result <- prcomp(df_score, scale = FALSE)
 
 num_components <- 1:10
+
+prcomp_loading <-
+    sweep(prcomp_result$rotation, 2, prcomp_result$sdev, FUN = "*")[, 1:10] %>%
+    as.data.frame()
+
 df_coord <- prcomp_result$x[, num_components] %>% as_tibble
 num_prop_variance <- summary(prcomp_result)$importance[2, num_components]
 
@@ -322,44 +327,59 @@ if (logic_dual) {
 #? Merge clusters with the same mutations
 #===========================================================
 
-tmp_que_score <- df_que_score %>% unnest(que_freq)
-tmp_control_score <- df_control_score %>% unnest(control_freq)
-
-tmp_possible_true_mut <-
-    full_join(tmp_que_score, tmp_control_score,
-        by = c("loc","MIDS"), suffix = c("_x", "_y")) %>%
-    mutate(Freq_x = replace_na(Freq_x, 0)) %>%
-    mutate(Freq_y = replace_na(Freq_y, 0)) %>%
-    filter(MIDS != "M") %>%
-    mutate(score = Freq_x - Freq_y) %>%
-    filter((score > 75) | (Freq_y < 5 & score > 5)) %>%
-    filter(!(Freq_y == 0 & Freq_x < 20)) %>%
+possible_true_mut <-
+    prcomp_loading %>%
+    mutate(loc = row_number()) %>%
+    pivot_longer(-loc, names_to = "PC", values_to = "score") %>%
+    group_by(loc) %>%
+    summarize(score = sum(abs(score))) %>%
+    summarize(score = score,
+        mean = mean(score),
+        var = mean((score - mean(score))^2)) %>%
+    summarize(anomaly_score = (score - mean)^2 / var) %>%
+    mutate(loc = row_number(), threshold = qchisq(0.99, 1)) %>%
+    filter(anomaly_score > threshold) %>%
     pull(loc)
 
-if(length(tmp_possible_true_mut) > 0) {
-    possible_true_mut <-
-        df_que_mids[, tmp_possible_true_mut] %>%
-        cbind(cl = merged_clusters) %>%
-        pivot_longer(-cl, names_to = "loc", values_to = "MIDS") %>%
-        group_by(cl, loc) %>%
-        count(MIDS) %>%
-        mutate(Freq = n / sum(n) * 100) %>%
-        filter(MIDS != "M") %>%
-        filter(Freq > 50) %>%
-        ungroup() %>%
-        select(loc, MIDS) %>%
-        unique
-} else {
-    possible_true_mut <- tibble()
-}
+# tmp_que_score <- df_que_score %>% unnest(que_freq)
+# tmp_control_score <- df_control_score %>% unnest(control_freq)
+
+# tmp_possible_true_mut <-
+#     full_join(tmp_que_score, tmp_control_score,
+#         by = c("loc","MIDS"), suffix = c("_x", "_y")) %>%
+#     mutate(Freq_x = replace_na(Freq_x, 0)) %>%
+#     mutate(Freq_y = replace_na(Freq_y, 0)) %>%
+#     filter(MIDS != "M") %>%
+#     mutate(score = Freq_x - Freq_y) %>%
+#     filter((score > 75) | (Freq_y < 5 & score > 5)) %>%
+#     filter(!(Freq_y == 0 & Freq_x < 20)) %>%
+#     pull(loc)
+
+# if(length(tmp_possible_true_mut) > 0) {
+#     possible_true_mut <-
+#         df_que_mids[, tmp_possible_true_mut] %>%
+#         cbind(cl = merged_clusters) %>%
+#         pivot_longer(-cl, names_to = "loc", values_to = "MIDS") %>%
+#         group_by(cl, loc) %>%
+#         count(MIDS) %>%
+#         mutate(Freq = n / sum(n) * 100) %>%
+#         filter(MIDS != "M") %>%
+#         filter(Freq > 50) %>%
+#         as.data.frame
+#         ungroup() %>%
+#         select(loc, MIDS) %>%
+#         unique
+# } else {
+#     possible_true_mut <- tibble()
+# }
 
 cl_nums <- length(unique(merged_clusters))
-common_true_mut <- as.integer()
+shared_true_mut <- as.integer()
 
-if(cl_nums > 1 && nrow(possible_true_mut) > 0) {
-    common_true_mut <-
+if(cl_nums > 1 && length(possible_true_mut) > 0) {
+    shared_true_mut <-
         map_dfr(merged_clusters %>% unique, function(x){
-            df_que_mids[merged_clusters == x, possible_true_mut$loc] %>%
+            df_que_mids[merged_clusters == x, possible_true_mut] %>%
             pivot_longer(col = everything(), names_to = "loc", values_to = "MIDS") %>%
             group_by(loc) %>%
             count(MIDS) %>%
@@ -368,21 +388,23 @@ if(cl_nums > 1 && nrow(possible_true_mut) > 0) {
             slice_max(n, n = 1) %>%
             mutate(cl = x)
         }) %>%
-        filter(Freq > 75) %>%
-        group_by(loc) %>%
-        summarise(n = n()) %>%
-        filter(n == cl_nums) %>%
+        select(loc, cl, MIDS) %>%
+        distinct(loc, MIDS, .keep_all = TRUE) %>%
+        arrange(loc) %>%
+        summarise(MIDS = MIDS, cl = cl, n = n()) %>%
+        filter(n > 1) %>%
         pull(loc) %>%
-        as.integer()
+        as.integer() %>%
+        unique
 }
 
-if(length(common_true_mut) > 0) {
+if(length(shared_true_mut) > 0) {
 
     retain_seq_consensus <-
         mclapply(merged_clusters %>% unique,
             function(x) {
                 df_que_mids[merged_clusters == x, ] %>%
-                select(all_of(common_true_mut)) %>%
+                select(all_of(shared_true_mut)) %>%
                 lapply(function(x) x %>% table %>% which.max %>% names) %>%
                 unlist %>%
                 str_c(collapse = "")
@@ -455,7 +477,7 @@ write_tsv(df_readid_cluster,
     col_names = F
 )
 
-write_tsv(possible_true_mut,
+write_tsv(tibble(loc = possible_true_mut),
     sprintf(".DAJIN_temp/clustering/temp/possible_true_mut_%s", output_suffix),
     col_names = F
 )
