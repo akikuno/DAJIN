@@ -19,8 +19,8 @@ pacman::p_load(tidyverse, parallel, furrr)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode20"
-# allele <- "abnormal"
+# barcode <- "barcode12"
+# allele <- "wt"
 
 # if (allele == "abnormal") control_allele <- "wt"
 # if (allele != "abnormal") control_allele <- allele
@@ -222,7 +222,7 @@ if (any(df_control_score$mut == 1)) {
         mutate(freq = n / sum(n) * 100) %>%
         slice_max(freq, n = 1) %>%
         slice_sample(MIDS, n = 1) %>%
-        mutate(lgl = if_else(freq > 75, TRUE, FALSE)) %>%
+        mutate(lgl = if_else(freq > 70, TRUE, FALSE)) %>%
         pull(lgl)
     })
     tmp_ <- which(df_control_score$mut == 1)[tmp_]
