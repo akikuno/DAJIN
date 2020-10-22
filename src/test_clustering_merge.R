@@ -19,8 +19,8 @@ pacman::p_load(tidyverse, parallel, furrr)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode08"
-# allele <- "wt"
+# barcode <- "barcode25"
+# allele <- "flox_deletion"
 
 # if (allele == "abnormal") control_allele <- "wt"
 # if (allele != "abnormal") control_allele <- allele
@@ -163,6 +163,7 @@ if (nrow(tmp_dual_adaptor) > 0) {
         count(cl) %>%
         filter(!(cl %in% tmp_biased_cl)) %>%
         slice_max(n, n = 1) %>%
+        slice_sample(n = 1) %>%
         pull(cl)
 
     merged_clusters <-
