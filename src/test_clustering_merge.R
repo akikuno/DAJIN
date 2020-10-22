@@ -5,10 +5,11 @@
 options(repos = "https://cloud.r-project.org/")
 options(readr.show_progress = FALSE)
 options(dplyr.summarise.inform = FALSE)
+options(future.globals.maxSize = Inf)
 options(warn = -1)
 
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
-pacman::p_load(tidyverse, parallel)
+pacman::p_load(tidyverse, parallel, furrr)
 
 ################################################################################
 #! I/O naming
@@ -18,8 +19,8 @@ pacman::p_load(tidyverse, parallel)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode04"
-# allele <- "target"
+# barcode <- "barcode02"
+# allele <- "abnormal"
 
 # if (allele == "abnormal") control_allele <- "wt"
 # if (allele != "abnormal") control_allele <- allele
@@ -27,6 +28,7 @@ pacman::p_load(tidyverse, parallel)
 # file_que_label <- sprintf(".DAJIN_temp/clustering/temp/query_labels_%s_%s", barcode, allele)
 # file_control_score <- sprintf(".DAJIN_temp/clustering/temp/df_control_freq_%s.RDS", control_allele)
 # threads <- 12L
+# plan(multiprocess, workers = threads)
 
 # ===========================================================
 #? Auguments
@@ -37,6 +39,7 @@ file_que_mids <- args[1]
 file_que_label <- args[2]
 file_control_score <- args[3]
 threads <- as.integer(args[4])
+plan(multiprocess, workers = threads)
 
 #===========================================================
 #? Inputs
@@ -183,7 +186,7 @@ if (logic_dual) {
 # 大型欠損では異常塩基>>正常塩基になり, 異常塩基の同定数が少なくなってしまうため
 # サンプル正常サンプルを大量に投下して異常塩基の数を相対的に減らして
 # ホテリングの異常スコアを際立たせる.
-abs_score <-
+loading_score <-
     prcomp_loading %>%
     mutate(loc = row_number()) %>%
     pivot_longer(-loc, names_to = "PC", values_to = "score") %>%
@@ -192,12 +195,12 @@ abs_score <-
     select(score)
 
 add_rnorm <-
-    rnorm(nrow(prcomp_loading) * 10, mean = 0, sd = 0.1) %>%
+    rnorm(nrow(loading_score) * 100, mean = 0, sd = 0.1) %>%
     as_tibble() %>%
     rename(score = value)
 
 hotelling_mut <-
-    bind_rows(abs_score, add_rnorm) %>%
+    bind_rows(loading_score, add_rnorm) %>%
     mutate(loc = row_number()) %>%
     summarize(score = score,
         mean = mean(score),
@@ -242,82 +245,149 @@ if (nrow(hotelling_mut) > 0) {
 if (sum(df_control_score$mut) == 1) {
     possible_true_mut <-
         c(possible_true_mut, which(df_control_score$mut == 1)) %>%
-        unique()
+        unique() %>%
+        sort()
 }
+
+#* TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+# 各クラスタの中の”自信がない塩基”については多数派に合わせる
 
 cl_nums <- length(unique(merged_clusters))
-shared_true_mut <- as.integer()
 
 if (cl_nums > 1 && length(possible_true_mut) > 0) {
-    shared_true_mut <-
-        map_dfr(merged_clusters %>% unique, function(x) {
-            df_que_mids[merged_clusters == x, possible_true_mut] %>%
-            pivot_longer(col = everything(),
-                names_to = "loc",
-                values_to = "MIDS") %>%
-            group_by(loc) %>%
-            count(MIDS) %>%
-            mutate(freq = n / sum(n) * 100) %>%
-            group_by(loc) %>%
-            slice_max(n, n = 1) %>%
-            mutate(cl = x)
-        }) %>%
-        filter(freq > 75) %>%
-        select(loc, cl, MIDS) %>%
-        distinct(loc, MIDS, .keep_all = TRUE) %>%
-        arrange(loc) %>%
-        summarise(MIDS = MIDS, cl = cl, n = n()) %>%
-        filter(n > 1) %>%
-        pull(loc) %>%
-        as.integer() %>%
-        unique
-}
 
-if (length(shared_true_mut) > 0) {
+    max_mids <-
+        future_map_chr(possible_true_mut, function(x) {
+        df_que_mids[, x] %>%
+        rename(MIDS = colnames(.)) %>%
+        count(MIDS) %>%
+        mutate(freq = n / sum(n) * 100) %>%
+        slice_max(freq, n = 1) %>%
+        slice_sample(MIDS, n = 1) %>%
+        pull(MIDS)
+    })
 
     retain_seq_consensus <-
-        mclapply(merged_clusters %>% unique,
-            function(x) {
-                df_que_mids[merged_clusters == x, ] %>%
-                select(all_of(shared_true_mut)) %>%
-                lapply(function(x) x %>% table %>% which.max %>% names) %>%
-                unlist %>%
-                str_c(collapse = "")
-            },
-            mc.cores = as.integer(threads)) %>%
+        mclapply(merged_clusters %>% unique, function(cl) {
+            map2_chr(possible_true_mut, max_mids, function(x, y) {
+                df_que_mids[merged_clusters == cl, x] %>%
+                rename(MIDS = colnames(.)) %>%
+                count(MIDS) %>%
+                mutate(freq = n / sum(n) * 100) %>%
+                slice_max(freq, n = 1) %>%
+                slice_sample(MIDS, n = 1) %>%
+                mutate(MIDS = if_else(freq < 90, y, MIDS)) %>%
+                pull(MIDS)
+                }) %>%
+            str_c(collapse = "")
+        }, mc.cores = as.integer(threads)) %>%
         set_names(merged_clusters %>% unique)
 
     query_ <- merged_clusters %>% unique
-    if (length(query_) > 1) {
-        df_consensus <- NULL
-        cl_combn <- combn(query_, 2)
+    df_consensus <- NULL
+    cl_combn <- combn(query_, 2)
 
-        for (i in seq(ncol(cl_combn))) {
-                df_ <- tibble(
-                    one = cl_combn[1, i],
-                    two = cl_combn[2, i],
-                    score = identical(
-                        retain_seq_consensus[[as.character(cl_combn[1, i])]],
-                        retain_seq_consensus[[as.character(cl_combn[2, i])]]
-                        )
-                )
-                df_consensus <- bind_rows(df_consensus, df_)
-        }
+    for (i in seq(ncol(cl_combn))) {
+            df_ <- tibble(
+                one = cl_combn[1, i],
+                two = cl_combn[2, i],
+                score = identical(
+                    retain_seq_consensus[[as.character(cl_combn[1, i])]],
+                    retain_seq_consensus[[as.character(cl_combn[2, i])]]
+                    )
+            )
+            df_consensus <- bind_rows(df_consensus, df_)
+    }
 
-        df_consensus_extracted <- df_consensus %>% filter(score == TRUE)
+    df_consensus_extracted <- df_consensus %>% filter(score == TRUE)
 
-        if (nrow(df_consensus_extracted) != 0) {
-            for (i in seq_along(rownames(df_consensus_extracted))) {
-                pattern_ <- df_consensus_extracted[i, ]$one
-                query_ <- df_consensus_extracted[i, ]$two
-                merged_clusters[merged_clusters == pattern_] <- query_
-            }
+    if (nrow(df_consensus_extracted) != 0) {
+        for (i in seq_along(rownames(df_consensus_extracted))) {
+            pattern_ <- df_consensus_extracted[i, ]$one
+            query_ <- df_consensus_extracted[i, ]$two
+            merged_clusters[merged_clusters == pattern_] <- query_
         }
     }
 } else {
     merged_clusters <-
         rep(1, length(merged_clusters))
 }
+
+#* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+# cl_nums <- length(unique(merged_clusters))
+# shared_true_mut <- as.integer()
+
+# if (cl_nums > 1 && length(possible_true_mut) > 0) {
+#     shared_true_mut <-
+#         map_dfr(merged_clusters %>% unique, function(x) {
+#             df_que_mids[merged_clusters == x, possible_true_mut] %>%
+#             pivot_longer(col = everything(),
+#                 names_to = "loc",
+#                 values_to = "MIDS") %>%
+#             group_by(loc) %>%
+#             count(MIDS) %>%
+#             mutate(freq = n / sum(n) * 100) %>%
+#             group_by(loc) %>%
+#             slice_max(n, n = 1) %>%
+#             mutate(cl = x)
+#         }) %>%
+#         filter(freq > 75) %>%
+#         select(loc, cl, MIDS) %>%
+#         distinct(loc, MIDS, .keep_all = TRUE) %>%
+#         arrange(loc) %>%
+#         summarise(MIDS = MIDS, cl = cl, n = n()) %>%
+#         filter(n > 1) %>%
+#         pull(loc) %>%
+#         as.integer() %>%
+#         unique
+# }
+
+# if (length(shared_true_mut) > 0) {
+
+    # retain_seq_consensus <-
+    #     mclapply(merged_clusters %>% unique,
+    #         function(x) {
+    #             df_que_mids[merged_clusters == x, ] %>%
+    #             select(all_of(shared_true_mut)) %>%
+    #             lapply(function(x) x %>% table %>% which.max %>% names) %>%
+    #             unlist %>%
+    #             str_c(collapse = "")
+    #         },
+    #         mc.cores = as.integer(threads)) %>%
+    #     set_names(merged_clusters %>% unique)
+
+#     query_ <- merged_clusters %>% unique
+#     if (length(query_) > 1) {
+#         df_consensus <- NULL
+#         cl_combn <- combn(query_, 2)
+
+#         for (i in seq(ncol(cl_combn))) {
+#                 df_ <- tibble(
+#                     one = cl_combn[1, i],
+#                     two = cl_combn[2, i],
+#                     score = identical(
+#                         retain_seq_consensus[[as.character(cl_combn[1, i])]],
+#                         retain_seq_consensus[[as.character(cl_combn[2, i])]]
+#                         )
+#                 )
+#                 df_consensus <- bind_rows(df_consensus, df_)
+#         }
+
+#         df_consensus_extracted <- df_consensus %>% filter(score == TRUE)
+
+#         if (nrow(df_consensus_extracted) != 0) {
+#             for (i in seq_along(rownames(df_consensus_extracted))) {
+#                 pattern_ <- df_consensus_extracted[i, ]$one
+#                 query_ <- df_consensus_extracted[i, ]$two
+#                 merged_clusters[merged_clusters == pattern_] <- query_
+#             }
+#         }
+#     }
+# } else {
+#     merged_clusters <-
+#         rep(1, length(merged_clusters))
+# }
 
 ################################################################################
 #! Output results
