@@ -19,7 +19,7 @@ pacman::p_load(tidyverse, parallel, furrr)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode12"
+# barcode <- "barcode08"
 # allele <- "wt"
 
 # if (allele == "abnormal") control_allele <- "wt"
@@ -262,9 +262,9 @@ if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
                 }) %>%
             str_c(collapse = "")
         }) %>%
-        set_names(seq_along(cluster))
+        set_names(unique(merged_clusters))
 
-    cl_combn <- combn(seq_along(cluster), 2)
+    cl_combn <- combn(unique(merged_clusters), 2)
 
     df_consensus <-
         seq(ncol(cl_combn)) %>%
