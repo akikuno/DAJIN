@@ -20,7 +20,7 @@ pacman::p_load(tidyverse, parallel, furrr)
 #===========================================================
 
 # barcode <- "barcode02"
-# allele <- "abnormal"
+# allele <- "wt"
 
 # if (allele == "abnormal") control_allele <- "wt"
 # if (allele != "abnormal") control_allele <- allele
@@ -91,42 +91,38 @@ prcomp_loading <-
 # if two sequences are simillar, merge them
 #===========================================================
 
-calc_cosine_sim <- function(a, b) {
-    crossprod(a, b) / sqrt(crossprod(a) * crossprod(b))
-    }
-
 merged_clusters <- int_hdbscan_clusters
 
-cluster <-
-    df_cluster$cluster %>%
-    unique()
+calc_cosine_sim <- function(x, y) {
+    crossprod(x, y) / sqrt(crossprod(x) * crossprod(y))
+    }
+
+cluster <- unique(merged_clusters)
 
 if (length(cluster) > 1) {
-    df_cossim <- NULL
     cl_combn <- combn(cluster, 2)
+    df_cossim <-
+        seq_along(cluster) %>%
+        sort %>%
+        map_dfr(function(x) {
+            score_1 <- df_cluster %>%
+                filter(cluster == cl_combn[1, x]) %>%
+                pull(score)
+            score_2 <- df_cluster %>%
+                filter(cluster == cl_combn[2, x]) %>%
+                pull(score)
 
-    i <- 1
-    for (i in seq(ncol(cl_combn))) {
-        score_1 <- df_cluster %>%
-            filter(cluster == cl_combn[1, i]) %>%
-            pull(score)
-        #
-        score_2 <- df_cluster %>%
-            filter(cluster == cl_combn[2, i]) %>%
-            pull(score)
+            cos_sim <- calc_cosine_sim(score_1, score_2)
 
-        cos_sim <- calc_cosine_sim(score_1, score_2)
-
-        df_ <- tibble(
-            one = cl_combn[1, i],
-            two = cl_combn[2, i],
-            score = cos_sim
-        )
-        df_cossim <- bind_rows(df_cossim, df_)
-    }
+            tibble(
+                one = cl_combn[1, x],
+                two = cl_combn[2, x],
+                score = cos_sim
+            )
+        })
     df_cossim_extracted <- df_cossim %>% filter(score > 0.5)
 
-    if (nrow(df_cossim_extracted) != 0) {
+    if (nrow(df_cossim_extracted) > 0) {
         for (i in seq_along(rownames(df_cossim_extracted))) {
             pattern_ <- df_cossim_extracted[i, ]$one
             query_ <- df_cossim_extracted[i, ]$two
@@ -147,19 +143,16 @@ if (length(cluster) > 1) {
 tmp_tb_strand <-
     tibble(cl = merged_clusters, strand = df_que_label$strand)
 
-logic_dual <-
+tmp_dual_adaptor <-
     tmp_tb_strand %>%
     count(strand) %>%
     mutate(freq = n / sum(n)) %>%
-    filter(freq < 0.90 & freq > 0.10) %>%
-    nrow %>%
-    `>`(0)
+    filter(freq < 0.90 & freq > 0.10)
 
-if (logic_dual) {
+if (nrow(tmp_dual_adaptor) > 0) {
     tmp_biased_cl <-
         tmp_tb_strand %>%
-        group_by(cl) %>%
-        count(strand) %>%
+        count(cl, strand) %>%
         mutate(freq = n / sum(n)) %>%
         mutate(bias = if_else(freq > 0.90, TRUE, FALSE)) %>%
         filter(bias == TRUE) %>%
@@ -168,24 +161,21 @@ if (logic_dual) {
 
     tmp_cl_max <-
         tmp_tb_strand %>%
-        group_by(cl) %>%
-        count() %>%
-        ungroup(cl) %>%
+        count(cl) %>%
         filter(!(cl %in% tmp_biased_cl)) %>%
         slice_max(n, n = 1) %>%
-        pull(cl)
+        pull(cl) %>%
+        as.integer()
 
     merged_clusters <-
-        ifelse(merged_clusters %in% tmp_biased_cl, tmp_cl_max, merged_clusters)
+        merged_clusters %>%
+        if_else(. %in% tmp_biased_cl, tmp_cl_max, .)
 }
 
 #===========================================================
 #? Merge clusters with the same mutations
 #===========================================================
-#* TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-# 大型欠損では異常塩基>>正常塩基になり, 異常塩基の同定数が少なくなってしまうため
-# サンプル正常サンプルを大量に投下して異常塩基の数を相対的に減らして
-# ホテリングの異常スコアを際立たせる.
+
 loading_score <-
     prcomp_loading %>%
     mutate(loc = row_number()) %>%
@@ -210,24 +200,6 @@ hotelling_mut <-
     filter(anomaly_score > threshold) %>%
     select(loc)
 
-    # mutate(loc = row_number()) %>%
-    # ggplot(aes(x = loc, y = anomaly_score)) + geom_point()
-#* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-# hotelling_mut <-
-#     prcomp_loading %>%
-#     mutate(loc = row_number()) %>%
-#     pivot_longer(-loc, names_to = "PC", values_to = "score") %>%
-#     group_by(loc) %>%
-#     summarize(score = sum(abs(score))) %>%
-#     summarize(score = score,
-#         mean = mean(score),
-#         var = mean((score - mean(score))^2)) %>%
-#     summarize(anomaly_score = (score - mean)^2 / var) %>%
-#     mutate(loc = row_number(), threshold = qchisq(0.99, 1)) %>%
-#     filter(anomaly_score > threshold) %>%
-#     select(loc)
-
 if (nrow(hotelling_mut) > 0) {
     possible_true_mut <-
         inner_join(hotelling_mut, df_control_score, by = "loc") %>%
@@ -249,12 +221,7 @@ if (sum(df_control_score$mut) == 1) {
         sort()
 }
 
-#* TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-# 各クラスタの中の”自信がない塩基”については多数派に合わせる
-
-cl_nums <- length(unique(merged_clusters))
-
-if (cl_nums > 1 && length(possible_true_mut) > 0) {
+if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
 
     max_mids <-
         future_map_chr(possible_true_mut, function(x) {
@@ -283,22 +250,21 @@ if (cl_nums > 1 && length(possible_true_mut) > 0) {
         }, mc.cores = as.integer(threads)) %>%
         set_names(merged_clusters %>% unique)
 
-    query_ <- merged_clusters %>% unique
-    df_consensus <- NULL
-    cl_combn <- combn(query_, 2)
+    cl_combn <- combn(unique(merged_clusters), 2)
 
-    for (i in seq(ncol(cl_combn))) {
-            df_ <- tibble(
-                one = cl_combn[1, i],
-                two = cl_combn[2, i],
-                score = identical(
-                    retain_seq_consensus[[as.character(cl_combn[1, i])]],
-                    retain_seq_consensus[[as.character(cl_combn[2, i])]]
-                    )
+    df_consensus <-
+        seq_along(unique(merged_clusters)) %>%
+        sort %>%
+        map_dfr(function(x) {
+            tmp_seq1 <- retain_seq_consensus[[as.character(cl_combn[1, x])]]
+            tmp_seq2 <- retain_seq_consensus[[as.character(cl_combn[2, x])]]
+
+            tibble(
+                one = cl_combn[1, x],
+                two = cl_combn[2, x],
+                score = identical(tmp_seq1, tmp_seq2)
             )
-            df_consensus <- bind_rows(df_consensus, df_)
-    }
-
+        })
     df_consensus_extracted <- df_consensus %>% filter(score == TRUE)
 
     if (nrow(df_consensus_extracted) != 0) {
@@ -313,82 +279,6 @@ if (cl_nums > 1 && length(possible_true_mut) > 0) {
         rep(1, length(merged_clusters))
 }
 
-#* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-# cl_nums <- length(unique(merged_clusters))
-# shared_true_mut <- as.integer()
-
-# if (cl_nums > 1 && length(possible_true_mut) > 0) {
-#     shared_true_mut <-
-#         map_dfr(merged_clusters %>% unique, function(x) {
-#             df_que_mids[merged_clusters == x, possible_true_mut] %>%
-#             pivot_longer(col = everything(),
-#                 names_to = "loc",
-#                 values_to = "MIDS") %>%
-#             group_by(loc) %>%
-#             count(MIDS) %>%
-#             mutate(freq = n / sum(n) * 100) %>%
-#             group_by(loc) %>%
-#             slice_max(n, n = 1) %>%
-#             mutate(cl = x)
-#         }) %>%
-#         filter(freq > 75) %>%
-#         select(loc, cl, MIDS) %>%
-#         distinct(loc, MIDS, .keep_all = TRUE) %>%
-#         arrange(loc) %>%
-#         summarise(MIDS = MIDS, cl = cl, n = n()) %>%
-#         filter(n > 1) %>%
-#         pull(loc) %>%
-#         as.integer() %>%
-#         unique
-# }
-
-# if (length(shared_true_mut) > 0) {
-
-    # retain_seq_consensus <-
-    #     mclapply(merged_clusters %>% unique,
-    #         function(x) {
-    #             df_que_mids[merged_clusters == x, ] %>%
-    #             select(all_of(shared_true_mut)) %>%
-    #             lapply(function(x) x %>% table %>% which.max %>% names) %>%
-    #             unlist %>%
-    #             str_c(collapse = "")
-    #         },
-    #         mc.cores = as.integer(threads)) %>%
-    #     set_names(merged_clusters %>% unique)
-
-#     query_ <- merged_clusters %>% unique
-#     if (length(query_) > 1) {
-#         df_consensus <- NULL
-#         cl_combn <- combn(query_, 2)
-
-#         for (i in seq(ncol(cl_combn))) {
-#                 df_ <- tibble(
-#                     one = cl_combn[1, i],
-#                     two = cl_combn[2, i],
-#                     score = identical(
-#                         retain_seq_consensus[[as.character(cl_combn[1, i])]],
-#                         retain_seq_consensus[[as.character(cl_combn[2, i])]]
-#                         )
-#                 )
-#                 df_consensus <- bind_rows(df_consensus, df_)
-#         }
-
-#         df_consensus_extracted <- df_consensus %>% filter(score == TRUE)
-
-#         if (nrow(df_consensus_extracted) != 0) {
-#             for (i in seq_along(rownames(df_consensus_extracted))) {
-#                 pattern_ <- df_consensus_extracted[i, ]$one
-#                 query_ <- df_consensus_extracted[i, ]$two
-#                 merged_clusters[merged_clusters == pattern_] <- query_
-#             }
-#         }
-#     }
-# } else {
-#     merged_clusters <-
-#         rep(1, length(merged_clusters))
-# }
-
 ################################################################################
 #! Output results
 ################################################################################
@@ -398,19 +288,18 @@ pattern_ <- merged_clusters %>%
     sort()
 query_ <- merged_clusters %>%
     unique() %>%
-    order() %>%
-    sort()
+    seq_along()
 
 merged_clusters <-
-    lapply(pattern_,
-        function(x) which(x == merged_clusters)) %>%
-        set_names(query_) %>%
-        map2_df(., query_, function(x, y) {
-            tibble(pattern = x,
-            query = rep(y, length(x))
-            )}) %>%
-    arrange(pattern) %>%
-    pull(query)
+    merged_clusters %>%
+    map(function(cl) {
+        map2(pattern_, query_, function(x, y) {
+                if_else(cl %in% x, as.integer(y), NULL)
+        })
+    }) %>%
+    unlist %>%
+    .[!is.na(.)]
+
 
 df_readid_cluster <-
     tibble(read_id = df_que_label$id,
