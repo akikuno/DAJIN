@@ -18,8 +18,8 @@ pacman::p_load(tidyverse, parallel)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode12"
-# allele <- "wt"
+# barcode <- "barcode04"
+# allele <- "target"
 
 # if (allele == "abnormal") control_allele <- "wt"
 # if (allele != "abnormal") control_allele <- allele
@@ -59,7 +59,6 @@ df_control_score <- readRDS(file_control_score)
 
 output_suffix <-
     str_remove(file_que_label, ".*labels_")
-
 
 df_cluster <-
     read_csv(
@@ -180,13 +179,26 @@ if (logic_dual) {
 #===========================================================
 #? Merge clusters with the same mutations
 #===========================================================
-
-hotelling_mut <-
+#* TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+# 大型欠損では異常塩基>>正常塩基になり, 異常塩基の同定数が少なくなってしまうため
+# サンプル正常サンプルを大量に投下して異常塩基の数を相対的に減らして
+# ホテリングの異常スコアを際立たせる.
+abs_score <-
     prcomp_loading %>%
     mutate(loc = row_number()) %>%
     pivot_longer(-loc, names_to = "PC", values_to = "score") %>%
     group_by(loc) %>%
-    summarize(score = sum(abs(score))) %>%
+    summarize(score = sum(score)) %>%
+    select(score)
+
+add_rnorm <-
+    rnorm(nrow(prcomp_loading) * 10, mean = 0, sd = 0.1) %>%
+    as_tibble() %>%
+    rename(score = value)
+
+hotelling_mut <-
+    bind_rows(abs_score, add_rnorm) %>%
+    mutate(loc = row_number()) %>%
     summarize(score = score,
         mean = mean(score),
         var = mean((score - mean(score))^2)) %>%
@@ -195,7 +207,25 @@ hotelling_mut <-
     filter(anomaly_score > threshold) %>%
     select(loc)
 
-if (nrow(hotelling_mut) > 0){
+    # mutate(loc = row_number()) %>%
+    # ggplot(aes(x = loc, y = anomaly_score)) + geom_point()
+#* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+# hotelling_mut <-
+#     prcomp_loading %>%
+#     mutate(loc = row_number()) %>%
+#     pivot_longer(-loc, names_to = "PC", values_to = "score") %>%
+#     group_by(loc) %>%
+#     summarize(score = sum(abs(score))) %>%
+#     summarize(score = score,
+#         mean = mean(score),
+#         var = mean((score - mean(score))^2)) %>%
+#     summarize(anomaly_score = (score - mean)^2 / var) %>%
+#     mutate(loc = row_number(), threshold = qchisq(0.99, 1)) %>%
+#     filter(anomaly_score > threshold) %>%
+#     select(loc)
+
+if (nrow(hotelling_mut) > 0) {
     possible_true_mut <-
         inner_join(hotelling_mut, df_control_score, by = "loc") %>%
         unnest(control_freq) %>%
@@ -220,7 +250,7 @@ shared_true_mut <- as.integer()
 
 if (cl_nums > 1 && length(possible_true_mut) > 0) {
     shared_true_mut <-
-        map_dfr(merged_clusters %>% unique, function(x){
+        map_dfr(merged_clusters %>% unique, function(x) {
             df_que_mids[merged_clusters == x, possible_true_mut] %>%
             pivot_longer(col = everything(),
                 names_to = "loc",
