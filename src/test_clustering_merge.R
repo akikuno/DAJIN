@@ -214,9 +214,23 @@ if (nrow(hotelling_mut) > 0) {
     possible_true_mut <- as.integer()
 }
 
-if (sum(df_control_score$mut) == 1) {
+if (any(df_control_score$mut == 1)) {
+
+    tmp_ <-
+    future_map_lgl(which(df_control_score$mut == 1), function(x) {
+        df_que_mids[, x] %>%
+        rename(MIDS = colnames(.)) %>%
+        count(MIDS) %>%
+        mutate(freq = n / sum(n) * 100) %>%
+        slice_max(freq, n = 1) %>%
+        slice_sample(MIDS, n = 1) %>%
+        mutate(lgl = if_else(freq > 75, TRUE, FALSE)) %>%
+        pull(lgl)
+    })
+    tmp_ <- which(df_control_score$mut == 1)[tmp_]
+
     possible_true_mut <-
-        c(possible_true_mut, which(df_control_score$mut == 1)) %>%
+        c(possible_true_mut, tmp_) %>%
         unique() %>%
         sort()
 }
