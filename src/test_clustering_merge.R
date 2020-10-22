@@ -19,8 +19,8 @@ pacman::p_load(tidyverse, parallel, furrr)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode02"
-# allele <- "wt"
+# barcode <- "barcode20"
+# allele <- "abnormal"
 
 # if (allele == "abnormal") control_allele <- "wt"
 # if (allele != "abnormal") control_allele <- allele
@@ -102,8 +102,7 @@ cluster <- unique(merged_clusters)
 if (length(cluster) > 1) {
     cl_combn <- combn(cluster, 2)
     df_cossim <-
-        seq_along(cluster) %>%
-        sort %>%
+        seq(ncol(cl_combn)) %>%
         map_dfr(function(x) {
             score_1 <- df_cluster %>%
                 filter(cluster == cl_combn[1, x]) %>%
@@ -164,8 +163,7 @@ if (nrow(tmp_dual_adaptor) > 0) {
         count(cl) %>%
         filter(!(cl %in% tmp_biased_cl)) %>%
         slice_max(n, n = 1) %>%
-        pull(cl) %>%
-        as.integer()
+        pull(cl)
 
     merged_clusters <-
         merged_clusters %>%
@@ -211,7 +209,7 @@ if (nrow(hotelling_mut) > 0) {
         pull(loc) %>%
         unique()
 } else {
-    possible_true_mut <- as.integer()
+    possible_true_mut <- as.double()
 }
 
 if (any(df_control_score$mut == 1)) {
@@ -248,9 +246,11 @@ if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
         pull(MIDS)
     })
 
+    cluster <- unique(merged_clusters)
+
     retain_seq_consensus <-
-        mclapply(merged_clusters %>% unique, function(cl) {
-            map2_chr(possible_true_mut, max_mids, function(x, y) {
+        map(cluster, function(cl) {
+            future_map2_chr(possible_true_mut, max_mids, function(x, y) {
                 df_que_mids[merged_clusters == cl, x] %>%
                 rename(MIDS = colnames(.)) %>%
                 count(MIDS) %>%
@@ -261,14 +261,13 @@ if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
                 pull(MIDS)
                 }) %>%
             str_c(collapse = "")
-        }, mc.cores = as.integer(threads)) %>%
-        set_names(merged_clusters %>% unique)
+        }) %>%
+        set_names(seq_along(cluster))
 
-    cl_combn <- combn(unique(merged_clusters), 2)
+    cl_combn <- combn(seq_along(cluster), 2)
 
     df_consensus <-
-        seq_along(unique(merged_clusters)) %>%
-        sort %>%
+        seq(ncol(cl_combn)) %>%
         map_dfr(function(x) {
             tmp_seq1 <- retain_seq_consensus[[as.character(cl_combn[1, x])]]
             tmp_seq2 <- retain_seq_consensus[[as.character(cl_combn[2, x])]]
