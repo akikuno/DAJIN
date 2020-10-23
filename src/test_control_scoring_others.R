@@ -15,7 +15,7 @@ pacman::p_load(tidyverse)
 #? TEST Auguments
 #===========================================================
 
-# label <- "target"
+# label <- "inversion"
 # file_name <- sprintf(".DAJIN_temp/clustering/temp/control_score_%s", label)
 
 #===========================================================
