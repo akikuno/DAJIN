@@ -68,22 +68,22 @@ if (length(allele_others) > 0) {
 #==========================================================
 
 p <-
-    ggplot(df, aes(x = fct_rev(Sample), y = `%_of_reads`, fill = Allele_type)) +
+    ggplot(df, aes(x = Sample, y = `%_of_reads`, fill = Allele_type)) +
     geom_col(position = position_stack(), color = "black", size = 0.5) +
     scale_fill_manual(
         name = NULL,
         values = color) +
     labs(x = NULL, y = "Percentage of reads") +
     theme_bw(base_size = 20) +
-    theme(legend.position = "top") +
-    coord_flip()
+    theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 45, hjust = 1))
 
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 #! Save figure
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-height <-
-    df$Sample %>% unique %>% length
+width <-
+    df$Sample %>% unique %>% length %>% `*`(0.5)
 
 ggsave(p, filename = ".DAJIN_temp/details/Details.pdf",
-    width = 7, height = height)
+    width = width, height = 7)
