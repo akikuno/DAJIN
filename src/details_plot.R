@@ -75,7 +75,7 @@ p <-
         values = color) +
     labs(x = NULL, y = "Percentage of reads") +
     theme_bw(base_size = 20) +
-    theme(legend.position = "bottom",
+    theme(legend.position = "right",
         axis.text.x = element_text(angle = 45, hjust = 1))
 
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -83,7 +83,7 @@ p <-
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 width <-
-    df$Sample %>% unique %>% length %>% `*`(0.5)
+    df$Sample %>% unique %>% length %>% `*`(0.5) %>% `+`(4)
 
 ggsave(p, filename = ".DAJIN_temp/details/Details.pdf",
     width = width, height = 7)
