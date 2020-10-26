@@ -19,8 +19,8 @@ pacman::p_load(tidyverse, parallel, furrr)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode25"
-# allele <- "flox_deletion"
+# barcode <- "barcode15"
+# allele <- "wt"
 
 # if (allele == "abnormal") control_allele <- "wt"
 # if (allele != "abnormal") control_allele <- allele
@@ -213,10 +213,11 @@ if (nrow(hotelling_mut) > 0) {
     possible_true_mut <- as.double()
 }
 
-if (any(df_control_score$mut == 1)) {
-
+if (sum(df_control_score$mut == 1) == 1) {
+    tmp_ <- which(df_control_score$mut == 1)
+} else if (any(df_control_score$mut == 1)) {
     tmp_ <-
-    future_map_lgl(which(df_control_score$mut == 1), function(x) {
+        future_map_lgl(which(df_control_score$mut == 1), function(x) {
         df_que_mids[, x] %>%
         rename(MIDS = colnames(.)) %>%
         count(MIDS) %>%
@@ -227,12 +228,14 @@ if (any(df_control_score$mut == 1)) {
         pull(lgl)
     })
     tmp_ <- which(df_control_score$mut == 1)[tmp_]
-
-    possible_true_mut <-
-        c(possible_true_mut, tmp_) %>%
-        unique() %>%
-        sort()
+} else {
+    tmp_ <- as.integer()
 }
+
+possible_true_mut <-
+    c(possible_true_mut, tmp_) %>%
+    unique() %>%
+    sort()
 
 if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
 
