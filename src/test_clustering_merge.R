@@ -19,8 +19,8 @@ pacman::p_load(tidyverse, furrr, vroom)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode47"
-# allele <- "wt"
+# barcode <- "barcode26"
+# allele <- "abnormal"
 
 # if (allele == "abnormal") control_allele <- "wt"
 # if (allele != "abnormal") control_allele <- allele
@@ -92,20 +92,26 @@ sequence_error <-
 
 df_score[, sequence_error] <- 10^-100
 
-add_rnorm <-
-    rnorm(ncol(df_que_mids) * 100, mean = 0, sd = 5) %>%
-    as_tibble() %>%
-    rename(score = value)
-
 hotelling <-
-    map_dfr(unique(merged_clusters), ~
-        df_score[merged_clusters == .x, ] %>%
+    future_map_dfr(unique(merged_clusters), function(x) {
+        tmp_scale <-
+            df_score[merged_clusters == x, ] %>%
+            colSums() %>%
+            scale() %>%
+            .[c(1:100, tail(seq(ncol(df_score)), 100))]
+        tmp_mean <- mean(tmp_scale)
+        tmp_sd <- sd(tmp_scale)
+        add_rnorm <-
+            rnorm(ncol(df_que_mids) * 100, mean = tmp_mean, sd = tmp_sd) %>%
+            as_tibble() %>%
+            rename(score = value)
+
+        df_score[merged_clusters == x, ] %>%
         colSums() %>%
         scale() %>%
         as_tibble %>%
         rename(score = colnames(.)) %>%
         bind_rows(add_rnorm) %>%
-        mutate(loc = row_number()) %>%
         summarize(score = score,
             mean = mean(score),
             var = mean((score - mean(score))^2)) %>%
@@ -113,8 +119,8 @@ hotelling <-
         mutate(loc = row_number(), threshold = qchisq(0.95, 1)) %>%
         filter(anomaly_score > threshold & loc <= ncol(df_que_mids)) %>%
         select(loc) %>%
-        mutate(cl = .x)
-    )
+        mutate(cl = x)
+    })
 
 hotelling_common <-
     hotelling %>%
@@ -150,7 +156,7 @@ if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
 
     consensus_common <-
         map(unique(merged_clusters), function(cl) {
-            map(tmp_, function(loc) {
+            future_map(tmp_, function(loc) {
                 df_que_mids[merged_clusters == cl, loc] %>%
                 rename(MIDS = colnames(.)) %>%
                 count(MIDS) %>%
@@ -174,13 +180,13 @@ if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
 
     consensus_uncommon <-
         map(unique(merged_clusters), function(cl) {
-            map(tmp_, function(y) {
+            future_map(tmp_, function(y) {
                 control <-
                     df_control_score %>%
                     filter(loc == y) %>%
                     unnest(control_freq) %>%
-                    mutate(MIDS = if_else(mut == 1, "M", NULL)) %>%
-                    mutate(freq = if_else(mut == 1, 100, NULL))
+                    mutate(MIDS = case_when(mut == 1 ~ "M", TRUE ~ MIDS)) %>%
+                    mutate(freq = case_when(mut == 1 ~ 100, TRUE ~ freq))
 
                 df_que_mids[merged_clusters == cl, y] %>%
                 rename(MIDS = colnames(.)) %>%
@@ -194,6 +200,7 @@ if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
                 pull(MIDS)
             }) %>%
             unlist %>%
+            .[!is.na(.)] %>%
             str_c(collapse = "")
         }) %>%
         set_names(unique(merged_clusters))
