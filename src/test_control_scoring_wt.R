@@ -5,7 +5,7 @@
 options(repos = "https://cloud.r-project.org/")
 options(readr.show_progress = FALSE)
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
-pacman::p_load(tidyverse, parallel)
+pacman::p_load(tidyverse, parallel, vroom)
 
 ################################################################################
 #! I/O naming
@@ -15,7 +15,7 @@ pacman::p_load(tidyverse, parallel)
 #? TEST Auguments
 #===========================================================
 
-# control <- "barcode32"
+# control <- "barcode42"
 # file_control_mids <- sprintf(".DAJIN_temp/clustering/temp/tmp_MIDS_%s_wt", control)
 # threads <- 14L
 
@@ -31,11 +31,11 @@ threads <- as.integer(args[2])
 #? Inputs
 #===========================================================
 
-df_control_mids <- read_csv(file_control_mids,
+df_control_mids <- vroom(file_control_mids,
     col_names = FALSE,
-    col_types = cols())
-colnames(df_control_mids) <-
-    seq_len(ncol(df_control_mids))
+    col_types = cols(),
+    num_threads = threads)
+colnames(df_control_mids) <- seq_len(ncol(df_control_mids))
 
 ################################################################################
 #! MIDS scoring
