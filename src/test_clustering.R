@@ -25,7 +25,7 @@ reticulate::use_condaenv("DAJIN")
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode18"
+# barcode <- "barcode23"
 # allele <- "wt"
 
 # if(allele == "abnormal") control_allele <- "wt"
@@ -202,43 +202,14 @@ cl <- h$HDBSCAN(min_samples = 1L,
 int_hdbscan_clusters <- cl$fit_predict(input_hdbscan) + 1
 
 ################################################################################
-#! Extract mutation frequency scores in each cluster
-################################################################################
-
-df_cluster <- tibble(loc = integer(), cluster = integer(), score = double())
-
-tmp_df_score <- df_score %>% colSums / nrow(df_score)
-for (i in unique(int_hdbscan_clusters)) {
-    tmp_score <-
-        df_score[int_hdbscan_clusters == i, ] %>%
-        colSums / sum(int_hdbscan_clusters == i)
-
-    tmp_score <- tmp_df_score - tmp_score
-
-    tmp_df <- tibble(
-        loc = seq_along(colnames(df_score)),
-        cluster = i,
-        score = tmp_score
-    )
-    df_cluster <- df_cluster %>% bind_rows(tmp_df)
-}
-rm(tmp_df, tmp_df_score, tmp_score)
-
-################################################################################
 #! Output results
 ################################################################################
-
-write_csv(df_cluster,
-    sprintf(".DAJIN_temp/clustering/temp/df_cluster_%s", output_suffix),
-    col_names = F
-)
 
 write_csv(tibble(cl = int_hdbscan_clusters),
     sprintf(".DAJIN_temp/clustering/temp/int_hdbscan_clusters_%s", output_suffix),
     col_names = F
 )
 
-write_csv(prcomp_loading,
-    sprintf(".DAJIN_temp/clustering/temp/prcomp_loading_%s", output_suffix),
-    col_names = F
+saveRDS(df_score,
+    sprintf(".DAJIN_temp/clustering/temp/df_score_%s.RDS", output_suffix)
 )
