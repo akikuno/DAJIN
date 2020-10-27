@@ -18,8 +18,8 @@ pacman::p_load(tidyverse)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode23"
-# allele <- "target"
+# barcode <- "barcode40"
+# allele <- "abnormal"
 
 # if (allele == "abnormal") control_allele <- "wt"
 # if (allele != "abnormal") control_allele <- allele
@@ -162,8 +162,8 @@ if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
                     df_control_score %>%
                     filter(loc == y) %>%
                     unnest(control_freq) %>%
-                    mutate(MIDS = if_else(mut == 1, "M", MIDS)) %>%
-                    mutate(freq = if_else(mut == 1, 100, freq))
+                    mutate(MIDS = if_else(mut == 1, "M", NULL)) %>%
+                    mutate(freq = if_else(mut == 1, 100, NULL))
 
                 df_que_mids[merged_clusters == cl, y] %>%
                 rename(MIDS = colnames(.)) %>%
