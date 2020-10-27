@@ -18,8 +18,8 @@ pacman::p_load(tidyverse)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode24"
-# allele <- "wt"
+# barcode <- "barcode23"
+# allele <- "target"
 
 # if (allele == "abnormal") control_allele <- "wt"
 # if (allele != "abnormal") control_allele <- allele
@@ -78,6 +78,15 @@ merged_clusters <- int_hdbscan_clusters
 #===========================================================
 #? Merge clusters with the same mutations
 #===========================================================
+
+sequence_error <-
+    df_control_score %>%
+    unnest(control_freq) %>%
+    filter(MIDS != "M" & freq > 10) %>%
+    pull(loc) %>%
+    unique()
+
+df_score[, sequence_error] <- 10^-100
 
 add_rnorm <-
     rnorm(ncol(df_que_mids) * 100, mean = 0, sd = 5) %>%
@@ -153,8 +162,8 @@ if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
                     df_control_score %>%
                     filter(loc == y) %>%
                     unnest(control_freq) %>%
-                    mutate(MIDS = if_else(mut == 1, "M", NULL)) %>%
-                    mutate(freq = if_else(mut == 1, 100, NULL))
+                    mutate(MIDS = if_else(mut == 1, "M", MIDS)) %>%
+                    mutate(freq = if_else(mut == 1, 100, freq))
 
                 df_que_mids[merged_clusters == cl, y] %>%
                 rename(MIDS = colnames(.)) %>%
@@ -164,7 +173,7 @@ if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
                 slice_max(freq_x, n = 1) %>%
                 filter(MIDS != "M" & freq_y < 5) %>%
                 slice_sample(MIDS, n = 1) %>%
-                mutate(MIDS = if_else(freq_x > 90, MIDS, "M")) %>%
+                mutate(MIDS = if_else(freq_x > 90, MIDS, NULL)) %>%
                 pull(MIDS)
             }) %>%
             unlist %>%
