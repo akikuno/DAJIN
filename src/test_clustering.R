@@ -80,7 +80,7 @@ df_que_score <-
     nest(nest = c(MIDS)) %>%
     mutate(que_freq = mclapply(nest,
         function(x)
-            x %>% count(MIDS) %>% mutate(freq = n / sum(n) * 100) %>% select(-n),
+            x %>% count(MIDS) %>% mutate(freq = n / sum(n) * 100),
         mc.cores = threads)) %>%
     mutate(loc = as.double(loc)) %>%
     select(loc, que_freq)
