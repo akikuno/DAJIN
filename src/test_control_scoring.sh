@@ -122,7 +122,7 @@ while read -r label; do
     cat > "${tmp_strecher_label}"
 
     splice_num="$(
-        minimap2 -ax splice .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/${label}.fa 2>/dev/null |
+        minimap2 -ax map-ont .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/${label}.fa 2>/dev/null |
         awk '$2==0 || $2==16 || $2==2048 || $2==2064' |
         grep -c -v "^@"
         )"
@@ -130,7 +130,7 @@ while read -r label; do
     if [ "${splice_num}" -eq 3 ]; then
     # inversion
     seq_len="$(cat .DAJIN_temp/fasta/"$label".fa | sed 1d | awk '{print length}')"
-    minimap2 -ax splice .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/${label}.fa 2>/dev/null |
+    minimap2 -ax map-ont .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/${label}.fa 2>/dev/null |
         awk '$2==0 || $2==16 || $2==2048 || $2==2064 {print $4}' |
         sort -n |
         awk -v seq_len="$seq_len" '{print} END {print seq_len}' |
