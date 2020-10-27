@@ -10,7 +10,7 @@ options(warn = -1)
 
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
 if (!requireNamespace("reticulate", quietly = T)) install.packages("reticulate")
-pacman::p_load(tidyverse, parallel, furrr)
+pacman::p_load(tidyverse, parallel, furrr, vroom)
 
 DAJIN_Python <- reticulate:::conda_list()$python %>%
     str_subset("DAJIN/bin/python")
@@ -51,9 +51,10 @@ plan(multiprocess, workers = threads)
 #? Inputs
 #===========================================================
 
-df_que_mids <- read_csv(file_que_mids,
+df_que_mids <- vroom(file_que_mids,
     col_names = FALSE,
-    col_types = cols())
+    col_types = cols(),
+    num_threads = threads)
 colnames(df_que_mids) <- seq_len(ncol(df_que_mids))
 
 df_que_label <- read_csv(file_que_label,
