@@ -5,10 +5,11 @@
 options(repos = "https://cloud.r-project.org/")
 options(readr.show_progress = FALSE)
 options(dplyr.summarise.inform = FALSE)
+options(future.globals.maxSize = Inf)
 options(warn = -1)
 
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
-pacman::p_load(tidyverse)
+pacman::p_load(tidyverse, furrr, vroom)
 
 ################################################################################
 #! I/O naming
@@ -18,8 +19,8 @@ pacman::p_load(tidyverse)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode40"
-# allele <- "abnormal"
+# barcode <- "barcode47"
+# allele <- "wt"
 
 # if (allele == "abnormal") control_allele <- "wt"
 # if (allele != "abnormal") control_allele <- allele
@@ -27,6 +28,7 @@ pacman::p_load(tidyverse)
 # file_que_label <- sprintf(".DAJIN_temp/clustering/temp/query_labels_%s_%s", barcode, allele)
 # file_control_score <- sprintf(".DAJIN_temp/clustering/temp/df_control_freq_%s.RDS", control_allele)
 # threads <- 12L
+# plan(multiprocess, workers = threads)
 
 # ===========================================================
 #? Auguments
@@ -37,14 +39,16 @@ file_que_mids <- args[1]
 file_que_label <- args[2]
 file_control_score <- args[3]
 threads <- as.integer(args[4])
+plan(multiprocess, workers = threads)
 
 #===========================================================
 #? Inputs
 #===========================================================
 
-df_que_mids <- read_csv(file_que_mids,
+df_que_mids <- vroom(file_que_mids,
     col_names = FALSE,
-    col_types = cols())
+    col_types = cols(),
+    num_threads = threads)
 colnames(df_que_mids) <- seq_len(ncol(df_que_mids))
 
 df_que_label <- read_csv(file_que_label,
@@ -126,6 +130,18 @@ possible_true_mut <- hotelling_common$loc %>% sort
 
 if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
 
+    max_mids <-
+        future_map_chr(possible_true_mut, function(x) {
+        df_que_mids[, x] %>%
+        rename(MIDS = colnames(.)) %>%
+        count(MIDS) %>%
+        mutate(freq = n / sum(n) * 100) %>%
+        slice_max(freq, n = 1) %>%
+        slice_sample(MIDS, n = 1) %>%
+        pull(MIDS)
+        }) %>%
+    set_names(possible_true_mut)
+
     # common
     tmp_ <-
         hotelling_common %>%
@@ -141,6 +157,7 @@ if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
                 mutate(freq = n / sum(n) * 100) %>%
                 slice_max(freq, n = 1) %>%
                 slice_sample(MIDS, n = 1) %>%
+                mutate(MIDS = if_else(freq > 75, MIDS, max_mids[names(max_mids) == loc])) %>%
                 pull(MIDS)
             }) %>%
             unlist %>%
