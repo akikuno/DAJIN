@@ -19,7 +19,7 @@ pacman::p_load(tidyverse, furrr, vroom)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode14"
+# barcode <- "barcode32"
 # allele <- "target"
 
 # if (allele == "abnormal") control_allele <- "wt"
@@ -133,20 +133,22 @@ hotelling_common <-
 #===========================================================
 
 possible_true_mut <-
-    future_map(hotelling_common$loc, function(y) {
-        map(unique(merged_clusters), function(x) {
-        df_que_mids[merged_clusters == x, y] %>%
+    future_map_lgl(hotelling_common$loc, function(loc) {
+        map_lgl(unique(merged_clusters), function(cl) {
+        df_que_mids[merged_clusters == cl, loc] %>%
             table(dnn = "MIDS") %>%
             as_tibble() %>%
             mutate(freq = n / sum(n) * 100) %>%
-            filter(MIDS != "M" & freq > 50)
-        }) %>%
-        set_names(y)
-    }) %>%
-    set_names(hotelling_common$loc) %>%
-    unlist
+            filter(MIDS != "M") %>%
+            slice_max(freq, n = 1) %>%
+            slice_sample(MIDS, n = 1) %>%
+            mutate(lgl = if_else(freq > 50, TRUE, FALSE)) %>%
+            pull(lgl)
+        })
+    })
 
-# possible_true_mut <- hotelling_common$loc %>% sort
+possible_true_mut <-
+    hotelling_common$loc[possible_true_mut]
 
 ################################################################################
 #! Merge clusters
