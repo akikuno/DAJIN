@@ -19,8 +19,8 @@ pacman::p_load(tidyverse, furrr, vroom)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode26"
-# allele <- "abnormal"
+# barcode <- "barcode21"
+# allele <- "target"
 
 # if (allele == "abnormal") control_allele <- "wt"
 # if (allele != "abnormal") control_allele <- allele
@@ -74,14 +74,10 @@ int_hdbscan_clusters <-
 df_score <- readRDS(sprintf(".DAJIN_temp/clustering/temp/df_score_%s.RDS", output_suffix))
 
 ################################################################################
-#! Merge clusters
+#! Extract mutations by Hotelling's T2 statistics
 ################################################################################
 
 merged_clusters <- int_hdbscan_clusters
-
-#===========================================================
-#? Merge clusters with the same mutations
-#===========================================================
 
 sequence_error <-
     df_control_score %>%
@@ -134,17 +130,69 @@ hotelling_common <-
 
 possible_true_mut <- hotelling_common$loc %>% sort
 
+################################################################################
+#! Merge clusters
+################################################################################
+
+#===========================================================
+#? Merge clusters with Cosine similarity
+#===========================================================
+
+calc_cosine_sim <- function(x, y) {
+    crossprod(x, y) / sqrt(crossprod(x) * crossprod(y))
+}
+
+if (length(unique(merged_clusters)) > 1) {
+
+    cl_combn <- combn(unique(merged_clusters), 2)
+
+    df_cossim <-
+        future_map_dfr(seq(ncol(cl_combn)), function(x) {
+            score_1 <-
+                df_score[merged_clusters == cl_combn[1, x], possible_true_mut] %>%
+                colSums
+            score_2 <-
+                df_score[merged_clusters == cl_combn[2, x], possible_true_mut] %>%
+                colSums
+
+            tibble(
+                one = cl_combn[1, x],
+                two = cl_combn[2, x],
+                score = calc_cosine_sim(score_1, score_2)
+            )
+        })
+
+    df_cossim_extracted <- df_cossim %>% filter(score > 0.75)
+
+    if (nrow(df_cossim_extracted) != 0) {
+        for (i in seq_along(rownames(df_cossim_extracted))) {
+            pattern_ <- df_cossim_extracted[i, ]$one
+            query_ <- df_cossim_extracted[i, ]$two
+            merged_clusters[merged_clusters == pattern_] <- query_
+        }
+        for (i in seq_along(rownames(df_cossim_extracted))) {
+            pattern_ <- df_cossim_extracted[i, ]$two
+            query_ <- df_cossim_extracted[i, ]$one
+            merged_clusters[merged_clusters == pattern_] <- query_
+        }
+    }
+}
+
+#===========================================================
+#? Merge clusters with the same mutation profiles
+#===========================================================
+
 if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
 
     max_mids <-
         future_map_chr(possible_true_mut, function(x) {
-        df_que_mids[, x] %>%
-        rename(MIDS = colnames(.)) %>%
-        count(MIDS) %>%
-        mutate(freq = n / sum(n) * 100) %>%
-        slice_max(freq, n = 1) %>%
-        slice_sample(MIDS, n = 1) %>%
-        pull(MIDS)
+            df_que_mids[, x] %>%
+            table(dnn = "MIDS") %>%
+            as_tibble() %>%
+            mutate(freq = n / sum(n) * 100) %>%
+            slice_max(freq, n = 1) %>%
+            slice_sample(MIDS, n = 1) %>%
+            pull(MIDS)
         }) %>%
     set_names(possible_true_mut)
 
@@ -158,8 +206,8 @@ if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
         map(unique(merged_clusters), function(cl) {
             future_map(tmp_, function(loc) {
                 df_que_mids[merged_clusters == cl, loc] %>%
-                rename(MIDS = colnames(.)) %>%
-                count(MIDS) %>%
+                table(dnn = "MIDS") %>%
+                as_tibble() %>%
                 mutate(freq = n / sum(n) * 100) %>%
                 slice_max(freq, n = 1) %>%
                 slice_sample(MIDS, n = 1) %>%
@@ -189,8 +237,8 @@ if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
                     mutate(freq = case_when(mut == 1 ~ 100, TRUE ~ freq))
 
                 df_que_mids[merged_clusters == cl, y] %>%
-                rename(MIDS = colnames(.)) %>%
-                count(MIDS) %>%
+                table(dnn = "MIDS") %>%
+                as_tibble() %>%
                 mutate(freq = n / sum(n) * 100) %>%
                 full_join(., control, by = "MIDS", suffix = c("_x", "_y")) %>%
                 slice_max(freq_x, n = 1) %>%
@@ -237,7 +285,6 @@ if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
     merged_clusters <-
         rep(1, length(merged_clusters))
 }
-
 
 #===========================================================
 #? Merge clusters with strand specific mutation into a major cluster
@@ -295,7 +342,6 @@ merged_clusters <-
     }) %>%
     unlist %>%
     .[!is.na(.)]
-
 
 df_readid_cluster <-
     tibble(read_id = df_que_label$id,
