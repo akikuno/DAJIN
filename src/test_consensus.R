@@ -5,7 +5,7 @@
 options(repos = 'https://cloud.r-project.org/')
 options(readr.show_progress = FALSE)
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
-pacman::p_load(tidyverse, parallel, furrr)
+pacman::p_load(tidyverse)
 
 ################################################################################
 #! I/O naming
@@ -15,8 +15,8 @@ pacman::p_load(tidyverse, parallel, furrr)
 #? TEST Auguments
 #===========================================================
 
-# file_que_mids <- ".DAJIN_temp/consensus/temp/allele_id_barcode05_target_4"
-# file_mutation_loc <- ".DAJIN_temp/clustering/temp/possible_true_mut_barcode05_target"
+# file_que_mids <- ".DAJIN_temp/consensus/temp/allele_id_barcode14_target_2"
+# file_mutation_loc <- ".DAJIN_temp/clustering/temp/possible_true_mut_barcode14_target"
 
 #===========================================================
 #? Auguments
