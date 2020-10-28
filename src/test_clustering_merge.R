@@ -19,7 +19,7 @@ pacman::p_load(tidyverse, furrr, vroom)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode02"
+# barcode <- "barcode42"
 # allele <- "wt"
 
 # if (allele == "abnormal") control_allele <- "wt"
@@ -79,12 +79,22 @@ df_score <- readRDS(sprintf(".DAJIN_temp/clustering/temp/df_score_%s.RDS", outpu
 
 merged_clusters <- int_hdbscan_clusters
 
+#===========================================================
+#? Replace sequence error
+#===========================================================
+
 sequence_error <-
     df_control_score %>%
     unnest(control_freq) %>%
     filter(MIDS != "M" & freq > 10) %>%
     pull(loc) %>%
     unique()
+
+df_score[, sequence_error] <- 10^-10000
+
+#===========================================================
+#? Extract mutations
+#===========================================================
 
 hotelling <-
     future_map_dfr(unique(merged_clusters), function(x) {
@@ -119,6 +129,7 @@ hotelling <-
 #===========================================================
 #? Exclude fuzzy mutations
 #===========================================================
+
 tmp_possible_true_mut <- hotelling$loc %>% sort %>% unique
 
 lgl_possible_true_mut <-
