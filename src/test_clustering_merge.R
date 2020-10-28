@@ -19,7 +19,7 @@ pacman::p_load(tidyverse, furrr, vroom)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode42"
+# barcode <- "barcode12"
 # allele <- "wt"
 
 # if (allele == "abnormal") control_allele <- "wt"
@@ -151,9 +151,12 @@ lgl_possible_true_mut <-
 possible_true_mut <-
     tmp_possible_true_mut[lgl_possible_true_mut]
 
-hotelling <-
-    hotelling %>%
-    filter(loc %in% possible_true_mut)
+# Force to add a point mutation location
+if (sum(df_control_score$mut) == 1) {
+    possible_true_mut <-
+        append(possible_true_mut, which(df_control_score$mut == 1)) %>%
+        unique
+}
 
 #===========================================================
 #? Divide mutation into common and uncommon
@@ -161,6 +164,7 @@ hotelling <-
 
 hotelling_common <-
     hotelling %>%
+    filter(loc %in% possible_true_mut) %>%
     add_count(loc, name = "count_loc") %>%
     mutate(common = if_else(
         count_loc == length(unique(merged_clusters)),
