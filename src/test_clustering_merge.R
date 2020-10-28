@@ -19,7 +19,7 @@ pacman::p_load(tidyverse, furrr, vroom)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode08"
+# barcode <- "barcode02"
 # allele <- "wt"
 
 # if (allele == "abnormal") control_allele <- "wt"
@@ -86,8 +86,6 @@ sequence_error <-
     pull(loc) %>%
     unique()
 
-df_score[, sequence_error] <- 10^-100
-
 hotelling <-
     future_map_dfr(unique(merged_clusters), function(x) {
         tmp_scale <-
@@ -118,6 +116,38 @@ hotelling <-
         mutate(cl = x)
     })
 
+#===========================================================
+#? Exclude fuzzy mutations
+#===========================================================
+tmp_possible_true_mut <- hotelling$loc %>% sort %>% unique
+
+lgl_possible_true_mut <-
+    future_map_lgl(tmp_possible_true_mut, function(loc) {
+        tmp_ <-
+            map_lgl(unique(merged_clusters), function(cl) {
+            df_que_mids[merged_clusters == cl, loc] %>%
+                table(dnn = "MIDS") %>%
+                as_tibble() %>%
+                mutate(freq = n / sum(n) * 100) %>%
+                slice_max(freq, n = 1) %>%
+                slice_sample(MIDS, n = 1) %>%
+                mutate(lgl = if_else(MIDS != "M" & freq > 50, TRUE, FALSE)) %>%
+                pull(lgl)
+            })
+        if_else(any(tmp_), TRUE, FALSE)
+    })
+
+possible_true_mut <-
+    tmp_possible_true_mut[lgl_possible_true_mut]
+
+hotelling <-
+    hotelling %>%
+    filter(loc %in% possible_true_mut)
+
+#===========================================================
+#? Divide mutation into common and uncommon
+#===========================================================
+
 hotelling_common <-
     hotelling %>%
     add_count(loc, name = "count_loc") %>%
@@ -128,77 +158,9 @@ hotelling_common <-
     select(loc, common) %>%
     distinct()
 
-#===========================================================
-#? Exclude fuzzy mutations
-#===========================================================
-
-possible_true_mut <-
-    future_map_lgl(hotelling_common$loc, function(loc) {
-        tmp_ <-
-            map_lgl(unique(merged_clusters), function(cl) {
-            df_que_mids[merged_clusters == cl, loc] %>%
-                table(dnn = "MIDS") %>%
-                as_tibble() %>%
-                mutate(freq = n / sum(n) * 100) %>%
-                filter(MIDS != "M") %>%
-                slice_max(freq, n = 1) %>%
-                slice_sample(MIDS, n = 1) %>%
-                mutate(lgl = if_else(freq > 50, TRUE, FALSE)) %>%
-                pull(lgl)
-            })
-        if_else(any(tmp_), TRUE, FALSE)
-    })
-
-possible_true_mut <-
-    hotelling_common$loc[possible_true_mut]
-
 ################################################################################
 #! Merge clusters
 ################################################################################
-
-#===========================================================
-#? Merge clusters with Cosine similarity
-#===========================================================
-
-calc_cosine_sim <- function(x, y) {
-    crossprod(x, y) / sqrt(crossprod(x) * crossprod(y))
-}
-
-if (length(unique(merged_clusters)) > 1) {
-
-    cl_combn <- combn(unique(merged_clusters), 2)
-
-    df_cossim <-
-        future_map_dfr(seq(ncol(cl_combn)), function(x) {
-            score_1 <-
-                df_score[merged_clusters == cl_combn[1, x], possible_true_mut] %>%
-                colSums
-            score_2 <-
-                df_score[merged_clusters == cl_combn[2, x], possible_true_mut] %>%
-                colSums
-
-            tibble(
-                one = cl_combn[1, x],
-                two = cl_combn[2, x],
-                score = calc_cosine_sim(score_1, score_2)
-            )
-        })
-
-    df_cossim_extracted <- df_cossim %>% filter(score > 0.75)
-
-    if (nrow(df_cossim_extracted) != 0) {
-        for (i in seq_along(rownames(df_cossim_extracted))) {
-            pattern_ <- df_cossim_extracted[i, ]$one
-            query_ <- df_cossim_extracted[i, ]$two
-            merged_clusters[merged_clusters == pattern_] <- query_
-        }
-        for (i in seq_along(rownames(df_cossim_extracted))) {
-            pattern_ <- df_cossim_extracted[i, ]$two
-            query_ <- df_cossim_extracted[i, ]$one
-            merged_clusters[merged_clusters == pattern_] <- query_
-        }
-    }
-}
 
 #===========================================================
 #? Merge clusters with the same mutation profiles
@@ -306,6 +268,50 @@ if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
 } else {
     merged_clusters <-
         rep(1, length(merged_clusters))
+}
+
+#===========================================================
+#? Merge clusters with Cosine similarity
+#===========================================================
+
+calc_cosine_sim <- function(x, y) {
+    crossprod(x, y) / sqrt(crossprod(x) * crossprod(y))
+}
+
+if (length(unique(merged_clusters)) > 1) {
+
+    cl_combn <- combn(unique(merged_clusters), 2)
+
+    df_cossim <-
+        future_map_dfr(seq(ncol(cl_combn)), function(x) {
+            score_1 <-
+                df_score[merged_clusters == cl_combn[1, x], possible_true_mut] %>%
+                colSums
+            score_2 <-
+                df_score[merged_clusters == cl_combn[2, x], possible_true_mut] %>%
+                colSums
+
+            tibble(
+                one = cl_combn[1, x],
+                two = cl_combn[2, x],
+                score = calc_cosine_sim(score_1, score_2)
+            )
+        })
+
+    df_cossim_extracted <- df_cossim %>% filter(score > 0.75)
+
+    if (nrow(df_cossim_extracted) != 0) {
+        for (i in seq_along(rownames(df_cossim_extracted))) {
+            pattern_ <- df_cossim_extracted[i, ]$one
+            query_ <- df_cossim_extracted[i, ]$two
+            merged_clusters[merged_clusters == pattern_] <- query_
+        }
+        for (i in seq_along(rownames(df_cossim_extracted))) {
+            pattern_ <- df_cossim_extracted[i, ]$two
+            query_ <- df_cossim_extracted[i, ]$one
+            merged_clusters[merged_clusters == pattern_] <- query_
+        }
+    }
 }
 
 #===========================================================
