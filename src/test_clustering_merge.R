@@ -19,8 +19,8 @@ pacman::p_load(tidyverse, furrr, vroom)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode12"
-# allele <- "wt"
+# barcode <- "barcode02"
+# allele <- "inversion"
 
 # if (allele == "abnormal") control_allele <- "wt"
 # if (allele != "abnormal") control_allele <- allele
@@ -142,7 +142,7 @@ lgl_possible_true_mut <-
                 mutate(freq = n / sum(n) * 100) %>%
                 slice_max(freq, n = 1) %>%
                 slice_sample(MIDS, n = 1) %>%
-t                mutate(lgl = if_else(MIDS != "M" & freq > 75, TRUE, FALSE)) %>%
+                mutate(lgl = if_else(MIDS != "M" & freq > 80, TRUE, FALSE)) %>%
                 pull(lgl)
             })
         if_else(any(tmp_), TRUE, FALSE)
