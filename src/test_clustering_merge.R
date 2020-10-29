@@ -142,7 +142,7 @@ lgl_possible_true_mut <-
                 mutate(freq = n / sum(n) * 100) %>%
                 slice_max(freq, n = 1) %>%
                 slice_sample(MIDS, n = 1) %>%
-                mutate(lgl = if_else(MIDS != "M" & freq > 50, TRUE, FALSE)) %>%
+t                mutate(lgl = if_else(MIDS != "M" & freq > 75, TRUE, FALSE)) %>%
                 pull(lgl)
             })
         if_else(any(tmp_), TRUE, FALSE)
