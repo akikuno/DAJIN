@@ -19,8 +19,8 @@ pacman::p_load(tidyverse, furrr, vroom)
 #? TEST Auguments
 #===========================================================
 
-# barcode <- "barcode02"
-# allele <- "inversion"
+# barcode <- "barcode25"
+# allele <- "abnormal"
 
 # if (allele == "abnormal") control_allele <- "wt"
 # if (allele != "abnormal") control_allele <- allele
@@ -313,7 +313,7 @@ if (length(unique(merged_clusters)) > 1) {
             )
         })
 
-    df_cossim_extracted <- df_cossim %>% filter(score > 0.75)
+    df_cossim_extracted <- df_cossim %>% filter(score > 0.95)
 
     if (nrow(df_cossim_extracted) != 0) {
         for (i in seq_along(rownames(df_cossim_extracted))) {
