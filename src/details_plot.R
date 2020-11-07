@@ -11,7 +11,8 @@ pacman::p_load(tidyverse, RColorBrewer)
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 df <- read_csv(".DAJIN_temp/details/Details.csv", col_types = cols())
-df <- df %>%
+df <-
+    df %>%
     rename_with(~ str_replace_all(.x, " ", "_")) %>%
     mutate(
         Allele_type = case_when(
@@ -44,7 +45,7 @@ allele_others <- df$Allele_type %>%
         unique() %>%
         .[-1]
 
-if (length(allele_others) > 0){
+if (length(allele_others) > 0) {
     color_brewer <- c(
         brewer.pal(n = 8, "Pastel2"),
         brewer.pal(n = 8, "Set1"),
@@ -66,20 +67,23 @@ if (length(allele_others) > 0){
 #? Plot
 #==========================================================
 
-p <- ggplot(df, aes(x = Sample, y = `%_of_reads`, fill = Allele_type)) +
+p <-
+    ggplot(df, aes(x = Sample, y = `%_of_reads`, fill = Allele_type)) +
     geom_col(position = position_stack(), color = "black", size = 0.5) +
     scale_fill_manual(
-        name = "Allele type",
+        name = NULL,
         values = color) +
-    labs(x = NULL, y = "% of reads") +
+    labs(x = NULL, y = "Percentage of reads") +
     theme_bw(base_size = 20) +
-    theme(axis.text.x = element_text(angle = 45, size = 20, hjust = 1),
-        axis.text.y = element_text(size = 20),
-        legend.position = "bottom")
+    theme(legend.position = "right",
+        axis.text.x = element_text(angle = 45, hjust = 1))
 
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 #! Save figure
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
+width <-
+    df$Sample %>% unique %>% length %>% `*`(0.5) %>% `+`(4)
+
 ggsave(p, filename = ".DAJIN_temp/details/Details.pdf",
-    width = 20, height = 7)
+    width = width, height = 7)

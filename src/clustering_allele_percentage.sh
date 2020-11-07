@@ -37,10 +37,10 @@ filter="${2}"
 #===========================================================
 #? Output
 #===========================================================
-mkdir -p ".DAJIN_temp/clustering/temp/"
+mkdir -p ".DAJIN_temp/clustering/allele_per/"
 
-# allele_id=.DAJIN_temp/clustering/readid_cl_mids_
-allele_percentage=.DAJIN_temp/clustering/label_cl_percentage_"${barcode}"
+# allele_id=.DAJIN_temp/clustering/allele_per/readid_cl_mids_
+allele_percentage=.DAJIN_temp/clustering/allele_per/label_cl_percentage_"${barcode}"
 
 #===========================================================
 #? Temporal
@@ -133,7 +133,7 @@ while read -r input; do
 
     hdbscan_id=.DAJIN_temp/clustering/temp/hdbscan_"${id}"
     query_seq=.DAJIN_temp/clustering/temp/query_seq_"${id}"
-    allele_id=.DAJIN_temp/clustering/readid_cl_mids_"${id}"
+    allele_id=.DAJIN_temp/clustering/allele_per/readid_cl_mids_"${id}"
 
     join "${hdbscan_id}" "${query_seq}" |
         awk -v bf="${before}" -v af="${after}" \

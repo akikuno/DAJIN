@@ -51,9 +51,9 @@ que_fa=".DAJIN_temp/fasta_ont/${barcode}.fa"
 tmp_que_fa=".DAJIN_temp/clustering/tmp_que_fa_${suffix}"_$$
 tmp_seqID=".DAJIN_temp/clustering/tmp_seqID_${suffix}"_$$
 
-tmp_all=".DAJIN_temp/tmp_all_${suffix}"_$$
-tmp_primary=".DAJIN_temp/tmp_primary_${suffix}"_$$
-tmp_secondary=".DAJIN_temp/tmp_secondary_${suffix}"_$$
+tmp_all=".DAJIN_temp/clustering/tmp_all_${suffix}"_$$
+tmp_primary=".DAJIN_temp/clustering/tmp_primary_${suffix}"_$$
+tmp_secondary=".DAJIN_temp/clustering/tmp_secondary_${suffix}"_$$
 
 ################################################################################
 #! Function definitions

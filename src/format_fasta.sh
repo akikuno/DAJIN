@@ -94,7 +94,7 @@ cat ${design_LF} |
 #? Insertion = I; Deletion = D; Substitution = S
 #===========================================================
 
-mutation_type=$(
+target_mutation_type=$(
     minimap2 -ax splice \
         .DAJIN_temp/fasta/wt.fa \
         .DAJIN_temp/fasta/target.fa \
@@ -112,7 +112,7 @@ mutation_type=$(
 #? Generate randome insertion and deletion at gRNA sites
 #===========================================================
 
-if [ "_${mutation_type}" = "_S" ]; then
+if [ "_${target_mutation_type}" = "_S" ]; then
     grna_len=$(awk -v grna="$grna" 'BEGIN{print length(grna)}')
     grna_firsthalf=$(awk -v grna="$grna" 'BEGIN{print substr(grna, 1, int(length(grna)/2))}')
     grna_secondhalf=$(awk -v grna="$grna" 'BEGIN{print substr(grna, int(length(grna)/2)+1, length(grna))}')

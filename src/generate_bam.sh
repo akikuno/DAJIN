@@ -25,7 +25,7 @@ threads="${2}"
 #? Variable
 #===========================================================
 
-mutation_type=$(
+target_mutation_type=$(
     minimap2 -ax splice \
         .DAJIN_temp/fasta/wt.fa \
         .DAJIN_temp/fasta/target.fa \
@@ -51,14 +51,14 @@ mkdir -p .DAJIN_temp/bam/temp .DAJIN_temp/bam/reads100
 #! Generate BAM files
 ################################################################################
 
-if [ "_$mutation_type" = "_S" ]; then
+if [ "_$target_mutation_type" = "_S" ]; then
     mv .DAJIN_temp/fasta_ont/wt_ins* .DAJIN_temp/
     mv .DAJIN_temp/fasta_ont/wt_del* .DAJIN_temp/
 fi
 
 ./DAJIN/src/mapping.sh "${genome:-mm10}" "${threads:-1}" || exit 1
 
-if [ "_$mutation_type" = "_S" ]; then
+if [ "_$target_mutation_type" = "_S" ]; then
     mv .DAJIN_temp/wt_ins* .DAJIN_temp/fasta_ont/
     mv .DAJIN_temp/wt_del* .DAJIN_temp/fasta_ont/
 fi
@@ -67,7 +67,7 @@ fi
 #? Generate BAM files on each cluster
 #===========================================================
 
-cat .DAJIN_temp/clustering/label* |
+cat .DAJIN_temp/clustering/allele_per/label* |
     awk '{nr[$1]++; print $0, nr[$1]}' |
 while read -r allele
 do
@@ -79,7 +79,7 @@ do
     input_bam="${barcode}_${alleletype}"
     output_bam="${barcode}_allele${alleleid}"
     #
-    find .DAJIN_temp/clustering/readid_cl_mids* |
+    find .DAJIN_temp/clustering/allele_per/readid_cl_mids* |
         grep "${input_bam}" |
         xargs cat |
         awk -v cl="${cluster}" '$2==cl' |
@@ -95,7 +95,6 @@ do
         samtools sort -@ "${threads:-1}" 2>/dev/null |
     cat > .DAJIN_temp/bam/"${output_bam}".bam
     samtools index .DAJIN_temp/bam/"${output_bam}".bam
-
 done
 
 #===========================================================
