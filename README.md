@@ -80,15 +80,14 @@ DAJIN outputs two files and two folders: `Details.csv`, `Details.pdf`, `BAM`, `C
 `Details.csv` contains allele information.
 
 
-|Sample   |Allele ID|% of reads|Allele type  |Indel|Large indel|Design|
-|---------|---------|----------|-------------|-----|-----------|------|
-|barcode01|1        |6.2       |abnormal     |+    |+          |-     |
-|barcode01|2        |93.8      |wt           |-    |-          |-     |
-|barcode02|1        |100.0     |target       |-    |-          |+     |
-|barcode03|1        |38.5      |abnormal     |+    |+          |-     |
-|barcode03|2        |13.4      |abnormal     |+    |+          |-     |
-|barcode03|3        |7.7       |flox_deletion|+    |-          |-     |
-|barcode03|4        |40.4      |flox_deletion|-    |-          |-     |
+| Sample    |  Allele ID |  % of reads |  Allele type  |  Indel |  Large indel |  Design |
+|-----------|------------|-------------|---------------|--------|--------------|---------|
+| barcode01 | 1          | 100         | wt            | -      | -            | -       |
+| barcode02 | 1          | 11.8        | abnormal      | +      | +            | -       |
+| barcode02 | 2          | 88.2        | target        | -      | -            | +       |
+| barcode03 | 1          | 9.9         | abnormal      | +      | +            | -       |
+| barcode03 | 2          | 38.5        | abnormal      | +      | +            | -       |
+| barcode03 | 3          | 51.6        | flox_deletion | -      | -            | -       |
 
 #### Details.pdf
 
