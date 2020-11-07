@@ -214,10 +214,6 @@ fi
 #? Make temporal directory
 #===========================================================
 
-# (find .DAJIN_temp/* -type d |
-#     grep -v fasta_ont |
-#     xargs rm -rf) 2>/dev/null || true
-
 dirs="fasta fasta_conv fasta_ont NanoSim data"
 echo "${dirs}" |
     sed "s:^:.DAJIN_temp/:g" |
@@ -258,45 +254,45 @@ set +u
 conda activate DAJIN
 set -u
 
-# # #===========================================================
-# # #? Get mutation loci
-# # #===========================================================
-
-# minimap2 -ax splice \
-#     ".DAJIN_temp/fasta_conv/wt.fa" ".DAJIN_temp/fasta_conv/target.fa" \
-#     --cs 2>/dev/null |
-#     awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-#     sed -e "s/cs:Z:://g" -e "s/:/ /g" -e "s/~/ /g" |
-#     tr -d "\~\*\-\+atgc" |
-#     awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
-# cat > .DAJIN_temp/data/mutation_points
-
 # #===========================================================
-# #? MIDS conversion
+# #? Get mutation loci
 # #===========================================================
 
-# find .DAJIN_temp/fasta_ont -type f |
-#     sort |
-#     awk '{print "./DAJIN/src/mids_classification.sh", $0, "wt", "&"}' |
-#     awk -v th=${threads:-1} '{
-#         if (NR%th==0) gsub("&","&\nwait",$0)
-#         print}
-#         END{print "wait"}' |
-# sh - 2>/dev/null
+minimap2 -ax splice \
+    ".DAJIN_temp/fasta_conv/wt.fa" ".DAJIN_temp/fasta_conv/target.fa" \
+    --cs 2>/dev/null |
+    awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
+    sed -e "s/cs:Z:://g" -e "s/:/ /g" -e "s/~/ /g" |
+    tr -d "\~\*\-\+atgc" |
+    awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
+cat > .DAJIN_temp/data/mutation_points
 
-# ################################################################################
-# #! Prediction
-# ################################################################################
+#===========================================================
+#? MIDS conversion
+#===========================================================
 
-# cat << EOF >&2
-# --------------------------------------------------------------------------------
-# Predict allele types
-# --------------------------------------------------------------------------------
-# EOF
+find .DAJIN_temp/fasta_ont -type f |
+    sort |
+    awk '{print "./DAJIN/src/mids_classification.sh", $0, "wt", "&"}' |
+    awk -v th=${threads:-1} '{
+        if (NR%th==0) gsub("&","&\nwait",$0)
+        print}
+        END{print "wait"}' |
+sh - 2>/dev/null
 
-# ./DAJIN/src/ml_prediction.sh "${control}" "${threads}" \
-# > .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt ||
-# exit 1
+################################################################################
+#! Prediction
+################################################################################
+
+cat << EOF >&2
+--------------------------------------------------------------------------------
+Predict allele types
+--------------------------------------------------------------------------------
+EOF
+
+./DAJIN/src/ml_prediction.sh "${control}" "${threads}" \
+> .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt ||
+exit 1
 
 
 ################################################################################
@@ -453,9 +449,10 @@ cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 #? Consensus
 #===========================================================
 
-(find .DAJIN_temp/consensus/* -type d |
-grep -v -e "consensus/temp" -e "sam" |
-xargs -I @ cp -f -r @ "${output_dir:-DAJIN_results}"/Consensus/) 2>/dev/null || true
+(   find .DAJIN_temp/consensus/* -type d |
+    grep -v -e "consensus/temp" -e "sam" |
+    xargs -I @ cp -f -r @ "${output_dir:-DAJIN_results}"/Consensus/
+) 2>/dev/null || true
 
 #===========================================================
 #? Details
