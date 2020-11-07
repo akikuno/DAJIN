@@ -104,8 +104,7 @@ This result shows the most of Nanopore reads of barcode02 are labeled as "intact
 
 The `Conseusus` folder includes FASTA and HTML files which display consensus sequence in each allele.
 
-Here is [an example of DAJIN consensus sequence]("https://github.com/akikuno/DAJIN/blob/master/misc/images/tyr_c140cg.html") using the point mutation.
-
+Here is <a href="https://github.com/akikuno/DAJIN/blob/master/misc/images/tyr_c140cg.html"> an example of DAJIN consensus sequence</a> using the point mutation.
 
 #### BAM
 
