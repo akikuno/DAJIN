@@ -99,11 +99,14 @@ This is an example result of three samples.
 
 The barcode01 is a wild-type mice as a control, whereas the barcode02 and barcode03 are genome-edited founder mice with a flox knock-in design.
 
-This result shows the most of Nanopore reads of barcode02 are labeled as "intact target" (flox), and indicates the barcode02 has the desired homozygous flox allele.
+This result shows the most of Nanopore reads of barcode02 are labeled as "intact target" (flox), and indicates the barcode02 is a candidate of the desired homozygous mice.
 
 #### Consensus
 
 The `Conseusus` folder includes FASTA and HTML files which display consensus sequence in each allele.
+
+Here is [an example of DAJIN consensus sequence]("https://github.com/akikuno/DAJIN/blob/master/misc/images/tyr_c140cg.html") using the point mutation.
+
 
 #### BAM
 
