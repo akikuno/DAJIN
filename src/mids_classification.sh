@@ -14,13 +14,6 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 ################################################################################
 
 #===========================================================
-#? TEST Auguments
-#===========================================================
-
-# que_fa=".DAJIN_temp/fasta_ont/barcode01.fa"
-# genotype="wt"
-
-#===========================================================
 #? Auguments
 #===========================================================
 
@@ -113,16 +106,10 @@ ref_len=$(awk '$1!~/^>/ {print length}' "${ref_fa}")
 ref_label="${ref_fa##*/}" && ref_label="${ref_label%.*}"
 
 ext=${ext:=100}
-first_flank=$(
-    cat .DAJIN_temp/data/mutation_points |
-    awk -v ext=${ext} '{print $1-ext}'
-    )
+first_flank=$(awk -v ext=${ext} '{print $1-ext}' .DAJIN_temp/data/mutation_points)
 [ "${first_flank}" -lt 1 ] && first_flank=1
 
-second_flank=$(
-    cat .DAJIN_temp/data/mutation_points |
-    awk -v ext=${ext} '{if(NF==2) print $2+ext; else print $1+ext}'
-    )
+second_flank=$(awk -v ext=${ext} '{if(NF==2) $0=$2+ext; else $0=$1+ext}1' .DAJIN_temp/data/mutation_points)
 [ "${second_flank}" -gt "${ref_len}" ] && second_flank="${ref_len}"
 
 #===========================================================

@@ -26,24 +26,16 @@ tf.random.set_seed(1234)
 ################################################################################
 
 # ===========================================================
-# ? TEST auguments
-# ===========================================================
-
-# file_name = ".DAJIN_temp/data/MIDS_barcode05_wt"
-# mutation_type = "S"
-# threads = 12
-
-# ===========================================================
 # ? Auguments
 # ===========================================================
 
 args = sys.argv
 file_name = args[1]
-mutation_type = args[2]
+target_mutation_type = args[2]
 threads = int(args[3])
 
-if mutation_type == "":
-    raise ValueError("mutation_type is empty")
+if target_mutation_type == "":
+    raise ValueError("target_mutation_type is empty")
 
 if threads == "":
     import multiprocessing
@@ -134,7 +126,7 @@ for index, label in enumerate(labels_index):
 # * the reads named "wt_ins" and "wt_del"
 # * should be treated as "abnormal".
 # ---------------------------------------
-if mutation_type == "S":
+if target_mutation_type == "S":
     df["prediction"].mask(
         df["prediction"].str.contains("wt_"), "abnormal", inplace=True
     )

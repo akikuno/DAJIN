@@ -25,7 +25,7 @@ threads="${2}"
 #? Input
 #===========================================================
 
-mutation_type=$(
+target_mutation_type=$(
     minimap2 -ax splice \
         .DAJIN_temp/fasta/wt.fa \
         .DAJIN_temp/fasta/target.fa \
@@ -49,7 +49,7 @@ tmp_prediction=".DAJIN_temp/data/tmp_DAJIN_MIDS_prediction_result.txt"
 #! Train models
 ################################################################################
 
-[ "_${mutation_type}" = "_S" ] && rm .DAJIN_temp/data/MIDS_target* 2>/dev/null || true
+[ "_${target_mutation_type}" = "_S" ] && rm .DAJIN_temp/data/MIDS_target* 2>/dev/null || true
 
 cat .DAJIN_temp/data/MIDS_* |
     grep "_sim" |
@@ -82,7 +82,7 @@ while read -r input; do
     echo "Prediction of ${barcode} is now processing..." >&2
 
     python ./DAJIN/src/ml_real.py \
-        "${input}" "${mutation_type}" "${threads}" ||
+        "${input}" "${target_mutation_type}" "${threads}" ||
     exit 1
 done
 

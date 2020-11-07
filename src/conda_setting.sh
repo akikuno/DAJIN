@@ -47,7 +47,7 @@ if [ "$(conda info -e | cut -d " " -f 1 | grep -c DAJIN$)" -eq 0 ]; then
     conda create -y -n DAJIN python=3.7 \
         numpy pandas scikit-learn joblib hdbscan \
         wget emboss samtools minimap2 \
-        r-essentials r-base r-reticulate >/dev/null 2>&1
+        r-essentials r-base r-reticulate r-vroom r-furrr >/dev/null 2>&1
     conda install -y -n DAJIN -c anaconda tensorflow tensorflow-gpu >/dev/null 2>&1
 fi
 
@@ -67,10 +67,11 @@ minimap2 --version >/dev/null 2>&1 || error_exit 'Command "minimap2" installatio
 python -c "import tensorflow as tf" >/dev/null 2>&1 ||
 error_exit '"Tensorflow" not found'
 
+tf_ver="$(conda list -n DAJIN | awk '$1~/tensorflow/ && $2>1.99')"
+[ -z "$tf_ver" ] && error_exit '"Tensorflow 2.x" not found'
+
 if samtools --version 2>&1 | grep libcrypto >/dev/null; then
     CONDA_ENV=$(conda info -e | awk '$2=="*"{print $NF}')
     (cd "${CONDA_ENV}"/lib/ && ln -s libcrypto.so.1.1 libcrypto.so.1.0.0)
 fi
 samtools --version >/dev/null 2>&1 || error_exit 'Command "samtools" installation has failed'
-
-exit 0

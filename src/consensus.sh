@@ -14,16 +14,6 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 ################################################################################
 
 #===========================================================
-#? TEST Auguments
-#===========================================================
-
-# barcode="barcode06"
-# alleletype="inversion"
-# cluster=1
-# percentage=69.7
-# alleleid=6
-
-#===========================================================
 #? Auguments
 #===========================================================
 
@@ -43,8 +33,8 @@ mapping_alleletype="${alleletype}"
 [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
 [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
 
-control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
-allele_id=".DAJIN_temp/clustering/readid_cl_mids_${in_suffix}"
+control_score=".DAJIN_temp/clustering/temp/possible_true_mut_${in_suffix}"
+allele_id=".DAJIN_temp/clustering/allele_per/readid_cl_mids_${in_suffix}"
 
 #===========================================================
 #? Output
@@ -63,7 +53,7 @@ mutation_id_loc_type_insnum=".DAJIN_temp/consensus/temp/consensus_${out_suffix}"
 mutation_type_site_nuc=".DAJIN_temp/consensus/temp/mutation_type_site_nuc_${out_suffix}"
 tmp_html=.DAJIN_temp/consensus/temp/tmp_html_"${out_suffix}"
 
-mutation_design=$(
+target_mutation_type=$(
     minimap2 -ax splice \
         .DAJIN_temp/fasta/wt.fa \
         .DAJIN_temp/fasta/target.fa \
@@ -92,8 +82,11 @@ cat "${allele_id}" |
     awk -F "" 'BEGIN{OFS=","}{$1=$1}1' |
 cat > "${tmp_allele_id}"
 
-Rscript DAJIN/src/consensus.R "${tmp_allele_id}" "${control_score}" "${barcode}" 2>/dev/null
-
+if [ -s "${control_score}" ]; then
+    Rscript DAJIN/src/consensus.R "${tmp_allele_id}" "${control_score}" 2>/dev/null
+else
+    true > ".DAJIN_temp/consensus/temp/mutation_${out_suffix}"
+fi
 #===========================================================
 #? Report (1) Cluster ID, (2) Base loc (3) Mutation type (4) Ins num
 #===========================================================
@@ -202,9 +195,6 @@ else
     echo "intact 0 0" > "${mutation_type_site_nuc}"
 fi
 
-# echo $out_suffix
-# cat "${mutation_type_site_nuc}" #<<<<<
-
 ################################################################################
 #! Report consensus sequence
 ################################################################################
@@ -264,12 +254,12 @@ diff_wt=$(
 #* Annotate "target" when including targetted point mutation
 #-------------------------------------
 
-if [ "_${mutation_design}" = "_S" ]; then
+if [ "_${target_mutation_type}" = "_S" ]; then
     mutation_point=$(cut -d " " -f 1 .DAJIN_temp/data/mutation_points)
 
     contaion_target=$(
         cat "${mutation_type_site_nuc}" |
-        awk -v mut="${mutation_design}" '$1==mut' |
+        awk -v mut="${target_mutation_type}" '$1==mut' |
         cut -d " " -f 2 |
         awk '{print $0-1}' |
         grep -c ${mutation_point} -
@@ -381,11 +371,5 @@ EOF
 mkdir -p .DAJIN_temp/consensus/FASTA .DAJIN_temp/consensus/HTML
 mv .DAJIN_temp/consensus/"${output_filename}".fa .DAJIN_temp/consensus/FASTA
 mv .DAJIN_temp/consensus/"${output_filename}".html .DAJIN_temp/consensus/HTML
-
-################################################################################
-#! Remove temporal files
-################################################################################
-
-# rm "${tmp_allele_id}" "${mutation_id_loc_type_insnum}" "${mutation_type_site_nuc}" "${tmp_html}"
 
 exit 0

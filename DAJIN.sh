@@ -4,7 +4,7 @@
 #! Initialize shell environment
 ################################################################################
 
-set -eu
+set -u
 umask 0022
 export LC_ALL=C
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
@@ -13,7 +13,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 ################################################################################
 #! Define the functions for printing usage and error message
 ################################################################################
-VERSION=0.3
+
+VERSION=0.4
 
 usage(){
 cat <<- USAGE
@@ -116,11 +117,11 @@ done
 #? Check directory
 #===========================================================
 
-[ -d "${input_dir}" ] ||
-    error_exit "$input_dir: No such directory"
+[ -d "${input_dir}" ] || error_exit "$input_dir: No such directory"
 
-[ -z "$(ls $input_dir)" ] &&
-    error_exit "$input_dir: Empty directory"
+fastq_num=$(find ${input_dir}/* -type f | grep -c -e ".fq" -e ".fastq")
+
+[ "$fastq_num" -eq 0 ] && error_exit "$input_dir: No FASTQ file in directory"
 
 #===========================================================
 #? Check control
@@ -210,10 +211,6 @@ fi
 #? Make temporal directory
 #===========================================================
 
-(find .DAJIN_temp/* -type d |
-# grep -v fasta_ont |
-xargs rm -rf) 2>/dev/null || true
-
 dirs="fasta fasta_conv fasta_ont NanoSim data"
 echo "${dirs}" |
     sed "s:^:.DAJIN_temp/:g" |
@@ -254,9 +251,9 @@ set +u
 conda activate DAJIN
 set -u
 
-#===========================================================
-#? Get mutation loci
-#===========================================================
+# #===========================================================
+# #? Get mutation loci
+# #===========================================================
 
 minimap2 -ax splice \
     ".DAJIN_temp/fasta_conv/wt.fa" ".DAJIN_temp/fasta_conv/target.fa" \
@@ -312,7 +309,7 @@ mkdir -p .DAJIN_temp/clustering/temp
 #? Prepare control's score to define sequencing error
 #===========================================================
 
-./DAJIN/src/clustering_control_score.sh "${control}" "${threads}"
+./DAJIN/src/clustering_control_scoring.sh "${control}" "${threads}"
 
 #===========================================================
 #? Clustering
@@ -321,19 +318,29 @@ mkdir -p .DAJIN_temp/clustering/temp
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     cut -f 2,3 |
     sort -u |
-    awk -v th=${threads:-1} '{print "./DAJIN/src/clustering.sh", $1, $2, th}' |
+    awk -v ctrl="$control" '$1 $2 != ctrl "wt"' |
+    awk -v th="${threads:-1}" '{print "./DAJIN/src/clustering.sh", $1, $2, th}' |
 sh -
+
+cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
+    awk -v ctrl="$control" '$2 $3 == ctrl "wt" {print $1"\t"1}' |
+cat > ".DAJIN_temp/clustering/temp/hdbscan_${control}_wt"
+cat ".DAJIN_temp/clustering/temp/hdbscan_${control}_wt" > .DAJIN_temp/clustering/temp/query_seq_${control}_wt
+true > ".DAJIN_temp/clustering/temp/possible_true_mut_${control}_wt"
 
 #===========================================================
 #? Allele percentage
 #===========================================================
+
+rm -rf ".DAJIN_temp/clustering/allele_per/" 2>/dev/null
+mkdir -p ".DAJIN_temp/clustering/allele_per/"
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     cut -f 2 |
     sort -u |
     awk -v filter="${filter:-on}" \
     '{print "./DAJIN/src/clustering_allele_percentage.sh", $1, filter, "&"}' |
-    awk -v th=${threads:-1} '{
+    awk -v th="${threads:-1}" '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
 sh -
@@ -352,26 +359,22 @@ EOF
 #? Setting directory
 #===========================================================
 
-(find .DAJIN_temp/consensus/* -type d |
-    grep -v "sam$" |
-    xargs -I @ rm -rf @) 2>/dev/null || true
+rm -rf .DAJIN_temp/consensus 2>/dev/null || true
 mkdir -p .DAJIN_temp/consensus/temp .DAJIN_temp/consensus/sam
 
 #===========================================================
 #? Generate temporal SAM files
 #===========================================================
 
-cat .DAJIN_temp/clustering/label* |
+cat .DAJIN_temp/clustering/allele_per/label* |
     cut -d " " -f 1,2 |
     sort -u |
     grep -v abnormal |  #TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 while read -r input; do
     barcode="${input%% *}"
-    mapping_alleletype="$(echo "${input##* }" | sed "s/ab*normal/wt/g")"
+    mapping_alleletype="$(echo "${input##* }" | sed "s/abnormal/wt/g" | sed "s/normal/wt/g")"
 
-    if ! [ -f .DAJIN_temp/consensus/sam/"${barcode}"_"${mapping_alleletype}".sam ]; then
-
-    cat .DAJIN_temp/clustering/readid_cl_mids_"${barcode}"_"${mapping_alleletype}" |
+    cat .DAJIN_temp/clustering/allele_per/readid_cl_mids_"${barcode}"_"${mapping_alleletype}" |
         awk '{print ">"$1}' |
         sort |
     cat > .DAJIN_temp/consensus/tmp_id
@@ -391,18 +394,17 @@ while read -r input; do
         sort |
     cat > .DAJIN_temp/consensus/sam/"${barcode}"_"${mapping_alleletype}".sam
     rm .DAJIN_temp/consensus/tmp_id
-    fi
 done
 
 #===========================================================
 #? Execute consensus.sh
 #===========================================================
 
-cat .DAJIN_temp/clustering/label* |
+cat .DAJIN_temp/clustering/allele_per/label* |
     awk '{nr[$1]++; print $0, nr[$1]}' |
     grep -v abnormal |  #TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     awk '{print "./DAJIN/src/consensus.sh", $0, "&"}' |
-    awk -v th=${threads:-1} '{
+    awk -v th="${threads:-1}" '{
         if (NR%th==0) gsub("&","&\nwait",$0)}1
         END{print "wait"}' |
 sh -
@@ -444,9 +446,10 @@ cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 #? Consensus
 #===========================================================
 
-(find .DAJIN_temp/consensus/* -type d |
-grep -v -e "consensus/temp" -e "sam" |
-xargs -I @ cp -f -r @ "${output_dir:-DAJIN_results}"/Consensus/) 2>/dev/null || true
+(   find .DAJIN_temp/consensus/* -type d |
+    grep -v -e "consensus/temp" -e "sam" |
+    xargs -I @ cp -f -r @ "${output_dir:-DAJIN_results}"/Consensus/
+) 2>/dev/null || true
 
 #===========================================================
 #? Details

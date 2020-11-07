@@ -14,14 +14,6 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #! I/O naming
 ################################################################################
 
-#===============================================================================
-#? TEST Aurguments
-#===============================================================================
-
-# barcode="barcode25"
-# alleletype="abnormal"
-# threads=14
-
 #===========================================================
 #? Auguments
 #===========================================================
@@ -39,7 +31,7 @@ mapping_alleletype="${alleletype}"
 [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
 [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
 
-control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
+control_RDS=".DAJIN_temp/clustering/temp/df_control_freq_${mapping_alleletype}.RDS"
 
 #===========================================================
 #? Output
@@ -62,6 +54,17 @@ query_label=".DAJIN_temp/clustering/temp/query_labels_${suffix}"
 ################################################################################
 
 ./DAJIN/src/mids_clustering.sh "${barcode}" "${alleletype}" > "${MIDS_que}"
+
+################################################################################
+#! Filter abnormal reads
+################################################################################
+
+if [ _"$alleletype" = "_abnormal" ] ; then
+cat "${MIDS_que}" |
+    awk '$2 ~ /[a-z]/ || $2 ~ "DDDDDDDDDD" || $2 ~ "SSSSSSSSSS"' |
+cat > .DAJIN_temp/clustering/temp/_MIDS_"${suffix}"
+mv .DAJIN_temp/clustering/temp/_MIDS_"${suffix}" "${MIDS_que}"
+fi
 
 ################################################################################
 #! Query seq (compressed MIDS) and Query score (comma-sep MIDS)
@@ -108,13 +111,8 @@ cat > "${query_label}"
 ################################################################################
 
 echo "Clustering ${barcode} ${alleletype}..." >&2
-Rscript DAJIN/src/clustering.R "${query_score}" "${query_label}" "${control_score}" "${threads}" 2>/dev/null || true
-ps -au | grep -e "clustering.R" -e "joblib" | awk '{print $2}'| xargs kill 2>/dev/null || true
-
-################################################################################
-#! Clean and Finish
-################################################################################
-
-rm "${MIDS_que}" "${query_score}" "${query_label}"
-
-exit 0
+if [ "$(cat ${query_label} | wc -l)" -gt 50 ]; then
+    Rscript DAJIN/src/clustering.R "${query_score}" "${query_label}" "${control_RDS}" "${threads}" 2>/dev/null
+    Rscript DAJIN/src/clustering_merge.R "${query_score}" "${query_label}" "${control_RDS}" "${threads}" 2>/dev/null
+    ps -au | grep -e "clustering.R" -e "joblib" | awk '{print $2}'| xargs kill 2>/dev/null || true
+fi
