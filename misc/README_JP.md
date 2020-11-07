@@ -5,37 +5,37 @@
 
 [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
 
-## 推奨環境
+## セットアップ
 
-以下の環境で動作確認をしています。
-- Ubuntu 18.04
-- Linux Mint 20.04
-- Windows10 WSL2 (Ubuntu 18.04)
+### 動作環境
 
-## インストール
+LinuxまたはWindows 10 ([WSL](https://docs.microsoft.com/ja-jp/windows/wsl/install-win10))で動作確認をしています.  
+検証済みの環境は[こちら](https://github.com/akikuno/DAJIN/blob/master/misc/TESTED_SYSTEMS.md)です.  
 
-### `git`と`conda`のインストール
+### `conda`をインストールします
 
-- [git](https://git-scm.com/book/ja/v2/%E4%BD%BF%E3%81%84%E5%A7%8B%E3%82%81%E3%82%8B-Git%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB)
+下記のURLにしたがい, `conda`をインストールします.  
+
 - [conda](https://docs.conda.io/en/latest/miniconda.html)
 
-##### DAJINをダウンロードします
+### DAJINをダウンロードします
 
 ```
 git clone https://github.com/akikuno/DAJIN.git
 ```
 
-### Windows10
+または下記URLでZIPファイルをダウンロードしてください.  
 
-Windows10の場合は[WSL2](https://docs.microsoft.com/ja-jp/windows/wsl/install-win10)が必要です。
+https://github.com/akikuno/DAJIN/archive/master.zip
 
----
+### DAJINをダウンロードします
+
 
 ## 利用方法
 
 ### 入力ファイルの用意
 
-以下のようなテキストファイルを作製します。
+以下のような入力ファイルを作製します.  
 
 ```
 design=DAJIN/example/design.txt
@@ -48,18 +48,16 @@ threads=10
 filter=on
 ```
 
-各項目の情報は以下のとおりです。
+各項目の情報は以下のとおりです. 各項目は順不同です.  
 
-- **desing**: 考えられる遺伝型の配列を記載したFASTA形式のテキストファイルです。 ">wt"と">target"の2つは含まれている必要があります。
-- **input_dir**: demultiplex済みのFASTA/FASTQファイルを含むディレクトリです。
-- **control**: 野生型コントロールのバーコード番号です。
-- **genome**: `mm10`, `hg38`等の参照ゲノムです。
-- **grna**: gRNA配列です。2つ以上の配列はコンマ（,）で区切ります。
-- **output_dir（オプショナル）**: 結果を保存するディレクトリの名前です。デフォルトは`DAJIN_results`です。
-- **threads（オプショナル）**: DAJINに使用するCPUスレッド数です。デフォルトでは`3分の2`を使用します。
-- **filter（オプショナル**: on/off）: マイナーアレル（Targetアレルが1%以下、その他のアレルが3%以下）を解析から除きます。デフォルトは"on"です。
-
-＊各項目は順不同です。
+- **desing**: 考えられる遺伝型の配列を記載したFASTA形式のテキストファイルです.  ">wt"と">target"の2つは含まれている必要があります. 
+- **input_dir**: demultiplex済みのFASTA/FASTQファイルを含むディレクトリです. 
+- **control**: 野生型コントロールのバーコード番号です. 
+- **genome**: `mm10`, `hg38`等の参照ゲノムです. 
+- **grna**: PAMを含むgRNA配列です. 2つ以上の配列はコンマ（,）で区切ります. 
+- **output_dir（オプショナル）**: 結果を保存するディレクトリの名前です. デフォルトは`DAJIN_results`です. 
+- **threads（オプショナル）**: DAJINに使用するCPUスレッド数です. デフォルトでは`3分の2`を使用します. 
+- **filter（オプショナル**: on/off）: マイナーアレル（3%以下）を解析から除きます. デフォルトは"on"です. 
 
 
 ### DAJINの実行
@@ -68,4 +66,49 @@ filter=on
 ./DAJIN/DAJIN.sh -f [入力ファイルのPATH]
 ```
 
-（以下、工事中です…:construction_worker:）
+下記のコマンドで例を実行します.
+
+```sh
+./DAJIN/DAJIN.sh -i DAJIN/example/design.txt
+```
+
+### 結果のレポートについて
+
+DAJINは2つのファイル（`Details.csv`, `Details.pdf`）と2つのフォルダ（`BAM`, `Consensus`）を出力します. 
+
+#### Details.csv
+
+`Details.csv` はアレル情報を記載しています.
+
+| Sample    |  Allele ID |  % of reads |  Allele type  |  Indel |  Large indel |  Design |
+|-----------|------------|-------------|---------------|--------|--------------|---------|
+| barcode01 | 1          | 100         | wt            | -      | -            | -       |
+| barcode02 | 1          | 11.8        | abnormal      | +      | +            | -       |
+| barcode02 | 2          | 88.2        | target        | -      | -            | +       |
+| barcode03 | 1          | 9.9         | abnormal      | +      | +            | -       |
+| barcode03 | 2          | 38.5        | abnormal      | +      | +            | -       |
+| barcode03 | 3          | 51.6        | flox_deletion | -      | -            | -       |
+
+#### Details.pdf
+
+`Details.pdf`は上記CSVを可視化した以下のような図です.  
+
+<img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/Details.png" width="75%">  
+
+barcode01は野生型コントロールです. barcode02とbarcode03はfloxノックインのゲノム編集を施したファウンダーマウスの結果です.  
+barcode02のほぼ全てのアレルがintact target （flox以外の異常な変異の入っていないアレル）であることから、このマウスは目的のfloxアレルをホモでもつマウスの候補と考えられます.  
+
+#### Consensus
+
+`Conseusus` フォルダーには各アレルのコンセンサス配列が保存されています.  
+ファイル形式はFASTAおよびHTMLです.  
+
+HTMLでは色付けされた変異情報が表示されます.  
+
+<a href="https://htmlpreview.github.io/?https://github.com/akikuno/DAJIN/blob/master/misc/images/tyr_c140cg.html" target= _blank rel= noopener> こちらは点変異のコンセンサス配列です. </a>
+
+#### BAM
+
+`BAM` フォルダーには解析したサンプルの全アレルおよび各アレルごとのBAMファイルが保存されています.  
+この`BAM`ファイルは[IGV](http://software.broadinstitute.org/software/igv/)で可視化できます.  
+
