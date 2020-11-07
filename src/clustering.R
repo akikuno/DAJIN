@@ -21,21 +21,6 @@ reticulate::use_condaenv("DAJIN")
 #! I/O naming
 ################################################################################
 
-#===========================================================
-#? TEST Auguments
-#===========================================================
-
-# barcode <- "barcode02"
-# allele <- "inversion"
-
-# if(allele == "abnormal") control_allele <- "wt"
-# if(allele != "abnormal") control_allele <- allele
-# file_que_mids <- sprintf(".DAJIN_temp/clustering/temp/query_score_%s_%s", barcode, allele)
-# file_que_label <- sprintf(".DAJIN_temp/clustering/temp/query_labels_%s_%s", barcode, allele)
-# file_control_score <- sprintf(".DAJIN_temp/clustering/temp/df_control_freq_%s.RDS", control_allele)
-# threads <- 12L
-# plan(multiprocess, workers = threads)
-
 # ===========================================================
 #? Auguments
 #===========================================================
