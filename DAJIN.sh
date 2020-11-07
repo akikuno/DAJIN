@@ -4,7 +4,7 @@
 #! Initialize shell environment
 ################################################################################
 
-set -eu
+set -u
 umask 0022
 export LC_ALL=C
 export UNIX_STD=2003  # to make HP-UX conform to POSIX
@@ -13,7 +13,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 ################################################################################
 #! Define the functions for printing usage and error message
 ################################################################################
-VERSION=0.3
+
+VERSION=0.4
 
 usage(){
 cat <<- USAGE
@@ -116,15 +117,11 @@ done
 #? Check directory
 #===========================================================
 
-[ -d "${input_dir}" ] ||
-    error_exit "$input_dir: No such directory"
+[ -d "${input_dir}" ] || error_exit "$input_dir: No such directory"
 
-fastq_num=$(
-    find ${input_dir}/* -type f |
-    awk -F "/" 'NF==2' |
-    grep -c -e ".fq" -e ".fastq")
-[ "$fastq_num" -eq 0 ] &&
-    error_exit "$input_dir: No FASTQ file in directory"
+fastq_num=$(find ${input_dir}/* -type f | grep -c -e ".fq" -e ".fastq")
+
+[ "$fastq_num" -eq 0 ] && error_exit "$input_dir: No FASTQ file in directory"
 
 #===========================================================
 #? Check control
