@@ -18,8 +18,8 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 #? TEST Aurguments
 #===============================================================================
 
-# barcode="barcode26"
-# alleletype="abnormal"
+# barcode="barcode30"
+# alleletype="inversion"
 # threads=14
 
 #===========================================================
@@ -39,7 +39,7 @@ mapping_alleletype="${alleletype}"
 [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
 [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
 
-control_score=".DAJIN_temp/clustering/temp/control_score_${mapping_alleletype}"
+control_RDS=".DAJIN_temp/clustering/temp/df_control_freq_${mapping_alleletype}.RDS"
 
 #===========================================================
 #? Output
@@ -119,5 +119,8 @@ cat > "${query_label}"
 ################################################################################
 
 echo "Clustering ${barcode} ${alleletype}..." >&2
-Rscript DAJIN/src/clustering.R "${query_score}" "${query_label}" "${control_score}" "${threads}" 2>/dev/null || true
-ps -au | grep -e "clustering.R" -e "joblib" | awk '{print $2}'| xargs kill 2>/dev/null || true
+if [ "$(cat ${query_label} | wc -l)" -gt 50 ]; then
+    Rscript DAJIN/src/clustering.R "${query_score}" "${query_label}" "${control_RDS}" "${threads}" 2>/dev/null
+    Rscript DAJIN/src/clustering_merge.R "${query_score}" "${query_label}" "${control_RDS}" "${threads}" 2>/dev/null
+    ps -au | grep -e "clustering.R" -e "joblib" | awk '{print $2}'| xargs kill 2>/dev/null || true
+fi
