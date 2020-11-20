@@ -10,7 +10,7 @@ options(warn = -1)
 
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
 if (!requireNamespace("reticulate", quietly = T)) install.packages("reticulate")
-pacman::p_load(tidyverse, parallel, furrr, vroom)
+pacman::p_load(tidyverse, parallel, furrr, vroom, tidyfast)
 
 DAJIN_Python <- reticulate:::conda_list()$python %>%
     str_subset("DAJIN/bin/python")
@@ -52,8 +52,7 @@ df_control_score <- readRDS(file_control_score)
 #? Outputs
 #===========================================================
 
-output_suffix <-
-    str_remove(file_que_label, ".*labels_")
+output_suffix <- str_remove(file_que_label, ".*labels_")
 
 ################################################################################
 #! MIDS scoring
@@ -61,7 +60,7 @@ output_suffix <-
 
 df_que_score <-
     df_que_mids %>%
-    pivot_longer(col = everything(), names_to = "loc", values_to = "MIDS") %>%
+    dt_pivot_longer(names_to = "loc", values_to = "MIDS") %>%
     group_by(loc) %>%
     nest(nest = c(MIDS)) %>%
     mutate(que_freq = mclapply(nest,
@@ -75,8 +74,7 @@ df_que_score <-
 #! MIDS subtraction
 ################################################################################
 
-tmp <-
-    inner_join(df_que_score, df_control_score, by = "loc")
+tmp <- inner_join(df_que_score, df_control_score, by = "loc")
 
 list_mids_score <-
     future_map2(tmp$que_freq, tmp$control_freq, function(x, y) {
