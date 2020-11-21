@@ -136,7 +136,7 @@ joblib <- reticulate::import("joblib")
 h <- reticulate::import("hdbscan")
 
 min_cluster_sizes <-
-    seq(nrow(input_hdbscan)/20, nrow(input_hdbscan)/2, length = 10) %>%
+    seq(nrow(input_hdbscan) * 0.2, nrow(input_hdbscan) * 0.4, length = 50) %>%
     as.integer %>%
     `+`(2) %>%
     unique
