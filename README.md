@@ -7,20 +7,20 @@
 
 [日本語はこちら](https://github.com/akikuno/DAJIN/blob/master/misc/README_JP.md)
 
-DAJIN is a genotyping software with simple, rapid and scalable whole-allelic profiling of genome editing organisms using long-read sequencer.  
+DAJIN is a genotyping software with simple, rapid, and scalable whole-allelic profiling of genome editing organisms using a long-read sequencer.  
 
 Here are the DAJIN's features:
 
-- DAJIN automatically identify and classify a diversity of mutations including point mutations, large deletions, inversions, and knock-in
+- DAJIN automatically identify and classify a diversity of mutations, including a point mutation, knock-out, knock-in, and inversion
 - DAJIN can treat ~100 samples within a day
 
 ## Initial setup
 
 We highly recommend Linux OS and NVIDIA GPU to reduce computation time.  
-If you have a Windows PC with NVIDIA GPU, please follow the instruction.  
+If a Windows PC with NVIDIA GPU, please follow the instruction.  
 https://docs.nvidia.com/cuda/wsl-user-guide/index.html
 
-FYI: We confirmed DAJIN's operation on [these environments](https://github.com/akikuno/DAJIN/blob/master/misc/TESTED_SYSTEMS.md).
+> FYI: We confirmed DAJIN's operation on [these environments](https://github.com/akikuno/DAJIN/blob/master/misc/TESTED_SYSTEMS.md).
 
 ### 1. Install [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) and [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)
 
@@ -40,7 +40,7 @@ git clone https://github.com/akikuno/DAJIN.git
 
 ## Recommended directory tree
 
-We recommend the following directory tree (described in next section).
+We recommend the following directory tree.
 
 ```
 ├── DAJIN
@@ -53,9 +53,9 @@ We recommend the following directory tree (described in next section).
 │   ├── ......
 
 ```
-*You can arbitrary rename `input.txt`, `design.fasta` and `fastq`.
+> You can rename `input.txt`, `design.fasta` and `fastq`.
 
-### 3. `input.txt`
+### 1. `input.txt`
 
 
 `input.txt` should be formatted as below:
@@ -83,14 +83,12 @@ threads=10
 
 ### 2. `design.fasta`
 
-`design.fasta` is a multi-FASTA file as following:
+`design.fasta` is a multi-FASTA file, which contain a WT and target sequence, as well as byproducts.
 
-```
->wt
-AAAAAA
->target
-AATAAA
-```
+An example of flox design is [here](https://github.com/akikuno/DAJIN/blob/master/example/example.fa).  
+In the case of flox design, 6 allele types (WT, Target, Left LoxP, Right LoxP, flox deletion, and Inversion) can be produced.  
+Besides, DAJIN annotates an allele that are different from these allele types as 'abnormal' allele.  
+
 ### 3. `fastq` directory
 
 Currently DAJIN accepts [qcat](https://github.com/nanoporetech/qcat)'s demultiplex.  
