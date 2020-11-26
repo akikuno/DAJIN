@@ -9,9 +9,11 @@
 
 DAJIN is a genotyping software with simple, rapid, and scalable whole-allelic profiling of genome editing organisms using a long-read sequencer.  
 
-Here are the DAJIN's features:
+Here are the DAJIN's features:  
 
 - DAJIN automatically identify and classify a diversity of mutations, including a point mutation, knock-out, knock-in, and inversion
+- DAJIN uses the nanopore long-read sequencer to capture larger genomic locus (~10 kb) than conventional genotyping methods such as a short-read NGS and Sanger sequencing.
+- DAJIN detects various mutations from single-nucleotide variants to large indels (~10 kb).
 - DAJIN can treat ~100 samples within a day
 
 ## Initial setup
@@ -55,6 +57,7 @@ We recommend the following directory tree.
 ```
 > You can rename `input.txt`, `design.fasta` and `fastq`.
 
+Description of the files/directory is as following:  
 ### 1. `input.txt`
 
 
@@ -79,7 +82,7 @@ threads=10
 - **threads** (optional: integer): Default is `2/3` of available CPU threads.
 - **filter**  (optional: `on` or `off`): set filter to remove very minor allele (less than 3%). Default is `on`.
 
-`design`, `input_dir`, `control`, `genome`,`grna` are required, but there are in no particular order.
+> `design`, `input_dir`, `control`, `genome`,`grna` are required, but there are in no particular order.
 
 ### 2. `design.fasta`
 
@@ -109,12 +112,12 @@ You can conduct DAJIN in example small dataset.
 
 ### Output files
 
-DAJIN outputs two files and two folders: `Details.csv`, `Details.pdf`, `BAM`, `Consensus`.
+DAJIN outputs two files and two folders: `Details.csv`, `Details.pdf`, `Consensus`, `BAM`.  
 
 #### Details.csv
 
 `Details.csv` contains allele information.
-
+The allele with target mutation is labeled **+** in Design column.
 
 | Sample    |  Allele ID |  % of reads |  Allele type  |  Indel |  Large indel |  Design |
 |-----------|------------|-------------|---------------|--------|--------------|---------|
@@ -150,7 +153,7 @@ The `BAM` files can be visualized by [IGV](http://software.broadinstitute.org/so
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE.md file for details
+This project is licensed under the MIT License - see the [LICENSE.md](https://github.com/akikuno/DAJIN/blob/master/LICENSE.md) file for details
 
 ## Acknowledgments
 
