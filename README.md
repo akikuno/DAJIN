@@ -70,7 +70,7 @@ output_dir=DAJIN_example
 threads=10
 ```
 
-- **desing**: PATH to a multi-FASTA file including sequences of each genotype. **">wt" and ">target" must be included.**
+- **design**: PATH to a multi-FASTA file including sequences of each genotype. **">wt" and ">target" must be included.**
 - **input_dir**: PATH to a directory containing demultiplexed FASTQ files
 - **control**: control barcode ID
 - **genome**: reference genome. e.g. mm10, hg38
@@ -99,7 +99,7 @@ We plan to update to accepts the output of guppy basecaller.
 ## USAGE
 
 ```sh
-./DAJIN/DAJIN.sh -i desing.txt
+./DAJIN/DAJIN.sh -i design.txt
 ```
 
 ### Example usage
