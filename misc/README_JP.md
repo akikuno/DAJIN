@@ -5,37 +5,68 @@
 
 [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
 
+DAJINはゲノム編集生物の遺伝型判別器です. 以下の特徴があります.  
+
+- 多くのゲノム編集デザインに対応しています. 点変異, ノックアウト, ノックイン, 逆位の解析が可能です.
+- Nanoporeロングリードシークエンサーによって従来法に比べ広範囲(~10 kb)のゲノム編集領域を探索できます
+- 一塩基変異から数kbにおよぶindelを同定できます
+- 100サンプル程度までのサンプルについて結果を高速に（GPU環境ならば1日以内で）レポートします
+
+## 推奨環境
+
+計算時間を短くするためにLinux OSとNvidia GPUが使える環境をおすすめします.  
+CPUでも実行可能ですが, サンプル数によってはかなり長時間（週単位）がかかってしまう可能性があります.  
+
+以下の環境で動作確認をしています.  
+
+- Ubuntu 18.04, RTX2080ti
+- Linux Mint 20.04, GTX1080ti
+- Windows10 WSL2 (Ubuntu 18.04) * CPUでの実行
+
+より詳細は計算環境は[こちら](https://github.com/akikuno/DAJIN/blob/master/misc/TESTED_SYSTEMS.md)です.  
+
+> なお, macOSは未検証です.  
+
 ## セットアップ
 
-### 動作環境
+### 1. [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)と[conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)をインストールします
 
-LinuxまたはWindows 10 ([WSL](https://docs.microsoft.com/ja-jp/windows/wsl/install-win10))で動作確認をしています.  
-検証済みの環境は[こちら](https://github.com/akikuno/DAJIN/blob/master/misc/TESTED_SYSTEMS.md)です.  
-
-### `conda`をインストールします
-
-下記のURLにしたがい, `conda`をインストールします.  
-
-- [conda](https://docs.conda.io/en/latest/miniconda.html)
-
-### DAJINをダウンロードします
+```bash
+# Instal git
+sudo apt install git
+# Install miniconda
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+chmod +x Miniconda3-latest-Linux-x86_64.sh
+./Miniconda3-latest-Linux-x86_64.sh
+```
+### 2. DAJINをダウンロードします
 
 ```
 git clone https://github.com/akikuno/DAJIN.git
 ```
 
-または下記URLでZIPファイルをダウンロードしてください.  
+## 推奨のディレクトリ構成について
 
-https://github.com/akikuno/DAJIN/archive/master.zip
+下記のようなディレクトリ構成を推奨しています.  
 
-### DAJINをダウンロードします
+```
+├── DAJIN
+├── input.txt
+├── design.fasta
+├── fastq
+│   ├── barcode01.fastq
+│   ├── barcode02.fastq
+│   ├── barcode03.fastq
+│   ├── ......
 
+```
 
-## 利用方法
+> `input.txt`, `design.fasta` と `fastq`の名前は自由に変更していただけます
 
-### 入力ファイルの用意
+ファイル/ディレクトリの説明は以下の通りです.  
+### 1. `input.txt`
 
-以下のような入力ファイルを作製します.  
+`input.txt`は以下のような形式のテキストファイルです.  
 
 ```
 design=DAJIN/example/design.txt
@@ -48,37 +79,56 @@ threads=10
 filter=on
 ```
 
-各項目の情報は以下のとおりです. 各項目は順不同です.  
+各項目の内容は以下のとおりです。
 
-- **desing**: 考えられる遺伝型の配列を記載したFASTA形式のテキストファイルです.  ">wt"と">target"の2つは含まれている必要があります. 
-- **input_dir**: demultiplex済みのFASTA/FASTQファイルを含むディレクトリです. 
-- **control**: 野生型コントロールのバーコード番号です. 
-- **genome**: `mm10`, `hg38`等の参照ゲノムです. 
-- **grna**: PAMを含むgRNA配列です. 2つ以上の配列はコンマ（,）で区切ります. 
-- **output_dir（オプショナル）**: 結果を保存するディレクトリの名前です. デフォルトは`DAJIN_results`です. 
-- **threads（オプショナル）**: DAJINに使用するCPUスレッド数です. デフォルトでは`3分の2`を使用します. 
-- **filter（オプショナル**: on/off）: マイナーアレル（3%以下）を解析から除きます. デフォルトは"on"です. 
+- **desing**: 考えられる遺伝型の配列を記載したFASTA形式のテキストファイルです。 ">wt"と">target"の2つは含まれている必要があります。
+- **input_dir**: demultiplex済みのFASTA/FASTQファイルを含むディレクトリです。
+- **control**: 野生型コントロールのバーコード番号です。
+- **genome**: `mm10`, `hg38`等の参照ゲノムです。
+- **grna**: gRNA配列です。2つ以上の配列はコンマ（,）で区切ります。
+- **output_dir（オプショナル）**: 結果を保存するディレクトリの名前です。デフォルトは`DAJIN_results`です。
+- **threads（オプショナル）**: DAJINに使用するCPUスレッド数です。デフォルトでは`3分の2`を使用します。
+- **filter（オプショナル**: on/off）: マイナーアレル（Targetアレルが1%以下、その他のアレルが3%以下）を解析から除きます。デフォルトは"on"です。
 
+> `design`, `input_dir`, `control`, `genome`,`grna` は必須項目です.
+> 各項目は順不同です。
 
-### DAJINの実行
+### 2. `design.fasta`
+
+`design.fasta` はマルチFASTA形式のテキストファイルです. WT（ゲノム編集前）とTarget（ゲノム編集後）の配列は必ず含む必要があります.  ほかにも副産物として起こりうる配列を加えることができます.  
+
+floxノックインの例は[こちら](https://github.com/akikuno/DAJIN/blob/master/example/example.fa)です.  
+floxノックインの場合は副産物アレルを含めて6つのアレルタイプが考えられます(WT, Target, Left LoxP, Right LoxP, flox deletion, Inversion).  
+また, DAJINは`design.fasta`の配列とは違ったアレルを'異常アレル abnormal'としてレポートします.  
+
+### 3. `fastq` directory
+
+現状, DAJINは[qcat](https://github.com/nanoporetech/qcat)によりDemultiplexされたfastqをあつかいます.  
+そのためGuppyの場合には出力のディレクトリ構成が異なるため, 変換する必要があります.  
+Guppyの出力を扱えるようにアップデートする予定です.  
+
+## DAJINの実行
 
 ```bash
-./DAJIN/DAJIN.sh -f [入力ファイルのPATH]
+./DAJIN/DAJIN.sh -i design.txt
 ```
-
-下記のコマンドで例を実行します.
+### Example usage
 
 ```sh
 ./DAJIN/DAJIN.sh -i DAJIN/example/design.txt
 ```
+:point_up_2:小さいデータセットでDAJINを試すことができます.  
 
-### 結果のレポートについて
 
-DAJINは2つのファイル（`Details.csv`, `Details.pdf`）と2つのフォルダ（`BAM`, `Consensus`）を出力します. 
+### 出力ファイル
+
+DAJINは解析後, 2つのファイルと2つのディレクトリを作製します. それぞれ`Details.csv`, `Details.pdf`, `Consensus`, `BAM`です.  
 
 #### Details.csv
 
-`Details.csv` はアレル情報を記載しています.
+`Details.csv` は各個体に含まれるアレルの種類と割合が示されています.  
+目的の変異をもつアレルはDesignの列が**+**となっています.  
+
 
 | Sample    |  Allele ID |  % of reads |  Allele type  |  Indel |  Large indel |  Design |
 |-----------|------------|-------------|---------------|--------|--------------|---------|
@@ -91,24 +141,33 @@ DAJINは2つのファイル（`Details.csv`, `Details.pdf`）と2つのフォル
 
 #### Details.pdf
 
-`Details.pdf`は上記CSVを可視化した以下のような図です.  
+`Details.pdf`は`Details.csv`を可視化したものです.  
+下記のような図になります.  
 
 <img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/Details.png" width="75%">  
 
-barcode01は野生型コントロールです. barcode02とbarcode03はfloxノックインのゲノム編集を施したファウンダーマウスの結果です.  
-barcode02のほぼ全てのアレルがintact target （flox以外の異常な変異の入っていないアレル）であることから、このマウスは目的のfloxアレルをホモでもつマウスの候補と考えられます.  
+barcode01は野生型コントロールで, barcode02および03がfloxノックインのマウスゲノムです. この図からbarcode02のゲノムはほぼfloxアレルであることから, 目的のノックインがホモで入った個体であると考えられます.  
 
-#### Consensus
+#### Consensusフォルダ
 
-`Conseusus` フォルダーには各アレルのコンセンサス配列が保存されています.  
-ファイル形式はFASTAおよびHTMLです.  
+`Conseusus`フォルダにはFASTAファイルまたはHTMLファイルがあり, 各アレルごとのコンセンサス配列が記載されています.  
 
-HTMLでは色付けされた変異情報が表示されます.  
+とくにHTMLファイルは変異が色付けされているため一瞥して変異箇所とその種類（挿入・欠失・置換）が理解できます.  
+<a href="https://htmlpreview.github.io/?https://github.com/akikuno/DAJIN/blob/master/misc/images/tyr_c140cg.html" target= _blank rel= noopener>こちらの一例</a>は点変異のコンセンサス配列です.  
 
-<a href="https://htmlpreview.github.io/?https://github.com/akikuno/DAJIN/blob/master/misc/images/tyr_c140cg.html" target= _blank rel= noopener> こちらは点変異のコンセンサス配列です. </a>
+#### BAMフォルダ
 
-#### BAM
+`BAM`フォルダには各サンプルごとのBAMファイルがあり, さらに1サンプルすべてのリードか, 各アレルごとのリードのBAMに分かれて保存されています.  
+[IGV](http://software.broadinstitute.org/software/igv/)によって可視化できます.  
 
-`BAM` フォルダーには解析したサンプルの全アレルおよび各アレルごとのBAMファイルが保存されています.  
-この`BAM`ファイルは[IGV](http://software.broadinstitute.org/software/igv/)で可視化できます.  
+## ライセンス
 
+DAJINはMITライセンスです. 詳細は[LICENSE.md](https://github.com/akikuno/DAJIN/blob/master/LICENSE.md)をご覧ください.
+
+## 謝辞
+
+- 水野聖哉 先生（筑波大学 実験動物学研究室）
+- 綾部 信哉 先生（理研バイオリソース研究センター 実験動物開発室）
+- 池田 祥久 さん（筑波大学 実験動物学研究室）
+- 坂本 航太郎 さん（筑波大学 ヒューマンバイオロジー学位プログラム）
+- 鈴木 沙耶香 さん（筑波大学 ヒューマンバイオロジー学位プログラム）
