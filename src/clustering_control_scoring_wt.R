@@ -5,7 +5,7 @@
 options(repos = "https://cloud.r-project.org/")
 options(readr.show_progress = FALSE)
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
-pacman::p_load(tidyverse, parallel, vroom)
+pacman::p_load(tidyverse, parallel, vroom, tidyfast)
 
 ################################################################################
 #! I/O naming
@@ -35,7 +35,7 @@ colnames(df_control_mids) <- seq_len(ncol(df_control_mids))
 
 df_control_freq_wt <-
     df_control_mids %>%
-    pivot_longer(col = everything(), names_to = "loc", values_to = "MIDS") %>%
+    dt_pivot_longer(names_to = "loc", values_to = "MIDS") %>%
     nest(nest = c(MIDS)) %>%
     mutate(control_freq = mclapply(nest,
         function(x)

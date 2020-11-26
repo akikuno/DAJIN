@@ -127,7 +127,7 @@ lgl_possible_true_mut <-
                 mutate(freq = n / sum(n) * 100) %>%
                 slice_max(freq, n = 1) %>%
                 slice_sample(MIDS, n = 1) %>%
-                mutate(lgl = if_else(MIDS != "M" & freq > 80, TRUE, FALSE)) %>%
+                mutate(lgl = if_else(MIDS != "M" & freq > 50, TRUE, FALSE)) %>%
                 pull(lgl)
             })
         if_else(any(tmp_), TRUE, FALSE)
@@ -274,11 +274,11 @@ if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
 #? Merge clusters with Cosine similarity
 #===========================================================
 
-calc_cosine_sim <- function(x, y) {
-    crossprod(x, y) / sqrt(crossprod(x) * crossprod(y))
-}
+if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 1) {
 
-if (length(unique(merged_clusters)) > 1) {
+    calc_cosine_sim <- function(x, y) {
+        crossprod(x, y) / sqrt(crossprod(x) * crossprod(y))
+    }
 
     cl_combn <- combn(unique(merged_clusters), 2)
 
@@ -354,22 +354,7 @@ if (nrow(tmp_dual_adaptor) > 0) {
 #! Output results
 ################################################################################
 
-pattern_ <- merged_clusters %>%
-    unique() %>%
-    sort()
-query_ <- merged_clusters %>%
-    unique() %>%
-    seq_along()
-
-merged_clusters <-
-    merged_clusters %>%
-    map(function(cl) {
-        map2(pattern_, query_, function(x, y) {
-                if_else(cl %in% x, as.integer(y), NULL)
-        })
-    }) %>%
-    unlist %>%
-    .[!is.na(.)]
+merged_clusters <- as.factor(merged_clusters) %>% as.integer()
 
 df_readid_cluster <-
     tibble(read_id = df_que_label$id,
