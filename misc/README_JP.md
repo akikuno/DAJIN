@@ -127,7 +127,7 @@ DAJINは解析後, 2つのファイルと2つのディレクトリを作製し�
 #### Details.csv
 
 `Details.csv` は各個体に含まれるアレルの種類と割合が示されています.  
-目的の変異をもつアレルはDesignの列が**+**となっています.  
+目的の変異をもつアレルはDesignの列が`+`となっています.  
 
 
 | Sample    |  Allele ID |  % of reads |  Allele type  |  Indel |  Large indel |  Design |
@@ -162,7 +162,7 @@ barcode01は野生型コントロールで, barcode02および03がfloxノック
 
 ## ライセンス
 
-DAJINはMITライセンスです. 詳細は[LICENSE.md](https://github.com/akikuno/DAJIN/blob/master/LICENSE.md)をご覧ください.
+DAJINはMITライセンスです. 詳細は[LICENSE](https://github.com/akikuno/DAJIN/blob/master/LICENSE)をご覧ください.
 
 ## 謝辞
 
