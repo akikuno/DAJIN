@@ -19,10 +19,9 @@ Here are the DAJIN's features:
 ## Initial setup
 
 We highly recommend Linux OS and NVIDIA GPU to reduce computation time.  
-If a Windows PC with NVIDIA GPU, please follow the instruction.  
-https://docs.nvidia.com/cuda/wsl-user-guide/index.html
+If a Windows PC with NVIDIA GPU, please follow [the instruction](https://docs.nvidia.com/cuda/wsl-user-guide/index.html).  
 
-> FYI: We confirmed DAJIN's operation on [these environments](https://github.com/akikuno/DAJIN/blob/master/misc/TESTED_SYSTEMS.md).
+> We confirmed DAJIN's operation on [these environments](https://github.com/akikuno/DAJIN/blob/master/misc/TESTED_SYSTEMS.md).
 
 ### 1. Install [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) and [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)
 
@@ -39,8 +38,24 @@ chmod +x Miniconda3-latest-Linux-x86_64.sh
 ```sh
 git clone https://github.com/akikuno/DAJIN.git
 ```
+## USAGE
 
-## Recommended directory tree
+```sh
+./DAJIN/DAJIN.sh -i design.txt
+```
+
+### Example usage
+
+```sh
+./DAJIN/DAJIN.sh -i DAJIN/example/design.txt
+```
+
+You can conduct DAJIN in example small dataset.
+
+
+## Input
+
+### Recommended directory tree
 
 We recommend the following directory tree.
 
@@ -97,24 +112,12 @@ Besides, DAJIN annotates an allele that are different from these allele types as
 Currently DAJIN accepts [qcat](https://github.com/nanoporetech/qcat)'s demultiplex.  
 We plan to update to accepts the output of guppy basecaller.
 
-## USAGE
 
-```sh
-./DAJIN/DAJIN.sh -i design.txt
-```
-
-### Example usage
-
-```sh
-./DAJIN/DAJIN.sh -i DAJIN/example/design.txt
-```
-You can conduct DAJIN in example small dataset.
-
-### Output files
+## Output
 
 DAJIN outputs two files and two folders: `Details.csv`, `Details.pdf`, `Consensus`, `BAM`.  
 
-#### Details.csv
+### 1. `Details.csv`
 
 `Details.csv` contains allele information.
 The allele with target mutation is labeled **+** in Design column.
@@ -128,7 +131,7 @@ The allele with target mutation is labeled **+** in Design column.
 | barcode03 | 2          | 38.5        | abnormal      | +      | +            | -       |
 | barcode03 | 3          | 51.6        | flox_deletion | -      | -            | -       |
 
-#### Details.pdf
+### 2. `Details.pdf`
 
 The output directory contains a figure of whole-allelic profile.  
 This is an example result of three samples.  
@@ -139,13 +142,13 @@ The barcode01 is a wild-type mice as a control, whereas the barcode02 and barcod
 
 This result shows the most of Nanopore reads of barcode02 are labeled as "intact target" (flox), and indicates the barcode02 is a candidate of the desired homozygous mice.
 
-#### Consensus
+### 3. `Consensus`
 
 The `Conseusus` folder includes FASTA and HTML files which display consensus sequence in each allele.
 
 Here is <a href="https://htmlpreview.github.io/?https://github.com/akikuno/DAJIN/blob/master/misc/images/tyr_c140cg.html" target= _blank rel= noopener> an example of DAJIN consensus sequence</a> using the point mutation.
 
-#### BAM
+### 4. `BAM`
 
 The `BAM` folder includes BAM files from all and each allele.
 
