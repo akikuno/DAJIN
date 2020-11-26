@@ -153,7 +153,7 @@ The `BAM` files can be visualized by [IGV](http://software.broadinstitute.org/so
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](https://github.com/akikuno/DAJIN/blob/master/LICENSE.md) file for details
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/akikuno/DAJIN/blob/master/LICENSE) file for details
 
 ## Acknowledgments
 
