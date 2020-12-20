@@ -9,26 +9,21 @@
 
 DAJIN is a genotyping software with simple, rapid, and scalable whole-allelic profiling of genome editing organisms using a long-read sequencer.  
 
-Here are the DAJIN's features:  
+:dart: DAJIN automatically identify and classify a diversity of mutations, including a point mutation, knock-out, knock-in, and inversion
+:dart: DAJIN uses the nanopore long-read sequencer to capture larger genomic locus (~10 kb) than conventional genotyping methods such as a short-read NGS and Sanger sequencing
+:dart: DAJIN detects various mutations from single-nucleotide variants to large indels (~10 kb)
+:dart: DAJIN can treat ~100 samples within a day
 
-- DAJIN automatically identify and classify a diversity of mutations, including a point mutation, knock-out, knock-in, and inversion
-- DAJIN uses the nanopore long-read sequencer to capture larger genomic locus (~10 kb) than conventional genotyping methods such as a short-read NGS and Sanger sequencing.
-- DAJIN detects various mutations from single-nucleotide variants to large indels (~10 kb).
-- DAJIN can treat ~100 samples within a day
+## Initial Setup
 
-## Initial setup
+We recommend **Linux OS with NVIDIA GPU** to reduce computation time.  
+If you use a Windows PC with NVIDIA GPU, please follow [this instruction](https://docs.nvidia.com/cuda/wsl-user-guide/index.html).  
 
-We highly recommend Linux OS and NVIDIA GPU to reduce computation time.  
-If a Windows PC with NVIDIA GPU, please follow the instruction.  
-https://docs.nvidia.com/cuda/wsl-user-guide/index.html
+> We confirmed DAJIN's operation on [these environments](https://github.com/akikuno/DAJIN/blob/master/misc/TESTED_SYSTEMS.md).
 
-> FYI: We confirmed DAJIN's operation on [these environments](https://github.com/akikuno/DAJIN/blob/master/misc/TESTED_SYSTEMS.md).
-
-### 1. Install [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) and [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)
+### 1. Install conda
 
 ```bash
-# Instal git
-sudo apt install git
 # Install miniconda
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 chmod +x Miniconda3-latest-Linux-x86_64.sh
@@ -39,14 +34,13 @@ chmod +x Miniconda3-latest-Linux-x86_64.sh
 ```sh
 git clone https://github.com/akikuno/DAJIN.git
 ```
-
-## Recommended directory tree
+### 3. Prepare design files and fastq directory
 
 We recommend the following directory tree.
 
 ```
 ├── DAJIN
-├── input.txt
+├── design.txt
 ├── design.fasta
 ├── fastq
 │   ├── barcode01.fastq
@@ -55,13 +49,13 @@ We recommend the following directory tree.
 │   ├── ......
 
 ```
-> You can rename `input.txt`, `design.fasta` and `fastq`.
+> You can rename `design.txt`, `design.fasta` and `fastq`.
 
-Description of the files/directory is as following:  
-### 1. `input.txt`
+Descriptions of the files/directory are as following:  
+#### 1. `design.txt`
 
 
-`input.txt` should be formatted as below:
+`design.txt` is formatted as below:
 
 ```
 design=DAJIN/example/example.fa
@@ -77,27 +71,27 @@ threads=10
 - **input_dir**: PATH to a directory containing demultiplexed FASTQ files
 - **control**: control barcode ID
 - **genome**: reference genome. e.g. mm10, hg38
-- **grna**: gRNA sequence(s) including PAM. multiple gRNA sequences must be delimitated by comma.
+- **grna**: gRNA sequence(s) *including PAM*. multiple gRNA sequences must be delimitated by comma.
 - **output_dir** (optional): output directory name. Default is `DAJIN_results`
 - **threads** (optional: integer): Default is `2/3` of available CPU threads.
 - **filter**  (optional: `on` or `off`): set filter to remove very minor allele (less than 3%). Default is `on`.
 
-> `design`, `input_dir`, `control`, `genome`,`grna` are required, but there are in no particular order.
+> `design`, `input_dir`, `control`, `genome`,`grna` are required, but there are in no particular dorder.
 
-### 2. `design.fasta`
+#### 2. `design.fasta`
 
 `design.fasta` is a multi-FASTA file, which contain a WT and target sequence, as well as byproducts.
 
-An example of flox design is [here](https://github.com/akikuno/DAJIN/blob/master/example/example.fa).  
+[This](https://github.com/akikuno/DAJIN/blob/master/example/example.fa) is an example file of flox design.  
 In the case of flox design, 6 allele types (WT, Target, Left LoxP, Right LoxP, flox deletion, and Inversion) can be produced.  
-Besides, DAJIN annotates an allele that are different from these allele types as 'abnormal' allele.  
+Besides, DAJIN annotates an allele that are different from these allele types as `abnormal` allele.  
 
-### 3. `fastq` directory
+#### 3. `fastq` directory
 
 Currently DAJIN accepts [qcat](https://github.com/nanoporetech/qcat)'s demultiplex.  
-We plan to update to accepts the output of guppy basecaller.
+We plan to update to accepts the output of `guppy` basecaller.
 
-## USAGE
+## Usage
 
 ```sh
 ./DAJIN/DAJIN.sh -i design.txt
@@ -110,11 +104,11 @@ We plan to update to accepts the output of guppy basecaller.
 ```
 You can conduct DAJIN in example small dataset.
 
-### Output files
+## Results
 
 DAJIN outputs two files and two folders: `Details.csv`, `Details.pdf`, `Consensus`, `BAM`.  
 
-#### Details.csv
+### Details.csv
 
 `Details.csv` contains allele information.
 The allele with target mutation is labeled **+** in Design column.
@@ -128,7 +122,7 @@ The allele with target mutation is labeled **+** in Design column.
 | barcode03 | 2          | 38.5        | abnormal      | +      | +            | -       |
 | barcode03 | 3          | 51.6        | flox_deletion | -      | -            | -       |
 
-#### Details.pdf
+### Details.pdf
 
 The output directory contains a figure of whole-allelic profile.  
 This is an example result of three samples.  
@@ -139,13 +133,13 @@ The barcode01 is a wild-type mice as a control, whereas the barcode02 and barcod
 
 This result shows the most of Nanopore reads of barcode02 are labeled as "intact target" (flox), and indicates the barcode02 is a candidate of the desired homozygous mice.
 
-#### Consensus
+### Consensus
 
 The `Conseusus` folder includes FASTA and HTML files which display consensus sequence in each allele.
 
 Here is <a href="https://htmlpreview.github.io/?https://github.com/akikuno/DAJIN/blob/master/misc/images/tyr_c140cg.html" target= _blank rel= noopener> an example of DAJIN consensus sequence</a> using the point mutation.
 
-#### BAM
+### BAM
 
 The `BAM` folder includes BAM files from all and each allele.
 
@@ -153,12 +147,12 @@ The `BAM` files can be visualized by [IGV](http://software.broadinstitute.org/so
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/akikuno/DAJIN/blob/master/LICENSE) file for details
+This project is under the MIT License - see the [LICENSE](https://github.com/akikuno/DAJIN/blob/master/LICENSE) file for details
 
 ## Acknowledgments
 
-- Dr. Seiya Mizuno
-- Dr. Sinya Ayabe
-- Mr. Yoshihisa Ikeda
-- Mr. Kotaro Sakamoto
-- Ms. Sayaka Suzuki
+- Dr. Seiya Mizuno at University of Tsukuba
+- Dr. Sinya Ayabe at Riken BioResource Research Center
+- Mr. Yoshihisa Ikeda at University of Tsukuba
+- Mr. Kotaro Sakamoto at University of Tsukuba
+- Ms. Sayaka Suzuki at University of Tsukuba
