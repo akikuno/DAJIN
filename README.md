@@ -9,10 +9,10 @@
 
 DAJIN is a genotyping software with simple, rapid, and scalable whole-allelic profiling of genome editing organisms using a long-read sequencer.  
 
-:dart: DAJIN automatically identify and classify a diversity of mutations, including a point mutation, knock-out, knock-in, and inversion  
-:dart: DAJIN uses the nanopore long-read sequencer to capture larger genomic locus (~10 kb) than conventional genotyping methods such as a short-read NGS and Sanger sequencing  
-:dart: DAJIN detects various mutations from single-nucleotide variants to large indels (~10 kb)  
-:dart: DAJIN can treat ~100 samples within a day  
+- :dart: DAJIN automatically identify and classify a diversity of mutations, including a point mutation, knock-out, knock-in, and inversion  
+- :dart: DAJIN uses the nanopore long-read sequencer to capture larger genomic locus (~10 kb) than conventional genotyping methods such as a short-read NGS and Sanger sequencing  
+- :dart: DAJIN detects various mutations from single-nucleotide variants to large indels (~10 kb)  
+- :dart: DAJIN can treat ~100 samples within a day  
 
 ## Initial Setup
 
