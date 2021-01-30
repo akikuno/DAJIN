@@ -254,27 +254,26 @@ set -u
 # #===========================================================
 # #? Get mutation loci
 # #===========================================================
+ref=".DAJIN_temp/fasta_conv/wt.fa"
+que=".DAJIN_temp/fasta_conv/target.fa"
 
-minimap2 -ax splice \
-    ".DAJIN_temp/fasta_conv/wt.fa" ".DAJIN_temp/fasta_conv/target.fa" \
-    --cs 2>/dev/null |
-    awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-    sed -e "s/cs:Z:://g" -e "s/:/ /g" -e "s/~/ /g" |
-    tr -d "\~\*\-\+atgc" |
-    awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
+minimap2 -ax splice "$ref" "$que"  --cs 2>/dev/null |
+  awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
+  sed -e "s/cs:Z:://g" -e "s/:/ /g" -e "s/~/ /g" |
+  tr -d "\~\*\-\+atgc" |
+  awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
 cat > .DAJIN_temp/data/mutation_points
+
+unset ref que
 
 #===========================================================
 #? MIDS conversion
 #===========================================================
 
 find .DAJIN_temp/fasta_ont -type f |
-    sort |
-    awk '{print "./DAJIN/src/mids_classification.sh", $0, "wt", "&"}' |
-    awk -v th=${threads:-1} '{
-        if (NR%th==0) gsub("&","&\nwait",$0)
-        print}
-        END{print "wait"}' |
+  sort |
+  awk '{print "./DAJIN/src/mids_classification.sh", $0, "wt", "&"}' |
+  awk -v th=${threads:-1} 'NR%th==0 {sub("&", "&\nwait")}1;END{print "wait"}' |
 sh - 2>/dev/null
 
 ################################################################################
@@ -287,9 +286,8 @@ Predict allele types
 --------------------------------------------------------------------------------
 EOF
 
-./DAJIN/src/ml_prediction.sh "${control}" "${threads}" \
-> .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt ||
-exit 1
+./DAJIN/src/ml_prediction.sh "${control}" "${threads}" > .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt ||
+  exit 1
 
 
 ################################################################################
@@ -316,10 +314,10 @@ mkdir -p .DAJIN_temp/clustering/temp
 #===========================================================
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    cut -f 2,3 |
-    sort -u |
-    awk -v ctrl="$control" '$1 $2 != ctrl "wt"' |
-    awk -v th="${threads:-1}" '{print "./DAJIN/src/clustering.sh", $1, $2, th}' |
+  cut -f 2,3 |
+  sort -u |
+  awk -v ctrl="$control" '$1 $2 != ctrl "wt"' |
+  awk -v th="${threads:-1}" '{print "./DAJIN/src/clustering.sh", $1, $2, th}' |
 sh -
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
@@ -336,13 +334,10 @@ rm -rf ".DAJIN_temp/clustering/allele_per/" 2>/dev/null
 mkdir -p ".DAJIN_temp/clustering/allele_per/"
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
-    cut -f 2 |
-    sort -u |
-    awk -v filter="${filter:-on}" \
-    '{print "./DAJIN/src/clustering_allele_percentage.sh", $1, filter, "&"}' |
-    awk -v th="${threads:-1}" '{
-        if (NR%th==0) gsub("&","&\nwait",$0)}1
-        END{print "wait"}' |
+  cut -f 2 |
+  sort -u |
+  awk -v filter="${filter:-on}" '{print "./DAJIN/src/clustering_allele_percentage.sh", $1, filter, "&"}' |
+  awk -v th=${threads:-1} 'NR%th==0 {sub("&", "&\nwait")}1;END{print "wait"}' |
 sh -
 
 ################################################################################
@@ -367,33 +362,28 @@ mkdir -p .DAJIN_temp/consensus/temp .DAJIN_temp/consensus/sam
 #===========================================================
 
 cat .DAJIN_temp/clustering/allele_per/label* |
-    cut -d " " -f 1,2 |
-    sort -u |
-    grep -v abnormal |  #TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  cut -d " " -f 1,2 |
+  sort -u |
+  grep -v abnormal |  #TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 while read -r input; do
-    barcode="${input%% *}"
-    mapping_alleletype="$(echo "${input##* }" | sed "s/abnormal/wt/g" | sed "s/normal/wt/g")"
+  barcode="${input%% *}"
+  mapping_alleletype="$(echo "${input##* }" | sed "s/abnormal/wt/g" | sed "s/normal/wt/g")"
 
-    cat .DAJIN_temp/clustering/allele_per/readid_cl_mids_"${barcode}"_"${mapping_alleletype}" |
-        awk '{print ">"$1}' |
-        sort |
-    cat > .DAJIN_temp/consensus/tmp_id
+  cat .DAJIN_temp/clustering/allele_per/readid_cl_mids_"${barcode}"_"${mapping_alleletype}" |
+    awk '{print ">"$1}' |
+    sort |
+  cat > .DAJIN_temp/consensus/tmp_id
 
-    cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
-        awk '{print $1}' |
-        tr "\n" " " |
-        awk '{gsub(">", "\n>")}1' |
-        grep -v "^$" |
-        sort |
-        join - .DAJIN_temp/consensus/tmp_id |
-        awk '{gsub(" ", "\n")}1' |
-        grep -v "^$" |
-        minimap2 -ax map-ont -t "${threads}" \
-            ".DAJIN_temp/fasta/${mapping_alleletype}.fa" - \
-            --cs=long 2>/dev/null |
-        sort |
-    cat > .DAJIN_temp/consensus/sam/"${barcode}"_"${mapping_alleletype}".sam
-    rm .DAJIN_temp/consensus/tmp_id
+  cat .DAJIN_temp/fasta_ont/"${barcode}".fa |
+    awk 'BEGIN{RS=">"}{print ">"$1" "$NF}' |
+    sed 1d |
+    sort |
+    join - .DAJIN_temp/consensus/tmp_id |
+    awk '{gsub(" ", "\n")}1' |
+    minimap2 -ax map-ont -t "${threads}" ".DAJIN_temp/fasta/${mapping_alleletype}.fa" - --cs=long 2>/dev/null |
+    sort |
+  cat > .DAJIN_temp/consensus/sam/"${barcode}"_"${mapping_alleletype}".sam
+rm .DAJIN_temp/consensus/tmp_id
 done
 
 #===========================================================
@@ -404,9 +394,7 @@ cat .DAJIN_temp/clustering/allele_per/label* |
     awk '{nr[$1]++; print $0, nr[$1]}' |
     grep -v abnormal |  #TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     awk '{print "./DAJIN/src/consensus.sh", $0, "&"}' |
-    awk -v th="${threads:-1}" '{
-        if (NR%th==0) gsub("&","&\nwait",$0)}1
-        END{print "wait"}' |
+  awk -v th=${threads:-1} 'NR%th==0 {sub("&", "&\nwait")}1;END{print "wait"}' |
 sh -
 
 ################################################################################
