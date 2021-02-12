@@ -46,13 +46,13 @@ USAGE
 }
 
 usage_and_exit(){
-    usage
-    exit 1
+  usage
+  exit 1
 }
 
 error_exit() {
-    echo "$@" 1>&2
-    exit 1
+  echo "$@" 1>&2
+  exit 1
 }
 
 ################################################################################
@@ -62,36 +62,36 @@ error_exit() {
 
 while [ $# -gt 0 ]
 do
-    case "$1" in
-        --help | --hel | --he | --h | '--?' | -help | -hel | -he | -h | '-?')
-            usage_and_exit
-            ;;
-        --version | --versio | --versi | --vers | --ver | --ve | --v | \
-        -version | -versio | -versi | -vers | -ver | -ve | -v )
-            echo "DAJIN version: $VERSION" && exit 0
-            ;;
-        --input | --in | --i | -i )
-            if ! [ -r "$2" ]; then
-                error_exit "$2: No such file"
-            fi
-            design=$(cat "$2" | grep "^design" | sed -e "s/ //g" -e "s/.*=//g")
-            input_dir=$(cat "$2" | grep "^input_dir" | sed -e "s/ //g" -e "s/.*=//g")
-            control=$(cat "$2" | grep "^control" | sed -e "s/ //g" -e "s/.*=//g")
-            genome=$(cat "$2" | grep "^genome" | sed -e "s/ //g" -e "s/.*=//g")
-            grna=$(cat "$2" | grep "^grna" | sed -e "s/ //g" -e "s/.*=//g")
-            output_dir=$(cat "$2" | grep "^output_dir" | sed -e "s/ //g" -e "s/.*=//g")
-            threads=$(cat "$2" | grep "^threads" | sed -e "s/ //g" -e "s/.*=//g")
-            filter=$(cat "$2" | grep "^filter" | sed -e "s/ //g" -e "s/.*=//g")
-            TEST=$(cat "$2" | grep "^TEST" | sed -e "s/ //g" -e "s/.*=//g")
-            ;;
-        -* )
-        error_exit "Unrecognized option : $1"
-            ;;
-        *)
-            break
-            ;;
-    esac
-    shift
+  case "$1" in
+    --help | --hel | --he | --h | '--?' | -help | -hel | -he | -h | '-?')
+      usage_and_exit
+      ;;
+    --version | --versio | --versi | --vers | --ver | --ve | --v | \
+    -version | -versio | -versi | -vers | -ver | -ve | -v )
+      echo "DAJIN version: $VERSION" && exit 0
+      ;;
+    --input | --in | --i | -i )
+      if ! [ -r "$2" ]; then
+        error_exit "$2: No such file"
+      fi
+      design=$(cat "$2" | grep "^design" | sed -e "s/ //g" -e "s/.*=//g")
+      input_dir=$(cat "$2" | grep "^input_dir" | sed -e "s/ //g" -e "s/.*=//g")
+      control=$(cat "$2" | grep "^control" | sed -e "s/ //g" -e "s/.*=//g")
+      genome=$(cat "$2" | grep "^genome" | sed -e "s/ //g" -e "s/.*=//g")
+      grna=$(cat "$2" | grep "^grna" | sed -e "s/ //g" -e "s/.*=//g")
+      output_dir=$(cat "$2" | grep "^output_dir" | sed -e "s/ //g" -e "s/.*=//g")
+      threads=$(cat "$2" | grep "^threads" | sed -e "s/ //g" -e "s/.*=//g")
+      filter=$(cat "$2" | grep "^filter" | sed -e "s/ //g" -e "s/.*=//g")
+      TEST=$(cat "$2" | grep "^TEST" | sed -e "s/ //g" -e "s/.*=//g")
+      ;;
+    -* )
+      error_exit "Unrecognized option : $1"
+      ;;
+    *)
+      break
+      ;;
+  esac
+  shift
 done
 
 #===========================================================
@@ -111,7 +111,7 @@ done
 [ -e "$design" ] || error_exit "$design: No such file"
 
 [ "$(grep -c -e '>wt' -e '>target' ${design})" -ne 2 ] &&
-    error_exit "$design: design must include '>target' and '>wt'. "
+  error_exit "$design: design must include '>target' and '>wt'. "
 
 #===========================================================
 #? Check directory
@@ -128,9 +128,9 @@ fastq_num=$(find ${input_dir}/* -type f | grep -c -e ".fq" -e ".fastq")
 #===========================================================
 
 if find ${input_dir}/ -type f | grep -q "${control}"; then
-    :
+  :
 else
-    error_exit "$control: No control file in ${input_dir}"
+  error_exit "$control: No control file in ${input_dir}"
 fi
 
 #===========================================================
@@ -138,13 +138,12 @@ fi
 #===========================================================
 
 genome_check=$(
-    wget -q -O - "http://hgdownload.soe.ucsc.edu/downloads.html" |
-    grep hgTracks |
-    grep -c "${genome:-XXX}"
+  wget -q -O - "http://hgdownload.soe.ucsc.edu/downloads.html" |
+  grep hgTracks |
+  grep -c "${genome:-XXX}"
 )
 
-[ "$genome_check" -eq 0 ] &&
-    error_exit "$genome: No such reference genome"
+[ "$genome_check" -eq 0 ] && error_exit "$genome: No such reference genome"
 
 #===========================================================
 #? Check grna
@@ -163,18 +162,18 @@ done
 #===========================================================
 
 [ $(echo "$output_dir" | sed "s/[_a-zA-Z0-9]*//g" | wc | awk '{print $2}') -ne 0 ] &&
-    error_exit "$output_dir: invalid directory name"
+  error_exit "$output_dir: invalid directory name"
 
 #===========================================================
 #? Check "filter"
 #===========================================================
 
 if [ -z "${filter}" ]; then
-    filter=on
+  filter=on
 elif [ _"${filter}" = _"on" ] || [ _"${filter}" = _"off" ]; then
-    :
+  :
 else
-    error_exit "${filter}: invalid filter name (on/off)"
+  error_exit "${filter}: invalid filter name (on/off)"
 fi
 
 #===========================================================
@@ -182,19 +181,19 @@ fi
 #===========================================================
 
 {
-unset max_threads tmp_threads
-max_threads=$(getconf _NPROCESSORS_ONLN)
-[ -z "$max_threads" ] && max_threads=$(getconf NPROCESSORS_ONLN)
-[ -z "$max_threads" ] && max_threads=$(ksh -c 'getconf NPROCESSORS_ONLN')
-[ -z "$max_threads" ] && max_threads=1
-tmp_threads=$(("${threads}" + 0))
+  unset max_threads tmp_threads
+  max_threads=$(getconf _NPROCESSORS_ONLN)
+  [ -z "$max_threads" ] && max_threads=$(getconf NPROCESSORS_ONLN)
+  [ -z "$max_threads" ] && max_threads=$(ksh -c 'getconf NPROCESSORS_ONLN')
+  [ -z "$max_threads" ] && max_threads=1
+  tmp_threads=$(("${threads}" + 0))
 }  2>/dev/null || true
 
 if [ "${tmp_threads:-0}" -gt 1 ] && [ "${tmp_threads}" -lt "${max_threads}" ]
 then
-    :
+  :
 else
-    threads=$(echo "${max_threads}" | awk '{print int($0*2/3+0.5)}')
+  threads=$(echo "${max_threads}" | awk '{print int($0*2/3+0.5)}')
 fi
 
 ################################################################################
@@ -213,8 +212,8 @@ fi
 
 dirs="fasta fasta_conv fasta_ont NanoSim data"
 echo "${dirs}" |
-    sed "s:^:.DAJIN_temp/:g" |
-    sed "s: : .DAJIN_temp/:g" |
+  sed "s:^:.DAJIN_temp/:g" |
+  sed "s: : .DAJIN_temp/:g" |
 xargs mkdir -p
 
 ./DAJIN/src/format_fasta.sh "$design" "$input_dir" "$grna"
@@ -234,7 +233,7 @@ conda activate DAJIN_nanosim
 set -u
 
 if [ "$(find .DAJIN_temp/fasta_ont | grep -c simulated)" -eq 0 ]; then
-    ./DAJIN/src/nanosim.sh "${control}" "${threads}"
+  ./DAJIN/src/nanosim.sh "${control}" "${threads}"
 fi
 
 ################################################################################
