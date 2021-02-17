@@ -185,6 +185,18 @@ cl <- h$HDBSCAN(min_samples = 1L,
 
 int_hdbscan_clusters <- cl$fit_predict(input_hdbscan) + 1
 
+tmp_cls <- int_hdbscan_clusters
+for (i in unique(int_hdbscan_clusters)) {
+    cl <- h$HDBSCAN(
+        min_samples = 1L,
+        min_cluster_size = as.integer(sum(int_hdbscan_clusters == i) * 0.3),
+        memory = joblib$Memory(cachedir = ".DAJIN_temp/clustering/temp", verbose = 0)
+        )
+    tmp_cls[tmp_cls == i] <- cl$fit_predict(input_hdbscan[int_hdbscan_clusters == i, ]) + (10 * i)
+}
+
+int_hdbscan_clusters <-as.factor(tmp_cls) %>% as.integer()
+
 ################################################################################
 #! Output results
 ################################################################################
