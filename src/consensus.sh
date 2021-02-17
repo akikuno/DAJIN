@@ -54,17 +54,15 @@ mutation_type_site_nuc=".DAJIN_temp/consensus/temp/mutation_type_site_nuc_${out_
 tmp_html=.DAJIN_temp/consensus/temp/tmp_html_"${out_suffix}"
 
 target_mutation_type=$(
-    minimap2 -ax splice \
-        .DAJIN_temp/fasta/wt.fa \
-        .DAJIN_temp/fasta/target.fa \
-        --cs 2>/dev/null |
-    grep -v "^@" |
-    awk '{
-        cstag=$(NF-1)
-        if(cstag ~ "\~") print "D"
-        else if(cstag ~ "\+") print "I"
-        else if(cstag ~ "\*") print "S"
-        }' 2>/dev/null
+  ref=".DAJIN_temp/fasta/wt.fa"
+  que=".DAJIN_temp/fasta/target.fa"
+  minimap2 -ax splice "$ref"  "$que"  --cs 2>/dev/null |
+  awk '!/@/ {
+    cstag=$(NF-1)
+    if(cstag ~ "\~") print "D"
+    else if(cstag ~ "\+") print "I"
+    else if(cstag ~ "\*") print "S"
+  }' 2>/dev/null
 )
 
 ################################################################################
@@ -76,11 +74,11 @@ target_mutation_type=$(
 #===========================================================
 
 cat "${allele_id}" |
-    awk -v cl="${cluster}" '$2==cl' |
-    cut -f 3 |
-    sed "s/=/M/g" |
-    awk -F "" 'BEGIN{OFS=","}{$1=$1}1' |
-cat > "${tmp_allele_id}"
+  awk -v cl="${cluster}" '$2==cl' |
+  cut -f 3 |
+  sed "s/=/M/g" |
+  awk -F "" 'BEGIN{OFS=","}{$1=$1}1' |
+  cat > "${tmp_allele_id}"
 
 if [ -s "${control_score}" ]; then
     Rscript DAJIN/src/consensus.R "${tmp_allele_id}" "${control_score}" 2>/dev/null
