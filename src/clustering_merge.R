@@ -20,9 +20,9 @@ pacman::p_load(tidyverse, furrr, vroom)
 #===========================================================
 
 args <- commandArgs(trailingOnly = TRUE)
-file_que_mids <- args[1]
-file_que_label <- args[2]
-file_control_score <- args[3]
+query_score <- args[1]
+query_label <- args[2]
+control_RDS <- args[3]
 threads <- as.integer(args[4])
 plan(multiprocess, workers = threads)
 
@@ -30,24 +30,24 @@ plan(multiprocess, workers = threads)
 #? Inputs
 #===========================================================
 
-df_que_mids <- vroom(file_que_mids,
+df_que_mids <- vroom(query_score,
     col_names = FALSE,
     col_types = cols(),
     num_threads = threads)
 colnames(df_que_mids) <- seq_len(ncol(df_que_mids))
 
-df_que_label <- read_csv(file_que_label,
+df_que_label <- read_csv(query_label,
     col_names = c("id", "strand", "barcode"),
     col_types = cols())
 
-df_control_score <- readRDS(file_control_score)
+df_control_score <- readRDS(control_RDS)
 
 #===========================================================
 #? Outputs
 #===========================================================
 
 output_suffix <-
-    str_remove(file_que_label, ".*labels_")
+    str_remove(query_label, ".*labels_")
 
 int_hdbscan_clusters <-
     read_csv(
@@ -298,7 +298,7 @@ if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 1) {
             )
         })
 
-    df_cossim_extracted <- df_cossim %>% filter(score > 0.95)
+    df_cossim_extracted <- df_cossim %>% filter(score > 0.90)
 
     if (nrow(df_cossim_extracted) != 0) {
         for (i in seq_along(rownames(df_cossim_extracted))) {
