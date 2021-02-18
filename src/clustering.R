@@ -26,9 +26,9 @@ reticulate::use_condaenv("DAJIN")
 #===========================================================
 
 args <- commandArgs(trailingOnly = TRUE)
-file_que_mids <- args[1]
-file_que_label <- args[2]
-file_control_score <- args[3]
+query_score <- args[1]
+query_label <- args[2]
+control_RDS <- args[3]
 threads <- as.integer(args[4])
 plan(multiprocess, workers = threads)
 
@@ -36,23 +36,23 @@ plan(multiprocess, workers = threads)
 #? Inputs
 #===========================================================
 
-df_que_mids <- vroom(file_que_mids,
+df_que_mids <- vroom(query_score,
     col_names = FALSE,
     col_types = cols(),
     num_threads = threads)
 colnames(df_que_mids) <- seq_len(ncol(df_que_mids))
 
-df_que_label <- read_csv(file_que_label,
+df_que_label <- read_csv(query_label,
     col_names = c("id", "strand", "barcode"),
     col_types = cols())
 
-df_control_score <- readRDS(file_control_score)
+df_control_score <- readRDS(control_RDS)
 
 #===========================================================
 #? Outputs
 #===========================================================
 
-output_suffix <- str_remove(file_que_label, ".*labels_")
+output_suffix <- str_remove(query_label, ".*labels_")
 
 ################################################################################
 #! MIDS scoring
@@ -136,7 +136,7 @@ joblib <- reticulate::import("joblib")
 h <- reticulate::import("hdbscan")
 
 min_cluster_sizes <-
-    seq(nrow(input_hdbscan) * 0.2, nrow(input_hdbscan) * 0.4, length = 50) %>%
+    seq(nrow(input_hdbscan) * 0.1, nrow(input_hdbscan) * 0.4, length = 50) %>%
     as.integer %>%
     `+`(2) %>%
     unique
@@ -189,13 +189,13 @@ tmp_cls <- int_hdbscan_clusters
 for (i in unique(int_hdbscan_clusters)) {
     cl <- h$HDBSCAN(
         min_samples = 1L,
-        min_cluster_size = as.integer(sum(int_hdbscan_clusters == i) * 0.3),
+        min_cluster_size = as.integer(sum(int_hdbscan_clusters == i) * 0.2),
         memory = joblib$Memory(cachedir = ".DAJIN_temp/clustering/temp", verbose = 0)
         )
     tmp_cls[tmp_cls == i] <- cl$fit_predict(input_hdbscan[int_hdbscan_clusters == i, ]) + (10 * i)
 }
 
-int_hdbscan_clusters <-as.factor(tmp_cls) %>% as.integer()
+int_hdbscan_clusters <- as.factor(tmp_cls) %>% as.integer()
 
 ################################################################################
 #! Output results
