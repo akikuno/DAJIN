@@ -9,12 +9,13 @@
 
 DAJIN is a genotyping software with simple, rapid, and scalable whole-allelic profiling of genome editing organisms using a long-read sequencer.  
 
-- :dart: DAJIN automatically identify and classify a diversity of mutations, including a point mutation, knock-out, knock-in, and inversion  
-- :dart: DAJIN uses the nanopore long-read sequencer to capture larger genomic locus (~10 kb) than conventional genotyping methods such as a short-read NGS and Sanger sequencing  
-- :dart: DAJIN detects various mutations from single-nucleotide variants to large indels (~10 kb)  
-- :dart: DAJIN can treat ~100 samples within a day  
+## Features
 
-## Initial Setup
+- DAJIN automatically identifies a diversity of mutations from single-nucleotide variants to structural variants, such as a point mutation, knock-out, knock-in, and inversion.  
+- DAJIN uses the nanopore long-read sequencer to capture larger genomic locus (~10 kb) than conventional genotyping methods such as a short-read NGS and Sanger sequencing.
+- DAJIN can genotype ~100 samples of different genome-editing designs at the same time within a day.  
+
+## Setup
 
 We recommend **Linux OS with NVIDIA GPU** to reduce computation time.  
 If you use a Windows PC with NVIDIA GPU, please follow [this instruction](https://docs.nvidia.com/cuda/wsl-user-guide/index.html).  
@@ -52,8 +53,8 @@ We recommend the following directory tree.
 > You can rename `design.txt`, `design.fasta` and `fastq`.
 
 Descriptions of the files/directory are as following:  
-#### 1. `design.txt`
 
+#### 1. `design.txt`
 
 `design.txt` is formatted as below:
 
@@ -89,7 +90,8 @@ Besides, DAJIN annotates an allele that are different from these allele types as
 #### 3. `fastq` directory
 
 Currently DAJIN accepts [qcat](https://github.com/nanoporetech/qcat)'s demultiplex.  
-We plan to update to accepts the output of `guppy` basecaller.
+
+> We plan to update to accepts the output of `guppy` basecaller.
 
 ## Usage
 
@@ -102,7 +104,7 @@ We plan to update to accepts the output of `guppy` basecaller.
 ```sh
 ./DAJIN/DAJIN.sh -i DAJIN/example/design.txt
 ```
-You can conduct DAJIN in example small dataset.
+You can conduct DAJIN in an example small dataset.
 
 ## Results
 
@@ -154,5 +156,5 @@ This project is under the MIT License - see the [LICENSE](https://github.com/aki
 - Dr. Seiya Mizuno at University of Tsukuba
 - Dr. Sinya Ayabe at Riken BioResource Research Center
 - Mr. Yoshihisa Ikeda at University of Tsukuba
-- Mr. Kotaro Sakamoto at University of Tsukuba
+- Dr. Kotaro Sakamoto at University of Tsukuba
 - Ms. Sayaka Suzuki at University of Tsukuba
