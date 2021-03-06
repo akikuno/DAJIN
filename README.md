@@ -151,10 +151,18 @@ The `BAM` files can be visualized by [IGV](http://software.broadinstitute.org/so
 
 This project is under the MIT License - see the [LICENSE](https://github.com/akikuno/DAJIN/blob/master/LICENSE) file for details
 
-## Acknowledgments
+## Citation
 
-- Dr. Seiya Mizuno at University of Tsukuba
-- Dr. Sinya Ayabe at Riken BioResource Research Center
-- Mr. Yoshihisa Ikeda at University of Tsukuba
-- Dr. Kotaro Sakamoto at University of Tsukuba
-- Ms. Sayaka Suzuki at University of Tsukuba
+```
+@article {Kuno2020.12.14.422641,
+	author = {Kuno, Akihiro and Ikeda, Yoshihisa and Ayabe, Shinya and Kato, Kanako and Sakamoto, Kotaro and Suzuki, Sayaka and Morimoto, Kento and Wakimoto, Arata and Mikami, Natsuki and Ishida, Miyuki and Iki, Natsumi and Hamada, Yuko and Takemura, Megumi and Daitoku, Yoko and Tanimoto, Yoko and Huong Dinh, Tra Thi and Murata, Kazuya and Hamada, Michito and Yoshiki, Atsushi and Sugiyama, Fumihiro and Takahashi, Satoru and Mizuno, Seiya},
+	title = {DAJIN-assisted multiplex genotyping to validate the outcomes of CRISPR-Cas-based genome editing},
+	elocation-id = {2020.12.14.422641},
+	year = {2020},
+	doi = {10.1101/2020.12.14.422641},
+	publisher = {Cold Spring Harbor Laboratory},
+	URL = {https://www.biorxiv.org/content/early/2020/12/14/2020.12.14.422641},
+	eprint = {https://www.biorxiv.org/content/early/2020/12/14/2020.12.14.422641.full.pdf},
+	journal = {bioRxiv}
+}
+```
