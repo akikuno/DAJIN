@@ -81,11 +81,11 @@ threads=10
 
 #### 2. `design.fasta`
 
-`design.fasta` is a multi-FASTA file, which contain a WT and target sequence, as well as byproducts.
+`design.fasta` is a multi-FASTA file, which contains a WT and target sequence, as well as byproducts.
 
 [This](https://github.com/akikuno/DAJIN/blob/master/example/example.fa) is an example file of flox design.  
-In the case of flox design, 6 allele types (WT, Target, Left LoxP, Right LoxP, flox deletion, and Inversion) can be produced.  
-Besides, DAJIN annotates an allele that are different from these allele types as `abnormal` allele.  
+In flox design, 6 allele types (WT, Target, Left LoxP, Right LoxP, flox deletion, and Inversion) may be produced.  
+Besides, DAJIN annotates an allele that is different from these allele types as `SV (structural variants)` allele.  
 
 #### 3. `fastq` directory
 
@@ -113,15 +113,15 @@ DAJIN outputs two files and two folders: `Details.csv`, `Details.pdf`, `Consensu
 ### Details.csv
 
 `Details.csv` contains allele information.
-The allele with target mutation is labeled **+** in Design column.
+The allele with target mutation is labeled **+** in the Design column.
 
 | Sample    |  Allele ID |  % of reads |  Allele type  |  Indel |  Large indel |  Design |
 |-----------|------------|-------------|---------------|--------|--------------|---------|
 | barcode01 | 1          | 100         | wt            | -      | -            | -       |
-| barcode02 | 1          | 11.8        | abnormal      | +      | +            | -       |
+| barcode02 | 1          | 11.8        | SV      | +      | +            | -       |
 | barcode02 | 2          | 88.2        | target        | -      | -            | +       |
-| barcode03 | 1          | 9.9         | abnormal      | +      | +            | -       |
-| barcode03 | 2          | 38.5        | abnormal      | +      | +            | -       |
+| barcode03 | 1          | 9.9         | SV      | +      | +            | -       |
+| barcode03 | 2          | 38.5        | SV      | +      | +            | -       |
 | barcode03 | 3          | 51.6        | flox_deletion | -      | -            | -       |
 
 ### Details.pdf
@@ -151,10 +151,18 @@ The `BAM` files can be visualized by [IGV](http://software.broadinstitute.org/so
 
 This project is under the MIT License - see the [LICENSE](https://github.com/akikuno/DAJIN/blob/master/LICENSE) file for details
 
-## Acknowledgments
+## Citation
 
-- Dr. Seiya Mizuno at University of Tsukuba
-- Dr. Sinya Ayabe at Riken BioResource Research Center
-- Mr. Yoshihisa Ikeda at University of Tsukuba
-- Dr. Kotaro Sakamoto at University of Tsukuba
-- Ms. Sayaka Suzuki at University of Tsukuba
+```
+@article {Kuno2020.12.14.422641,
+	author = {Kuno, Akihiro and Ikeda, Yoshihisa and Ayabe, Shinya and Kato, Kanako and Sakamoto, Kotaro and Suzuki, Sayaka and Morimoto, Kento and Wakimoto, Arata and Mikami, Natsuki and Ishida, Miyuki and Iki, Natsumi and Hamada, Yuko and Takemura, Megumi and Daitoku, Yoko and Tanimoto, Yoko and Huong Dinh, Tra Thi and Murata, Kazuya and Hamada, Michito and Yoshiki, Atsushi and Sugiyama, Fumihiro and Takahashi, Satoru and Mizuno, Seiya},
+	title = {DAJIN-assisted multiplex genotyping to validate the outcomes of CRISPR-Cas-based genome editing},
+	elocation-id = {2020.12.14.422641},
+	year = {2020},
+	doi = {10.1101/2020.12.14.422641},
+	publisher = {Cold Spring Harbor Laboratory},
+	URL = {https://www.biorxiv.org/content/early/2020/12/14/2020.12.14.422641},
+	eprint = {https://www.biorxiv.org/content/early/2020/12/14/2020.12.14.422641.full.pdf},
+	journal = {bioRxiv}
+}
+```
