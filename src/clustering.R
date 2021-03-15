@@ -1,5 +1,5 @@
 ################################################################################
-#! Install required packages
+# Install required packages
 ################################################################################
 
 options(repos = "https://cloud.r-project.org/")
@@ -17,11 +17,11 @@ Sys.setenv(RETICULATE_PYTHON = DAJIN_Python)
 reticulate::use_condaenv("DAJIN")
 
 ################################################################################
-#! I/O naming
+# I/O naming
 ################################################################################
 
 # ===========================================================
-#? Auguments
+# Auguments
 #===========================================================
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -32,7 +32,7 @@ threads <- as.integer(args[4])
 plan(multiprocess, workers = threads)
 
 #===========================================================
-#? Inputs
+# Inputs
 #===========================================================
 
 df_que_mids <- vroom(query_score,
@@ -48,13 +48,13 @@ df_que_label <- read_csv(query_label,
 df_control_score <- readRDS(control_RDS)
 
 #===========================================================
-#? Outputs
+# Outputs
 #===========================================================
 
 output_suffix <- str_remove(query_label, ".*labels_")
 
 ################################################################################
-#! MIDS scoring
+# MIDS scoring
 ################################################################################
 
 df_que_score <-
@@ -70,7 +70,7 @@ df_que_score <-
   select(loc, que_freq)
 
 ################################################################################
-#! MIDS subtraction
+# MIDS subtraction
 ################################################################################
 
 tmp <- inner_join(df_que_score, df_control_score, by = "loc")
@@ -91,7 +91,7 @@ list_mids_score <-
 rm(tmp)
 
 ################################################################################
-#! Score each reads
+# Score each reads
 ################################################################################
 
 df_score <-
@@ -107,7 +107,7 @@ df_score <-
 df_score[, colSums(df_score) == 0] <- 10^-100
 
 ################################################################################
-#! PCA
+# PCA
 ################################################################################
 
 prcomp_result <- prcomp(df_score, scale = FALSE)
@@ -126,7 +126,7 @@ output_pca <- map2_dfc(df_coord, num_prop_variance, ~ .x * .y)
 rm(prcomp_result)
 
 ################################################################################
-#! Clustering
+# Clustering
 ################################################################################
 
 input_hdbscan <- output_pca
@@ -147,8 +147,8 @@ hd <- function(x) {
 }
 
 #===========================================================
-#? Clustering with multile cluster sizes
-#? to find the most frequent cluster numbers
+# Clustering with multile cluster sizes
+# to find the most frequent cluster numbers
 #===========================================================
 
 int_cluster_nums <-
@@ -158,8 +158,8 @@ int_cluster_nums <-
   .[. != 1]
 
 #===========================================================
-#? Extract cluster size with the smallest cluster size
-#? and the most frequent cluster numbers
+# Extract cluster size with the smallest cluster size
+# and the most frequent cluster numbers
 #===========================================================
 
 int_cluster_nums_opt <-
@@ -175,7 +175,7 @@ if (length(int_cluster_nums_opt) == 0)
   int_cluster_nums_opt <- which.max(min_cluster_sizes)
 
 #===========================================================
-#? Clustering with optimized cluster sizes
+# Clustering with optimized cluster sizes
 #===========================================================
 
 cl <- h$HDBSCAN(min_samples = 1L,
@@ -197,7 +197,7 @@ for (i in unique(int_hdbscan_clusters)) {
 int_hdbscan_clusters <- as.factor(tmp_cls) %>% as.integer()
 
 ################################################################################
-#! Output results
+# Output results
 ################################################################################
 
 write_csv(tibble(cl = int_hdbscan_clusters),

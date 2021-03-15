@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ################################################################################
-#! Initialize shell environment
+# Initialize shell environment
 ################################################################################
 
 set -u
@@ -11,10 +11,10 @@ export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 
 ################################################################################
-#! Define the functions for printing usage and error message
+# Define the functions for printing usage and error message
 ################################################################################
 
-VERSION=0.4
+VERSION=1.0
 
 usage(){
 cat <<- USAGE
@@ -56,7 +56,7 @@ error_exit() {
 }
 
 ################################################################################
-#! Parse arguments
+# Parse arguments
 ################################################################################
 [ $# -eq 0 ] && usage_and_exit
 
@@ -95,7 +95,7 @@ do
 done
 
 #===========================================================
-#? Check required arguments
+# Check required arguments
 #===========================================================
 
 [ -z "$design" ] && error_exit "design argument is not specified"
@@ -105,7 +105,7 @@ done
 [ -z "$grna" ] && error_exit "grna argument is not specified"
 
 #===========================================================
-#? Check fasta file
+# Check fasta file
 #===========================================================
 
 [ -e "$design" ] || error_exit "$design: No such file"
@@ -114,7 +114,7 @@ done
   error_exit "$design: design must include '>target' and '>wt'. "
 
 #===========================================================
-#? Check directory
+# Check directory
 #===========================================================
 
 [ -d "${input_dir}" ] || error_exit "$input_dir: No such directory"
@@ -124,7 +124,7 @@ fastq_num=$(find ${input_dir}/* -type f | grep -c -e ".fq" -e ".fastq")
 [ "$fastq_num" -eq 0 ] && error_exit "$input_dir: No FASTQ file in directory"
 
 #===========================================================
-#? Check control
+# Check control
 #===========================================================
 
 if find ${input_dir}/ -type f | grep -q "${control}"; then
@@ -134,7 +134,7 @@ else
 fi
 
 #===========================================================
-#? Check genome
+# Check genome
 #===========================================================
 
 genome_check=$(
@@ -146,7 +146,7 @@ genome_check=$(
 [ "$genome_check" -eq 0 ] && error_exit "$genome: No such reference genome"
 
 #===========================================================
-#? Check grna
+# Check grna
 #===========================================================
 
 set $(echo "${grna}" | sed "s/,/ /g")
@@ -158,14 +158,14 @@ do
 done
 
 #===========================================================
-#? Check output directory name
+# Check output directory name
 #===========================================================
 
 [ $(echo "$output_dir" | sed "s/[_a-zA-Z0-9]*//g" | wc | awk '{print $2}') -ne 0 ] &&
   error_exit "$output_dir: invalid directory name"
 
 #===========================================================
-#? Check "filter"
+# Check "filter"
 #===========================================================
 
 if [ -z "${filter}" ]; then
@@ -177,7 +177,7 @@ else
 fi
 
 #===========================================================
-#? Define threads
+# Define threads
 #===========================================================
 
 {
@@ -197,17 +197,17 @@ else
 fi
 
 ################################################################################
-#! Setting Conda environment
+# Setting Conda environment
 ################################################################################
 
 . DAJIN/src/conda_setting.sh
 
 ################################################################################
-#! Formatting environments
+# Formatting environments
 ################################################################################
 
 #===========================================================
-#? Make temporal directory
+# Make temporal directory
 #===========================================================
 
 dirs="fasta fasta_conv fasta_ont NanoSim data"
@@ -219,7 +219,7 @@ xargs mkdir -p
 ./DAJIN/src/format_fasta.sh "$design" "$input_dir" "$grna"
 
 ################################################################################
-#! NanoSim (v2.5.0)
+# NanoSim (v2.5.0)
 ################################################################################
 
 cat << EOF >&2
@@ -237,7 +237,7 @@ if [ "$(find .DAJIN_temp/fasta_ont | grep -c simulated)" -eq 0 ]; then
 fi
 
 ################################################################################
-#! MIDS conversion
+# MIDS conversion
 ################################################################################
 
 cat << EOF >&2
@@ -250,9 +250,9 @@ set +u
 conda activate DAJIN
 set -u
 
-# #===========================================================
-# #? Get mutation loci
-# #===========================================================
+#===========================================================
+# Get mutation loci
+#===========================================================
 ref=".DAJIN_temp/fasta_conv/wt.fa"
 que=".DAJIN_temp/fasta_conv/target.fa"
 
@@ -266,7 +266,7 @@ cat > .DAJIN_temp/data/mutation_points
 unset ref que
 
 #===========================================================
-#? MIDS conversion
+# MIDS conversion
 #===========================================================
 
 find .DAJIN_temp/fasta_ont -type f |
@@ -276,7 +276,7 @@ find .DAJIN_temp/fasta_ont -type f |
 sh - 2>/dev/null
 
 ################################################################################
-#! Prediction
+# Prediction
 ################################################################################
 
 cat << EOF >&2
@@ -290,7 +290,7 @@ EOF
 
 
 ################################################################################
-#! Clustering
+# Clustering
 ################################################################################
 
 cat << EOF >&2
@@ -303,13 +303,13 @@ rm -rf .DAJIN_temp/clustering 2>/dev/null || true
 mkdir -p .DAJIN_temp/clustering/temp
 
 #===========================================================
-#? Prepare control's score to define sequencing error
+# Prepare control's score to define sequencing error
 #===========================================================
 
 ./DAJIN/src/clustering_control_scoring.sh "${control}" "${threads}"
 
 #===========================================================
-#? Clustering
+# Clustering
 #===========================================================
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
@@ -326,7 +326,7 @@ cat ".DAJIN_temp/clustering/temp/hdbscan_${control}_wt" > .DAJIN_temp/clustering
 true > ".DAJIN_temp/clustering/temp/possible_true_mut_${control}_wt"
 
 #===========================================================
-#? Allele percentage
+# Allele percentage
 #===========================================================
 
 rm -rf ".DAJIN_temp/clustering/allele_per/" 2>/dev/null
@@ -340,7 +340,7 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
 sh -
 
 ################################################################################
-#! Get consensus sequence in each cluster
+# Get consensus sequence in each cluster
 ################################################################################
 
 cat << EOF >&2
@@ -350,14 +350,14 @@ Report consensus sequence
 EOF
 
 #===========================================================
-#? Setting directory
+# Setting directory
 #===========================================================
 
 rm -rf .DAJIN_temp/consensus 2>/dev/null || true
 mkdir -p .DAJIN_temp/consensus/temp .DAJIN_temp/consensus/sam
 
 #===========================================================
-#? Generate temporal SAM files
+# Generate temporal SAM files
 #===========================================================
 
 cat .DAJIN_temp/clustering/allele_per/label* |
@@ -386,7 +386,7 @@ rm .DAJIN_temp/consensus/tmp_id
 done
 
 #===========================================================
-#? Execute consensus.sh
+# Execute consensus.sh
 #===========================================================
 
 cat .DAJIN_temp/clustering/allele_per/label* |
@@ -397,13 +397,13 @@ cat .DAJIN_temp/clustering/allele_per/label* |
 sh -
 
 ################################################################################
-#! Summarize to Details.csv and Details.pdf
+# Summarize to Details.csv and Details.pdf
 ################################################################################
 
 ./DAJIN/src/details.sh
 
 ################################################################################
-#! Mapping by minimap2 for IGV visualization
+# Mapping by minimap2 for IGV visualization
 ################################################################################
 
 cat << EOF >&2
@@ -415,7 +415,7 @@ EOF
 ./DAJIN/src/generate_bam.sh "${genome}" "${threads}"
 
 ################################################################################
-#! Move output files
+# Move output files
 ################################################################################
 
 rm -rf "${output_dir:=DAJIN_results}" 2>/dev/null || true
@@ -423,14 +423,14 @@ mkdir -p "${output_dir:-DAJIN_results}"/BAM
 mkdir -p "${output_dir:-DAJIN_results}"/Consensus
 
 #===========================================================
-#? BAM
+# BAM
 #===========================================================
 
 rm -rf .DAJIN_temp/bam/temp 2>/dev/null || true
 cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 
 #===========================================================
-#? Consensus
+# Consensus
 #===========================================================
 
 (   find .DAJIN_temp/consensus/* -type d |
@@ -439,13 +439,13 @@ cp -r .DAJIN_temp/bam/* "${output_dir:-DAJIN_results}"/BAM/ 2>/dev/null
 ) 2>/dev/null || true
 
 #===========================================================
-#? Details
+# Details
 #===========================================================
 
 cp .DAJIN_temp/details/* "${output_dir:-DAJIN_results}"/
 
 ################################################################################
-#! Finish call
+# Finish call
 ################################################################################
 
 [ -z "${TEST}" ] && rm -rf .DAJIN_temp/
