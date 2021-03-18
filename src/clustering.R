@@ -104,7 +104,7 @@ df_score <-
       pull(score)
   })
 
-df_score[, colSums(df_score) == 0] <- 10^-100
+df_score[, colSums(df_score) == 0] <- 10^-10000
 
 ################################################################################
 #! PCA
@@ -112,10 +112,10 @@ df_score[, colSums(df_score) == 0] <- 10^-100
 
 prcomp_result <- prcomp(df_score, scale = FALSE)
 
-num_components <- 1:10
+num_components <- 1:5
 
 prcomp_loading <-
-  sweep(prcomp_result$rotation, 2, prcomp_result$sdev, FUN = "*")[, 1:10] %>%
+  sweep(prcomp_result$rotation, 2, prcomp_result$sdev, FUN = "*")[, 1:5] %>%
   as.data.frame()
 
 df_coord <- prcomp_result$x[, num_components] %>% as_tibble

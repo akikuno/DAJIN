@@ -285,10 +285,10 @@ if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 1) {
   df_cossim <-
     future_map_dfr(seq(ncol(cl_combn)), function(x) {
       score_1 <-
-        df_score[merged_clusters == cl_combn[1, x], possible_true_mut] %>%
+        df_score[merged_clusters == cl_combn[1, x], ] %>%
         colSums
       score_2 <-
-        df_score[merged_clusters == cl_combn[2, x], possible_true_mut] %>%
+        df_score[merged_clusters == cl_combn[2, x], ] %>%
         colSums
 
       tibble(
@@ -298,7 +298,7 @@ if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 1) {
       )
     })
 
-  df_cossim_extracted <- df_cossim %>% filter(score > 0.90)
+  df_cossim_extracted <- df_cossim %>% filter(score > 0.95)
 
   if (nrow(df_cossim_extracted) != 0) {
     for (i in seq_along(rownames(df_cossim_extracted))) {
