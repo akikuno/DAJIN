@@ -310,7 +310,6 @@ mkdir -p .DAJIN_temp/clustering/temp
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
   cut -f 2,3 |
   sort -u |
-  grep barcode20 | grep wt |
   awk -v ctrl="$control" '$1 $2 != ctrl "wt"' |
   awk -v th="${threads:-1}" '{print "./DAJIN/src/clustering.sh", $1, $2, th}' |
   sh -
