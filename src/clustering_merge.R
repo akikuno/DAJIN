@@ -298,7 +298,7 @@ if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 1 &) {
       )
     })
 
-  cossim_thres <- if_else(str_detect(query_score, "abnormal"), 0.95, 0.90)
+  cossim_thres <- if_else(str_detect(query_score, "abnormal"), 0.95, 0.80)
   df_cossim_extracted <- df_cossim %>% filter(score > cossim_thres)
 
   if (nrow(df_cossim_extracted) != 0) {
