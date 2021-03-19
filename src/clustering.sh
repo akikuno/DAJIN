@@ -7,8 +7,7 @@
 set -eu
 umask 0022
 export LC_ALL=C
-export UNIX_STD=2003  # to make HP-UX conform to POSIX
-
+export UNIX_STD=2003 # to make HP-UX conform to POSIX
 
 ################################################################################
 #! I/O naming
@@ -53,17 +52,17 @@ query_label=".DAJIN_temp/clustering/temp/query_labels_${suffix}"
 #! MIDS conversion
 ################################################################################
 
-./DAJIN/src/mids_clustering.sh "${barcode}" "${alleletype}" > "${MIDS_que}"
+./DAJIN/src/mids_clustering.sh "${barcode}" "${alleletype}" >"${MIDS_que}"
 
 ################################################################################
 #! Filter abnormal reads
 ################################################################################
 
-if [ _"$alleletype" = "_abnormal" ] ; then
-cat "${MIDS_que}" |
-    awk '$2 ~ /[a-z]/ || $2 ~ "DDDDDDDDDD" || $2 ~ "SSSSSSSSSS"' |
-cat > .DAJIN_temp/clustering/temp/_MIDS_"${suffix}"
-mv .DAJIN_temp/clustering/temp/_MIDS_"${suffix}" "${MIDS_que}"
+if [ _"$alleletype" = "_abnormal" ]; then
+    cat "${MIDS_que}" |
+        awk '$2 ~ /[a-z]/ || $2 ~ "DDDDDDDDDD" || $2 ~ "SSSSSSSSSS"' |
+        cat >.DAJIN_temp/clustering/temp/_MIDS_"${suffix}"
+    mv .DAJIN_temp/clustering/temp/_MIDS_"${suffix}" "${MIDS_que}"
 fi
 
 ################################################################################
@@ -80,7 +79,7 @@ cat "${MIDS_que}" |
     join - .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     awk -v atype="${alleletype}" '$NF==atype' |
     cut -d " " -f 1,2 |
-cat > "${query_seq}"
+    cat >"${query_seq}"
 
 #===========================================================
 #? Output query score
@@ -91,7 +90,7 @@ cat "${query_seq}" |
     awk -F '' 'BEGIN{OFS=","}{$1=$1}1' |
     sed "s/[0-9]/I/g" |
     sed "s/[a-z]/I/g" |
-cat > "${query_score}"
+    cat >"${query_score}"
 
 ################################################################################
 #! Query label (seqID,barcodeID)
@@ -104,7 +103,7 @@ cat "${MIDS_que}" |
     awk -v atype="${alleletype}" '$NF==atype' |
     cut -d " " -f 1,3,4 |
     sed "s/ /,/g" |
-cat > "${query_label}"
+    cat >"${query_label}"
 
 ################################################################################
 #! Clustering
@@ -112,7 +111,7 @@ cat > "${query_label}"
 
 echo "Clustering ${barcode} ${alleletype}..." >&2
 if [ "$(cat ${query_label} | wc -l)" -gt 50 ]; then
-    Rscript DAJIN/src/clustering.R "${query_score}" "${query_label}" "${control_RDS}" "${threads}" 2>/dev/null
+    # Rscript DAJIN/src/clustering.R "${query_score}" "${query_label}" "${control_RDS}" "${threads}" 2>/dev/null
     Rscript DAJIN/src/clustering_merge.R "${query_score}" "${query_label}" "${control_RDS}" "${threads}" 2>/dev/null
-    ps -au | grep -e "clustering.R" -e "joblib" | awk '{print $2}'| xargs kill 2>/dev/null || true
+    ps -au | grep -e "clustering.R" -e "joblib" | awk '{print $2}' | xargs kill 2>/dev/null || true
 fi
