@@ -298,7 +298,7 @@ if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 1) {
       )
     })
 
-  df_cossim_extracted <- df_cossim %>% filter(score > 0.95)
+  df_cossim_extracted <- df_cossim %>% filter(score > 0.90)
 
   if (nrow(df_cossim_extracted) != 0) {
     for (i in seq_along(rownames(df_cossim_extracted))) {
