@@ -166,7 +166,7 @@ hotelling_common <-
 #? Merge clusters with the same mutation profiles
 #===========================================================
 
-if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
+if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 0) {
 
   max_mids <-
     future_map_chr(possible_true_mut, function(x) {
@@ -274,7 +274,7 @@ if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
 #? Merge clusters with Cosine similarity
 #===========================================================
 
-if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 1 &) {
+if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 1) {
 
   calc_cosine_sim <- function(x, y) {
     crossprod(x, y) / sqrt(crossprod(x) * crossprod(y))
