@@ -274,7 +274,7 @@ if (length(unique(merged_clusters)) > 1 && length(possible_true_mut) > 0) {
 #? Merge clusters with Cosine similarity
 #===========================================================
 
-if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 1) {
+if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 1 &) {
 
   calc_cosine_sim <- function(x, y) {
     crossprod(x, y) / sqrt(crossprod(x) * crossprod(y))
@@ -298,7 +298,8 @@ if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 1) {
       )
     })
 
-  df_cossim_extracted <- df_cossim %>% filter(score > 0.90)
+  cossim_thres <- if_else(str_detect(query_score, "abnormal"), 0.95, 0.90)
+  df_cossim_extracted <- df_cossim %>% filter(score > cossim_thres)
 
   if (nrow(df_cossim_extracted) != 0) {
     for (i in seq_along(rownames(df_cossim_extracted))) {
