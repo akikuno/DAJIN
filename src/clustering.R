@@ -16,6 +16,9 @@ DAJIN_Python <- reticulate::conda_list()$python %>% str_subset("DAJIN/bin/python
 Sys.setenv(RETICULATE_PYTHON = DAJIN_Python)
 reticulate::use_condaenv("DAJIN")
 
+joblib <- reticulate::import("joblib")
+h <- reticulate::import("hdbscan")
+
 ################################################################################
 # I/O naming
 ################################################################################
@@ -131,8 +134,6 @@ rm(prcomp_result)
 
 input_hdbscan <- output_pca
 
-joblib <- reticulate::import("joblib")
-h <- reticulate::import("hdbscan")
 
 min_cluster_sizes <-
   seq(nrow(input_hdbscan) * 0.1, nrow(input_hdbscan) * 0.4, length = 50) %>%
@@ -152,8 +153,7 @@ hd <- function(x) {
 #===========================================================
 
 int_cluster_nums <-
-  mclapply(min_cluster_sizes, hd,
-  mc.cores = as.integer(threads)) %>%
+  mclapply(min_cluster_sizes, hd, mc.cores = as.integer(threads)) %>%
   unlist %>%
   .[. != 1]
 
@@ -186,6 +186,8 @@ int_hdbscan_clusters <- cl$fit_predict(input_hdbscan) + 2
 
 tmp_cls <- int_hdbscan_clusters
 for (i in unique(int_hdbscan_clusters)) {
+  .cl_size <- as.integer(sum(int_hdbscan_clusters == i) * 0.4)
+  if (.cl_size <= 1) next
   cl <- h$HDBSCAN(
     min_samples = 1L,
     min_cluster_size = as.integer(sum(int_hdbscan_clusters == i) * 0.4),
