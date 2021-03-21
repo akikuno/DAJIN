@@ -216,9 +216,17 @@ if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 0) {
         control <-
           df_control_score %>%
           filter(loc == y) %>%
-          unnest(control_freq) %>%
-          mutate(MIDS = case_when(mut == 1 ~ "M", TRUE ~ MIDS)) %>%
-          mutate(freq = case_when(mut == 1 ~ 100, TRUE ~ freq))
+          unnest(control_freq)
+        control <-
+          if(str_detect(colnames(control), "MIDS")) {
+            control %>%
+            mutate(MIDS = case_when(mut == 1 ~ "M", TRUE ~ MIDS)) %>%
+            mutate(freq = case_when(mut == 1 ~ 100, TRUE ~ freq))
+          } else {
+            control %>%
+            mutate(MIDS = "M", freq = 0) %>%
+            bind_rows(tibble(MIDS = c("I","D","S"), freq = c(0,0,0)))
+          }
 
         df_que_mids[merged_clusters == cl, y] %>%
         table(dnn = "MIDS") %>%
