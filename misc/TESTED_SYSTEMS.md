@@ -1,8 +1,9 @@
-# System information
+# Tested system information
 
 We have checked DAJIN works correctly in the following systems:
 
 ## Linux
+
 ---
 | OS     | Ubuntu 18.04.3 LTS x86_64            |
 | ------ | ------------------------------------ |
@@ -21,6 +22,7 @@ We have checked DAJIN works correctly in the following systems:
 | Memory | 64 GB                           |
 
 ## Windows 10 (WSL2)
+
 ---
 | OS     | Ubuntu 18.04.5 LTS on Windows 10 x86_64 |
 | ------ | --------------------------------------- |
