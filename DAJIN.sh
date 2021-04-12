@@ -13,7 +13,7 @@ export UNIX_STD=2003 # to make HP-UX conform to POSIX
 # Define the functions for printing usage and error message
 ################################################################################
 
-VERSION=1.0
+VERSION=0.5
 
 usage() {
   cat <<-USAGE
@@ -158,8 +158,9 @@ done
 # Check output directory name
 #===========================================================
 
-[ $(echo "$output_dir" | sed "s/[_a-zA-Z0-9]*//g" | wc | awk '{print $2}') -ne 0 ] &&
+mkdir -p .DAJIN_temp/"$output_dir" 2>/dev/null ||
   error_exit "$output_dir: invalid directory name"
+rm -rf .DAJIN_temp/"$output_dir" 2>/dev/null || true
 
 #===========================================================
 # Check "filter"
@@ -214,79 +215,75 @@ echo "${dirs}" |
 
 ./DAJIN/src/format_fasta.sh "$design" "$input_dir" "$grna"
 
-# ################################################################################
-# #! NanoSim (v2.5.0)
-# ################################################################################
+################################################################################
+#! NanoSim (v2.5.0)
+################################################################################
 
-# cat <<EOF >&2
-# --------------------------------------------------------------------------------
-# NanoSim read simulation
-# --------------------------------------------------------------------------------
-# EOF
+cat <<EOF >&2
+--------------------------------------------------------------------------------
+NanoSim read simulation
+--------------------------------------------------------------------------------
+EOF
 
-# set +u
-# conda activate DAJIN_nanosim
-# set -u
+set +u
+conda activate DAJIN_nanosim
+set -u
 
-# if [ "$(find .DAJIN_temp/fasta_ont | grep -c simulated)" -eq 0 ]; then
-#   ./DAJIN/src/nanosim.sh "${control}" "${threads}"
-# fi
-
-# ################################################################################
-# #! MIDS conversion
-# ################################################################################
-
-# cat <<EOF >&2
-# --------------------------------------------------------------------------------
-# Preprocessing
-# --------------------------------------------------------------------------------
-# EOF
-
-# set +u
-# conda activate DAJIN
-# set -u
-
-# # #===========================================================
-# # #? Get mutation loci
-# # #===========================================================
-# ref=".DAJIN_temp/fasta_conv/wt.fa"
-# que=".DAJIN_temp/fasta_conv/target.fa"
-
-# minimap2 -ax splice "$ref" "$que" --cs 2>/dev/null |
-#   awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
-#   sed -e "s/cs:Z:://g" -e "s/:/ /g" -e "s/~/ /g" |
-#   tr -d "\~\*\-\+atgc" |
-#   awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
-#   cat >.DAJIN_temp/data/mutation_points
-
-# unset ref que
-
-# #===========================================================
-# #? MIDS conversion
-# #===========================================================
-
-# find .DAJIN_temp/fasta_ont -type f |
-#   sort |
-#   awk '{print "./DAJIN/src/mids_classification.sh", $0, "wt", "&"}' |
-#   awk -v th=${threads:-1} 'NR%th==0 {sub("&", "&\nwait")}1;END{print "wait"}' |
-#   sh - 2>/dev/null
-
-# ################################################################################
-# # Prediction
-# ################################################################################
-
-# cat <<EOF >&2
-# --------------------------------------------------------------------------------
-# Predict allele types
-# --------------------------------------------------------------------------------
-# EOF
-
-# ./DAJIN/src/ml_prediction.sh "${control}" "${threads}" >.DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt ||
-#   exit 1
+if [ "$(find .DAJIN_temp/fasta_ont | grep -c simulated)" -eq 0 ]; then
+  ./DAJIN/src/nanosim.sh "${control}" "${threads}"
+fi
 
 ################################################################################
-# Clustering
+#! MIDS conversion
 ################################################################################
+
+cat <<EOF >&2
+--------------------------------------------------------------------------------
+Preprocessing
+--------------------------------------------------------------------------------
+EOF
+
+set +u
+conda activate DAJIN
+set -u
+
+# #===========================================================
+# #? Get mutation loci
+# #===========================================================
+
+minimap2 -ax splice .DAJIN_temp/fasta_conv/wt.fa .DAJIN_temp/fasta_conv/target.fa --cs 2>/dev/null |
+  awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
+  sed -e "s/cs:Z:://g" -e "s/:/ /g" -e "s/~/ /g" |
+  tr -d "\~\*\-\+atgc" |
+  awk '{$NF=0; for(i=1;i<=NF;i++) sum+=$i} END{print $1,sum}' |
+  cat >.DAJIN_temp/data/mutation_points
+
+#===========================================================
+#? MIDS conversion
+#===========================================================
+
+find .DAJIN_temp/fasta_ont -type f |
+  sort |
+  awk '{print "./DAJIN/src/mids_classification.sh", $0, "wt", "&"}' |
+  awk -v th="${threads:-1}" 'NR%th==0 {sub("&", "&\nwait")}1; END {print "wait"}' |
+  sh - 2>/dev/null
+
+################################################################################
+# Prediction
+################################################################################
+
+cat <<EOF >&2
+--------------------------------------------------------------------------------
+Predict allele types
+--------------------------------------------------------------------------------
+EOF
+
+./DAJIN/src/ml_prediction.sh "${control}" "${threads}" >.DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt ||
+  exit 1
+
+###############################################################################
+Clustering
+###############################################################################
 
 cat <<EOF >&2
 --------------------------------------------------------------------------------
@@ -331,7 +328,7 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
   cut -f 2 |
   sort -u |
   awk -v filter="${filter:-on}" '{print "./DAJIN/src/clustering_allele_percentage.sh", $1, filter, "&"}' |
-  awk -v th=${threads:-1} 'NR%th==0 {sub("&", "&\nwait")}1;END{print "wait"}' |
+  awk -v th="${threads:-1}" 'NR%th==0 {sub("&", "&\nwait")}1;END{print "wait"}' |
   sh -
 
 ################################################################################
@@ -358,7 +355,7 @@ mkdir -p .DAJIN_temp/consensus/temp .DAJIN_temp/consensus/sam
 cat .DAJIN_temp/clustering/allele_per/label* |
   cut -d " " -f 1,2 |
   sort -u |
-  grep -v abnormal | #TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  grep -v abnormal |
   while read -r input; do
     barcode="${input%% *}"
     mapping_alleletype="$(echo "${input##* }" | sed "s/abnormal/wt/g" | sed "s/normal/wt/g")"
@@ -386,9 +383,9 @@ cat .DAJIN_temp/clustering/allele_per/label* |
 
 cat .DAJIN_temp/clustering/allele_per/label* |
   awk '{nr[$1]++; print $0, nr[$1]}' |
-  grep -v abnormal | #TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  grep -v abnormal |
   awk '{print "./DAJIN/src/consensus.sh", $0, "&"}' |
-  awk -v th=${threads:-1} 'NR%th==0 {sub("&", "&\nwait")}1;END{print "wait"}' |
+  awk -v th="${threads:-1}" 'NR%th==0 {sub("&", "&\nwait")}1;END{print "wait"}' |
   sh -
 
 ################################################################################
