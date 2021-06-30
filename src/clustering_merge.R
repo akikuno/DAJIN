@@ -126,7 +126,7 @@ lgl_possible_true_mut <-
         as_tibble() %>%
         mutate(freq = n / sum(n) * 100) %>%
         slice_max(freq, n = 1) %>%
-        slice_sample(MIDS, n = 1) %>%
+        head(n = 1) %>%
         mutate(lgl = if_else(MIDS != "M" & freq > 50, TRUE, FALSE)) %>%
         pull(lgl)
       })
@@ -175,7 +175,7 @@ if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 0) {
       as_tibble() %>%
       mutate(freq = n / sum(n) * 100) %>%
       slice_max(freq, n = 1) %>%
-      slice_sample(MIDS, n = 1) %>%
+      head(n = 1) %>%
       pull(MIDS)
     }) %>%
   set_names(possible_true_mut)
@@ -194,7 +194,7 @@ if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 0) {
         as_tibble() %>%
         mutate(freq = n / sum(n) * 100) %>%
         slice_max(freq, n = 1) %>%
-        slice_sample(MIDS, n = 1) %>%
+        head(n = 1) %>%
         mutate(MIDS = if_else(freq > 75, MIDS, max_mids[names(max_mids) == loc])) %>%
         pull(MIDS)
       }) %>%
@@ -235,7 +235,7 @@ if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 0) {
         full_join(., control, by = "MIDS", suffix = c("_x", "_y")) %>%
         slice_max(freq_x, n = 1) %>%
         filter(MIDS != "M" & freq_y < 5) %>%
-        slice_sample(MIDS, n = 1) %>%
+        head(n = 1) %>%
         mutate(MIDS = if_else(freq_x > 90, MIDS, NULL)) %>%
         pull(MIDS)
       }) %>%
