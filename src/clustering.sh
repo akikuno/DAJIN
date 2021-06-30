@@ -87,7 +87,8 @@ cat "${MIDS_que}" |
 
 cat "${query_seq}" |
     cut -d " " -f 2 |
-    awk -F '' 'BEGIN{OFS=","}{$1=$1}1' |
+    awk '{n=split($0,array,""); for(i=1;i<=n;i++) printf array[i]","; print ""}' |
+    sed "s/,$//" |
     sed "s/[0-9]/I/g" |
     sed "s/[a-z]/I/g" |
     cat >"${query_score}"
@@ -113,5 +114,5 @@ echo "Clustering ${barcode} ${alleletype}..." >&2
 if [ "$(cat ${query_label} | wc -l)" -gt 50 ]; then
     Rscript DAJIN/src/clustering.R "${query_score}" "${query_label}" "${control_RDS}" "${threads}" 2>/dev/null
     Rscript DAJIN/src/clustering_merge.R "${query_score}" "${query_label}" "${control_RDS}" "${threads}" 2>/dev/null
-    ps -au | grep -e "clustering.R" -e "joblib" | awk '{print $2}' | xargs kill 2>/dev/null || true
+    ps -au | grep -e "clustering.R" -e "joblib" | awk '{print $2}' | xargs kill 2>/dev/null || :
 fi
