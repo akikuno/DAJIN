@@ -7,8 +7,7 @@
 set -u
 umask 0022
 export LC_ALL=C
-export UNIX_STD=2003  # to make HP-UX conform to POSIX
-
+export UNIX_STD=2003 # to make HP-UX conform to POSIX
 
 ################################################################################
 #! I/O naming
@@ -52,7 +51,7 @@ tmp_secondary=".DAJIN_temp/clustering/tmp_secondary_${suffix}"_$$
 #! Function definitions
 ################################################################################
 
-mids_compressed(){
+mids_compressed() {
     set /dev/stdin
     cat "${1}" |
         # long deletion
@@ -76,8 +75,8 @@ mids_compressed(){
         gsub(/[ACGT]/, "M", $0)
         gsub(/\*[acgt][acgt]/, " S", $0)
         gsub("=", " ", $0)
-        gsub("\+", " +", $0)
-        gsub("\-", " -", $0)
+        gsub(/\+/, " +", $0)
+        gsub(/\-/, " -", $0)
         for(i=1; i<=NF; i++){
             if($i ~ /^\+/){
                 len=length($i)-1
@@ -95,8 +94,8 @@ mids_compressed(){
             }
         gsub(" ", "", $0)
         print id, loc, $0, strand}' 2>/dev/null |
-    sort -t " " |
-    cat
+        sort -t " " |
+        cat
 }
 
 ################################################################################
@@ -108,7 +107,7 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
     grep "${alleletype}" |
     cut -f 1 |
     sort |
-cat > "${tmp_seqID}"
+    cat >"${tmp_seqID}"
 
 cat "${que_fa}" |
     awk '{printf $1"\t"}' |
@@ -118,7 +117,7 @@ cat "${que_fa}" |
     sed "s/^/>/g" |
     sed "s/ /\n/g" |
     grep -v "^$" |
-cat > "${tmp_que_fa}"
+    cat >"${tmp_que_fa}"
 
 ################################################################################
 #! Mapping
@@ -141,7 +140,7 @@ minimap2 -ax splice "${ref_fa}" "${tmp_que_fa}" --cs=long 2>/dev/null |
         num_pri=sub("primary","",flag[$1])
         if(num_pri>0) print $0
     }' |
-cat > "${tmp_all}"
+    cat >"${tmp_all}"
 
 ################################################################################
 #! MIDS conversion
@@ -150,12 +149,12 @@ cat > "${tmp_all}"
 cat "${tmp_all}" |
     grep "primary" |
     mids_compressed |
-cat > "${tmp_primary}"
+    cat >"${tmp_primary}"
 
 cat "${tmp_all}" |
     grep "secondary" |
     mids_compressed |
-cat > "${tmp_secondary}"
+    cat >"${tmp_secondary}"
 
 #===========================================================
 #? Concatenate "primary" and "secondary"
@@ -212,7 +211,7 @@ cat "${tmp_primary}" "${tmp_secondary}" |
     # Remove all-mutated reads
     awk '$2 !~ /^[I|D|S]+$/' |
     sed -e "s/$/\t${barcode}/g" -e "s/ /\t/g" |
-cat
+    cat
 
 rm "${tmp_que_fa}" "${tmp_seqID}" "${tmp_all}" "${tmp_primary}" "${tmp_secondary}"
 
