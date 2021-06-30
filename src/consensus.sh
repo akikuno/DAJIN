@@ -7,7 +7,7 @@
 set -u
 umask 0022
 export LC_ALL=C
-export UNIX_STD=2003  # to make HP-UX conform to POSIX
+export UNIX_STD=2003 # to make HP-UX conform to POSIX
 
 ################################################################################
 #! I/O naming
@@ -56,8 +56,8 @@ tmp_html=.DAJIN_temp/consensus/temp/tmp_html_"${out_suffix}"
 target_mutation_type=$(
   ref=".DAJIN_temp/fasta/wt.fa"
   que=".DAJIN_temp/fasta/target.fa"
-  minimap2 -ax splice "$ref"  "$que"  --cs 2>/dev/null |
-  awk '!/@/ {
+  minimap2 -ax splice "$ref" "$que" --cs 2>/dev/null |
+    awk '!/@/ {
   cstag=$(NF-1)
   if(cstag ~ "\~") print "D"
   else if(cstag ~ "\+") print "I"
@@ -77,13 +77,14 @@ cat "${allele_id}" |
   awk -v cl="${cluster}" '$2==cl' |
   cut -f 3 |
   sed "s/=/M/g" |
-  awk -F "" 'BEGIN{OFS=","}{$1=$1}1' |
-  cat > "${tmp_allele_id}"
+  awk '{n=split($0,array,""); for(i=1;i<=n;i++) printf array[i]","; print ""}' |
+  sed "s/,$//" |
+  cat >"${tmp_allele_id}"
 
 if [ -s "${control_score}" ]; then
   Rscript DAJIN/src/consensus.R "${tmp_allele_id}" "${control_score}" 2>/dev/null
 else
-  true > ".DAJIN_temp/consensus/temp/mutation_${out_suffix}"
+  true >".DAJIN_temp/consensus/temp/mutation_${out_suffix}"
 fi
 #===========================================================
 #? Report (1) Cluster ID, (2) Base loc (3) Mutation type (4) Ins num
@@ -91,11 +92,11 @@ fi
 
 if [ -s ".DAJIN_temp/consensus/temp/mutation_${out_suffix}" ]; then
   cat ".DAJIN_temp/consensus/temp/mutation_${out_suffix}" |
-  sed "s/^/${cluster} /g" |
-  #----------------------------------------------------------
-  #* Converte Insertion character to number
-  #----------------------------------------------------------
-  awk '{
+    sed "s/^/${cluster} /g" |
+    #----------------------------------------------------------
+    #* Converte Insertion character to number
+    #----------------------------------------------------------
+    awk '{
     if($4 ~ /[a-z]/) {
     for (i=10; i<=36; i++) {
       num=i+87
@@ -104,10 +105,10 @@ if [ -s ".DAJIN_temp/consensus/temp/mutation_${out_suffix}" ]; then
     }
     }
     print $0}' |
-  sed "s/35$/>35/g" |
-  cat > "${mutation_id_loc_type_insnum}"
+    sed "s/35$/>35/g" |
+    cat >"${mutation_id_loc_type_insnum}"
 else
-  echo "${cluster} 0 intact 0" > "${mutation_id_loc_type_insnum}"
+  echo "${cluster} 0 intact 0" >"${mutation_id_loc_type_insnum}"
 fi
 
 ################################################################################
@@ -117,8 +118,8 @@ fi
 if [ "$(grep -c intact ${mutation_id_loc_type_insnum})" -eq 0 ]; then
 
   set $(
-  cat "${mutation_id_loc_type_insnum}" |
-  awk -v cl="${cluster}" '$1==cl {
+    cat "${mutation_id_loc_type_insnum}" |
+      awk -v cl="${cluster}" '$1==cl {
     type=type$3"_"
     site=site$2"_"
     size=size$4"_"
@@ -148,7 +149,7 @@ if [ "$(grep -c intact ${mutation_id_loc_type_insnum})" -eq 0 ]; then
     awk -v type="${mutation_type}" \
       -v site="${mutation_site}" \
       -v size="${insertion_size}" \
-    'BEGIN{
+      'BEGIN{
       split(type, type_, " ")
       split(site, site_, " ")
       split(size, size_, " ")
@@ -189,9 +190,9 @@ if [ "$(grep -c intact ${mutation_id_loc_type_insnum})" -eq 0 ]; then
       END{for(i in out) print out[i]
       }' |
     sort -t " " -k2,2n |
-  cat > "${mutation_type_site_nuc}"
+    cat >"${mutation_type_site_nuc}"
 else
-  echo "intact 0 0" > "${mutation_type_site_nuc}"
+  echo "intact 0 0" >"${mutation_type_site_nuc}"
 fi
 
 ################################################################################
@@ -208,7 +209,9 @@ mutation_nuc=$(cut -d " " -f 3 "${mutation_type_site_nuc}" | xargs echo)
 
 cat .DAJIN_temp/fasta/${mapping_alleletype}.fa |
   sed 1d |
-  awk -F "" -v type="${mutation_type}" -v site="${mutation_site}" -v nuc="${mutation_nuc}" \
+  awk '{n=split($0,array,""); for(i=1;i<=n;i++) printf array[i]","; print ""}' |
+  sed "s/,$//" |
+  awk -F "," -v type="${mutation_type}" -v site="${mutation_site}" -v nuc="${mutation_nuc}" \
     'BEGIN{
       split(type, type_, " ")
       split(site, site_, " ")
@@ -227,7 +230,7 @@ cat .DAJIN_temp/fasta/${mapping_alleletype}.fa |
     }
     }}1' |
   sed -e "s/ //g" -e "s/_/ /g" |
-cat > .DAJIN_temp/consensus/temp/"${out_suffix}"
+  cat >.DAJIN_temp/consensus/temp/"${out_suffix}"
 
 #===========================================================
 #? Format output file name
@@ -239,15 +242,15 @@ diff_target=$(
   cat .DAJIN_temp/fasta/target.fa |
     sed 1d |
     diff - .DAJIN_temp/consensus/temp/${out_suffix} |
-  wc -l
-  )
+    wc -l
+)
 
 diff_wt=$(
   cat .DAJIN_temp/fasta/wt.fa |
     sed 1d |
     diff - .DAJIN_temp/consensus/temp/${out_suffix} |
-  wc -l
-  )
+    wc -l
+)
 
 #-------------------------------------
 #* Annotate "target" when including targetted point mutation
@@ -258,11 +261,11 @@ if [ "_${target_mutation_type}" = "_S" ]; then
 
   contaion_target=$(
     cat "${mutation_type_site_nuc}" |
-    awk -v mut="${target_mutation_type}" '$1==mut' |
-    cut -d " " -f 2 |
-    awk '{print $0-1}' |
-    grep -c ${mutation_point} -
-    )
+      awk -v mut="${target_mutation_type}" '$1==mut' |
+      cut -d " " -f 2 |
+      awk '{print $0-1}' |
+      grep -c ${mutation_point} -
+  )
 else
   contaion_target=0
 fi
@@ -284,7 +287,7 @@ fi
 cat .DAJIN_temp/consensus/temp/"${out_suffix}" |
   fold |
   sed -e "1i >${output_filename}_${percentage}%" |
-cat > .DAJIN_temp/consensus/"${output_filename}".fa
+  cat >.DAJIN_temp/consensus/"${output_filename}".fa
 
 #===========================================================
 #? HTML file
@@ -292,7 +295,9 @@ cat > .DAJIN_temp/consensus/"${output_filename}".fa
 
 cat ".DAJIN_temp/fasta/${mapping_alleletype}.fa" |
   sed 1d |
-  awk -F "" -v type="${mutation_type}" -v site="${mutation_site}" -v nuc="${mutation_nuc}" \
+  awk '{n=split($0,array,""); for(i=1;i<=n;i++) printf array[i]","; print ""}' |
+  sed "s/,$//" |
+  awk -F "," -v type="${mutation_type}" -v site="${mutation_site}" -v nuc="${mutation_nuc}" \
     'BEGIN{
       split(type, type_, " ")
       split(site, site_, " ")
@@ -310,11 +315,11 @@ cat ".DAJIN_temp/fasta/${mapping_alleletype}.fa" |
     $(site_[i]) = "<span_class=\"Del\">" nuc_[i] "</span>"
     }
     }}1' |
-  sed -e "s/ //g" -e "s/_/ /g"|
+  sed -e "s/ //g" -e "s/_/ /g" |
   sed -e "1i >${output_filename}_${percentage}%" |
-cat > "${tmp_html}"
+  cat >"${tmp_html}"
 
-cat << EOF > .DAJIN_temp/consensus/"${output_filename}".html
+cat <<EOF >.DAJIN_temp/consensus/"${output_filename}".html
 <!DOCTYPE html>
 <html>
 <head>
@@ -350,9 +355,9 @@ p {
 <p>
 EOF
 
-cat "${tmp_html}" >> .DAJIN_temp/consensus/"${output_filename}".html
+cat "${tmp_html}" >>.DAJIN_temp/consensus/"${output_filename}".html
 
-cat << EOF >> .DAJIN_temp/consensus/"${output_filename}".html
+cat <<EOF >>.DAJIN_temp/consensus/"${output_filename}".html
 </p>
 <hr>
 <p>
