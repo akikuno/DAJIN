@@ -17,7 +17,7 @@ VERSION=0.5
 
 usage() {
   cat <<-USAGE
-Usage     : ./DAJIN/DAJIN.sh -i [text file] (described at "Input")
+Usage     : DAJIN -i [text file] (described at "Input")
 
 Example   : ./DAJIN/DAJIN.sh -i DAJIN/example/design.txt
 
