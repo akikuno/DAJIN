@@ -92,7 +92,7 @@ DAJIN defines `SV (structural variants)` allele that is different from these all
 ## Usage
 
 ```sh
-./DAJIN/DAJIN.sh -i design.txt
+./DAJIN/DAJIN -i design.txt
 ```
 
 ### Example usage
@@ -100,7 +100,7 @@ DAJIN defines `SV (structural variants)` allele that is different from these all
 You can test DAJIN by an example small dataset.
 
 ```sh
-./DAJIN/DAJIN.sh -i DAJIN/example/design.txt
+./DAJIN/DAJIN -i DAJIN/example/design.txt
 ```
 
 ## Outputs

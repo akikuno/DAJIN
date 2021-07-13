@@ -59,9 +59,9 @@ target_mutation_type=$(
   minimap2 -ax splice "$ref" "$que" --cs 2>/dev/null |
     awk '!/@/ {
   cstag=$(NF-1)
-  if(cstag ~ "\~") print "D"
-  else if(cstag ~ "\+") print "I"
-  else if(cstag ~ "\*") print "S"
+  if(cstag ~ "~") print "D"
+  else if(cstag ~ /\+/) print "I"
+  else if(cstag ~ /\*/) print "S"
   }' 2>/dev/null
 )
 
@@ -115,7 +115,7 @@ fi
 #! Variant call
 ################################################################################
 
-if [ "$(grep -c intact ${mutation_id_loc_type_insnum})" -eq 0 ]; then
+if ! grep -qc intact "${mutation_id_loc_type_insnum}"; then
 
   set $(
     cat "${mutation_id_loc_type_insnum}" |
@@ -219,17 +219,18 @@ cat .DAJIN_temp/fasta/${mapping_alleletype}.fa |
     }
     {for(i in type_){
       nuc_[i] = toupper(nuc_[i])
-      if(type_[i] == "S"){
-    $(site_[i]) = nuc_[i]
-    }
-      else if(type_[i] == "I"){
-    $(site_[i]) = $site_[i]""nuc_[i]
-    }
-      else if(type_[i] == "D"){
-    $(site_[i]) = ""
-    }
-    }}1' |
-  sed -e "s/ //g" -e "s/_/ /g" |
+      if(type_[i] == "S") {
+        $(site_[i]) = nuc_[i]
+      }
+      else if(type_[i] == "I") {
+        $(site_[i]) = $site_[i]""nuc_[i]
+      }
+      else if(type_[i] == "D") {
+        $(site_[i]) = ""
+      }
+    print $(site_[i])
+    }}' |
+  sed -e "s/,//g" -e "s/ //g" -e "s/_/ /g" |
   cat >.DAJIN_temp/consensus/temp/"${out_suffix}"
 
 #===========================================================
@@ -286,7 +287,7 @@ fi
 
 cat .DAJIN_temp/consensus/temp/"${out_suffix}" |
   fold |
-  sed -e "1i >${output_filename}_${percentage}%" |
+  awk -v header=">${output_filename}_${percentage}%" 'BEGIN{print header}1' |
   cat >.DAJIN_temp/consensus/"${output_filename}".fa
 
 #===========================================================
@@ -315,8 +316,8 @@ cat ".DAJIN_temp/fasta/${mapping_alleletype}.fa" |
     $(site_[i]) = "<span_class=\"Del\">" nuc_[i] "</span>"
     }
     }}1' |
-  sed -e "s/ //g" -e "s/_/ /g" |
-  sed -e "1i >${output_filename}_${percentage}%" |
+  sed -e "s/,//g" -e "s/ //g" -e "s/_/ /g" |
+  awk -v header=">${output_filename}_${percentage}%" 'BEGIN{print header}1' |
   cat >"${tmp_html}"
 
 cat <<EOF >.DAJIN_temp/consensus/"${output_filename}".html
