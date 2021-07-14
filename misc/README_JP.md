@@ -5,17 +5,18 @@
 
 [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
 
-DAJINはゲノム編集生物の遺伝型判別器です. 以下の特徴があります.  
+DAJINはNanoporeロングリードシークエンサーを用いた, ゲノム編集生物の遺伝型解析ソフトウェアです.  
+他の遺伝型解析ツールに比べて, 以下の特徴があります.  
 
-- 多くのゲノム編集デザインに対応しています. 点変異, ノックアウト, ノックイン, 逆位の解析が可能です.
-- Nanoporeロングリードシークエンサーによって従来法に比べ広範囲(~10 kb)のゲノム編集領域を探索できます
-- 一塩基変異から数kbにおよぶindelを同定できます
-- 100サンプル程度までのサンプルについて結果を高速に（GPU環境ならば1日以内で）レポートします
+- 10 kb程度までの領域におけるオンターゲット効果の解析が可能
+- 汎用的なゲノム編集デザインに対応 （点変異, ノックアウト, ノックイン, 逆位）
+- 一塩基変異から構造多型（数kbにおよぶindel）が検出可能
+- 100サンプル程度までの多サンプルを高速に（GPU環境ならば1日以内で）レポート
 
 ## 推奨環境
 
 計算時間を短くするためにLinux OSとNvidia GPUが使える環境をおすすめします.  
-CPUでも実行可能ですが, サンプル数によってはかなり長時間（週単位）がかかってしまう可能性があります.  
+CPUでも実行可能ですが, リード数によってはかなり長時間（週単位）がかかってしまう可能性があります.  
 
 以下の環境で動作確認をしています.  
 
@@ -25,7 +26,7 @@ CPUでも実行可能ですが, サンプル数によってはかなり長時間
 
 より詳細は計算環境は[こちら](https://github.com/akikuno/DAJIN/blob/master/misc/TESTED_SYSTEMS.md)です.  
 
-> なお, macOSは未検証です.  
+＊macOSは未検証です.  
 
 ## セットアップ
 
@@ -50,7 +51,7 @@ git clone https://github.com/akikuno/DAJIN.git
 下記のようなディレクトリ構成を推奨しています.  
 
 ```
-├── DAJIN
+├── DAJIN # <- git cloneでダウンロードしたディレクトリです
 ├── input.txt
 ├── design.fasta
 ├── fastq
@@ -130,14 +131,14 @@ DAJINは解析後, 2つのファイルと2つのディレクトリを作製し�
 目的の変異をもつアレルはDesignの列が`+`となっています.  
 
 
-| Sample    |  Allele ID |  % of reads |  Allele type  |  Indel |  Large indel |  Design |
-|-----------|------------|-------------|---------------|--------|--------------|---------|
-| barcode01 | 1          | 100         | wt            | -      | -            | -       |
-| barcode02 | 1          | 11.8        | abnormal      | +      | +            | -       |
-| barcode02 | 2          | 88.2        | target        | -      | -            | +       |
-| barcode03 | 1          | 9.9         | abnormal      | +      | +            | -       |
-| barcode03 | 2          | 38.5        | abnormal      | +      | +            | -       |
-| barcode03 | 3          | 51.6        | flox_deletion | -      | -            | -       |
+| Sample    | Allele ID | % of reads | Allele type   | Indel | Large indel | Design |
+| --------- | --------- | ---------- | ------------- | ----- | ----------- | ------ |
+| barcode01 | 1         | 100        | wt            | -     | -           | -      |
+| barcode02 | 1         | 11.8       | abnormal      | +     | +           | -      |
+| barcode02 | 2         | 88.2       | target        | -     | -           | +      |
+| barcode03 | 1         | 9.9        | abnormal      | +     | +           | -      |
+| barcode03 | 2         | 38.5       | abnormal      | +     | +           | -      |
+| barcode03 | 3         | 51.6       | flox_deletion | -     | -           | -      |
 
 #### Details.pdf
 
@@ -164,10 +165,18 @@ barcode01は野生型コントロールで, barcode02および03がfloxノック
 
 DAJINはMITライセンスです. 詳細は[LICENSE](https://github.com/akikuno/DAJIN/blob/master/LICENSE)をご覧ください.
 
-## 謝辞
+## 論文
 
-- 水野 聖哉 先生（筑波大学 実験動物学研究室）
-- 綾部 信哉 先生（理研バイオリソース研究センター 実験動物開発室）
-- 池田 祥久 さん（筑波大学 実験動物学研究室）
-- 坂本 航太郎 さん（筑波大学 ヒューマンバイオロジー学位プログラム）
-- 鈴木 沙耶香 さん（筑波大学 ヒューマンバイオロジー学位プログラム）
+```
+@article {DAJIN,
+	author = {Kuno, Akihiro and Ikeda, Yoshihisa and Ayabe, Shinya and Kato, Kanako and Sakamoto, Kotaro and Suzuki, Sayaka and Morimoto, Kento and Wakimoto, Arata and Mikami, Natsuki and Ishida, Miyuki and Iki, Natsumi and Hamada, Yuko and Takemura, Megumi and Daitoku, Yoko and Tanimoto, Yoko and Huong Dinh, Tra Thi and Murata, Kazuya and Hamada, Michito and Muratani, Masafumi and Yoshiki, Atsushi and Sugiyama, Fumihiro and Takahashi, Satoru and Mizuno, Seiya},
+	title = {Multiplex genotyping method to validate the multiallelic genome editing outcomes using machine learning-assisted long-read sequencing},
+	elocation-id = {2020.12.14.422641},
+	year = {2021},
+	doi = {10.1101/2020.12.14.422641},
+	publisher = {Cold Spring Harbor Laboratory},
+	URL = {https://www.biorxiv.org/content/early/2021/07/09/2020.12.14.422641},
+	eprint = {https://www.biorxiv.org/content/early/2021/07/09/2020.12.14.422641.full.pdf},
+	journal = {bioRxiv}
+}
+```
