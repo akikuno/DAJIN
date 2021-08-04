@@ -12,7 +12,7 @@ if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
 if (!requireNamespace("reticulate", quietly = T)) install.packages("reticulate")
 pacman::p_load(tidyverse, parallel, furrr, vroom, tidyfast)
 
-DAJIN_PY <- system("which python", intern = TRUE) %>% str_subset("DAJIN/bin/python")
+DAJIN_PY <- system("which python", intern = TRUE)
 Sys.setenv(RETICULATE_PYTHON = DAJIN_PY)
 reticulate::use_condaenv("DAJIN")
 
