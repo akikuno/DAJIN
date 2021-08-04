@@ -68,6 +68,7 @@ if [ "$convert_revcomp" -eq 1 ]; then
         ./DAJIN/src/revcomp.sh - |
         cat >.DAJIN_temp/fasta/fasta_revcomp.fa
     design_LF=".DAJIN_temp/fasta/fasta_revcomp.fa"
+    grna=$(echo "$grna" | ./DAJIN/src/revcomp.sh -)
 fi
 
 #===========================================================
