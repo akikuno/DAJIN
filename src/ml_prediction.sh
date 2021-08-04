@@ -7,8 +7,7 @@
 set -eu
 umask 0022
 export LC_ALL=C
-export UNIX_STD=2003  # to make HP-UX conform to POSIX
-
+export UNIX_STD=2003 # to make HP-UX conform to POSIX
 
 ################################################################################
 #! I/O naming
@@ -27,12 +26,12 @@ threads="${2}"
 
 target_mutation_type=$(
   minimap2 -ax splice .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/target.fa --cs 2>/dev/null |
-  grep -v "^@" |
-  awk '{
+    grep -v "^@" |
+    awk '{
     cstag=$(NF-1)
     if(cstag ~ "~") print "D"
-    else if(cstag ~ "\+") print "I"
-    else if(cstag ~ "\*") print "S"
+    else if(cstag ~ /\+/) print "I"
+    else if(cstag ~ /\*/) print "S"
     }' 2>/dev/null
 )
 
@@ -45,7 +44,7 @@ target_mutation_type=$(
 cat .DAJIN_temp/data/MIDS_* |
   grep "_sim" |
   sed -e "s/_aligned_reads//g" |
-cat > ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
+  cat >".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
 
 cat .DAJIN_temp/data/MIDS_"${control}"_wt |
   grep -v "IIIIIIIIII" |
@@ -53,7 +52,7 @@ cat .DAJIN_temp/data/MIDS_"${control}"_wt |
   grep -v "SSSSSSSSSS" |
   head -n 10000 |
   sed "s/${control}$/wt_simulated/g" |
-cat >> ".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
+  cat >>".DAJIN_temp/data/DAJIN_MIDS_sim.txt"
 
 echo "Model training..." >&2
 python ./DAJIN/src/ml_simulated.py \
@@ -64,20 +63,20 @@ python ./DAJIN/src/ml_simulated.py \
 ################################################################################
 tmp_prediction=".DAJIN_temp/data/tmp_DAJIN_MIDS_prediction_result.txt"
 
-true > "${tmp_prediction}"
+true >"${tmp_prediction}"
 
 find .DAJIN_temp/data/MIDS* |
   grep -v sim |
   sort |
-while read -r input; do
-  barcode=$(echo "${input%_*}" | sed "s/.*MIDS_//")
-  echo "Prediction of ${barcode} is now processing..." >&2
-  python ./DAJIN/src/ml_real.py "${input}" "${target_mutation_type}" "${threads}" ||
-  exit 1
-done
+  while read -r input; do
+    barcode=$(echo "${input%_*}" | sed "s/.*MIDS_//")
+    echo "Prediction of ${barcode} is now processing..." >&2
+    python ./DAJIN/src/ml_real.py "${input}" "${target_mutation_type}" "${threads}" ||
+      exit 1
+  done
 
 cat "${tmp_prediction}" |
-    sort |
-cat
+  sort |
+  cat
 
 rm "${tmp_prediction}"

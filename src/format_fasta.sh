@@ -101,8 +101,8 @@ target_mutation_type=$(
         awk '{
         cstag=$(NF-1)
         if(cstag ~ "~") print "D"
-        else if(cstag ~ "\+") print "I"
-        else if(cstag ~ "\*") print "S"
+        else if(cstag ~ /\+/) print "I"
+        else if(cstag ~ /\*/) print "S"
         }' 2>/dev/null
 )
 

@@ -7,7 +7,7 @@
 set -eu
 umask 0022
 export LC_ALL=C
-export UNIX_STD=2003  # to make HP-UX conform to POSIX
+export UNIX_STD=2003 # to make HP-UX conform to POSIX
 
 ################################################################################
 #! I/O naming
@@ -44,12 +44,11 @@ tmp_all=".DAJIN_temp/data/tmp_all_${suffix}"
 tmp_primary=".DAJIN_temp/data/tmp_primary_${suffix}"
 tmp_secondary=".DAJIN_temp/data/tmp_secondary_${suffix}"
 
-
 ################################################################################
 #! Function
 ################################################################################
 
-mids_conv(){
+mids_conv() {
     set /dev/stdin
     cat "${1}" |
         # long deletion
@@ -73,8 +72,8 @@ mids_conv(){
             gsub(/[ACGT]/, "M", $0)
             gsub(/\*[acgt][acgt]/, " S", $0)
             gsub("=", " ", $0)
-            gsub("\+", " +", $0)
-            gsub("\-", " -", $0)
+            gsub("\\+", " +", $0)
+            gsub("\\-", " -", $0)
             for(i=1; i<=NF; i++){
                 if($i ~ /^\+/){
                     len=length($i)-1
@@ -89,8 +88,8 @@ mids_conv(){
                 }
             gsub(" ", "", $0)
         print id, loc, $0}' 2>/dev/null |
-    sort -t " " |
-    cat
+        sort -t " " |
+        cat
 }
 
 ################################################################################
@@ -142,7 +141,7 @@ minimap2 -ax splice "${ref_fa}" "${que_fa}" --cs=long 2>/dev/null |
     awk -v first="${first_flank}" -v second="${second_flank}" '{
         if($2<=first && $3>=second) print $1}' |
     sort |
-cat > "${tmp_seqID}"
+    cat >"${tmp_seqID}"
 
 ################################################################################
 #! MIDS conversion
@@ -161,17 +160,17 @@ cat "${tmp_mapping}" |
         if($2==0 || $2==2048) {strand="plus"} else {strand="minus"};
         for(i=1;i<=NF;i++) if($i ~ /cs:Z/) print $1,alignment,strand,$4,$i
     }' |
-cat > "${tmp_all}"
+    cat >"${tmp_all}"
 
 cat "${tmp_all}" |
     grep "primary" |
     mids_conv |
-cat > "${tmp_primary}"
+    cat >"${tmp_primary}"
 
 cat "${tmp_all}" |
     grep "secondary" |
     mids_conv |
-cat > "${tmp_secondary}"
+    cat >"${tmp_secondary}"
 
 #===========================================================
 #? Concat primary secondary
@@ -225,7 +224,7 @@ cat "${tmp_primary}" "${tmp_secondary}" |
     awk '$2 !~ /^[I|D|S]+$/' |
     sed "s/$/ ${label}/g" |
     awk '{gsub(" ", "\t")}1' |
-cat > "${output_MIDS}"
+    cat >"${output_MIDS}"
 
 rm "${tmp_mapping}" "${tmp_seqID}" "${tmp_all}" "${tmp_primary}" "${tmp_secondary}"
 exit 0
