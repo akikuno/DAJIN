@@ -29,9 +29,11 @@ alleleid="${5}"
 
 in_suffix="${barcode}"_"${alleletype}"
 out_suffix="${barcode}"_"${alleletype}"_"${alleleid}"
-mapping_alleletype="${alleletype}"
-[ "$alleletype" = "normal" ] && mapping_alleletype="wt"
-[ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
+
+sam_alleletype="$alleletype"
+fasta_alleletype="$alleletype"
+[ "$alleletype" = "normal" ] && sam_alleletype="wt"
+[ "$alleletype" = "abnormal" ] && fasta_alleletype="wt"
 
 control_score=".DAJIN_temp/clustering/temp/possible_true_mut_${in_suffix}"
 allele_id=".DAJIN_temp/clustering/allele_per/readid_cl_mids_${in_suffix}"
@@ -98,11 +100,11 @@ if [ -s ".DAJIN_temp/consensus/temp/mutation_${out_suffix}" ]; then
     #----------------------------------------------------------
     awk '{
     if($4 ~ /[a-z]/) {
-    for (i=10; i<=36; i++) {
-      num=i+87
-      ins=sprintf("%c", num)
-      if($4==ins) $4=i
-    }
+      for (i=10; i<=36; i++) {
+        num=i+87
+        ins=sprintf("%c", num)
+        if($4==ins) $4=i
+      }
     }
     print $0}' |
     sed "s/35$/>35/g" |
@@ -115,7 +117,7 @@ fi
 #! Variant call
 ################################################################################
 
-if ! grep -qc intact "${mutation_id_loc_type_insnum}"; then
+if ! grep -q intact "${mutation_id_loc_type_insnum}"; then
 
   set $(
     cat "${mutation_id_loc_type_insnum}" |
@@ -135,7 +137,7 @@ if ! grep -qc intact "${mutation_id_loc_type_insnum}"; then
     awk -v cl="${cluster}" '$2==cl' |
     cut -f 1 |
     sort -u |
-    join .DAJIN_temp/consensus/sam/"${barcode}"_"${mapping_alleletype}".sam - |
+    join .DAJIN_temp/consensus/sam/"${barcode}"_"${sam_alleletype}".sam - |
     awk '$2==0 || $2==16' |
     awk '{print $4, $(NF-1)}' |
     sed "s/cs:Z://g" |
@@ -207,29 +209,30 @@ mutation_nuc=$(cut -d " " -f 3 "${mutation_type_site_nuc}" | xargs echo)
 #? FASTA file
 #===========================================================
 
-cat .DAJIN_temp/fasta/${mapping_alleletype}.fa |
+cat .DAJIN_temp/fasta/${fasta_alleletype}.fa |
   sed 1d |
   awk '{n=split($0,array,""); for(i=1;i<=n;i++) printf array[i]","; print ""}' |
   sed "s/,$//" |
-  awk -F "," -v type="${mutation_type}" -v site="${mutation_site}" -v nuc="${mutation_nuc}" \
+  awk -F "," -v types="${mutation_type}" -v sites="${mutation_site}" -v nucs="${mutation_nuc}" \
     'BEGIN{
-      split(type, type_, " ")
-      split(site, site_, " ")
-      split(nuc, nuc_, " ")
-    }
-    {for(i in type_){
-      nuc_[i] = toupper(nuc_[i])
-      if(type_[i] == "S") {
-        $(site_[i]) = nuc_[i]
+      split(types, array_type, " ")
+      split(sites, array_site, " ")
+      split(nucs, array_nuc, " ")
+    } {
+    for(i in array_type) {
+      type = array_type[i]
+      site = array_site[i]
+      nuc = toupper(array_nuc[i])
+      if(type == "S") {
+        $site = nuc
       }
-      else if(type_[i] == "I") {
-        $(site_[i]) = $site_[i]""nuc_[i]
+      else if(type == "I") {
+        $site = $site nuc
       }
-      else if(type_[i] == "D") {
-        $(site_[i]) = ""
+      else if(type == "D") {
+        $site = ""
       }
-    print $(site_[i])
-    }}' |
+    }}1' |
   sed -e "s/,//g" -e "s/ //g" -e "s/_/ /g" |
   cat >.DAJIN_temp/consensus/temp/"${out_suffix}"
 
@@ -283,8 +286,6 @@ else
   output_filename="${output_filename}_mutation_${alleletype}"
 fi
 
-# echo "$output_filename"
-
 cat .DAJIN_temp/consensus/temp/"${out_suffix}" |
   fold |
   awk -v header=">${output_filename}_${percentage}%" 'BEGIN{print header}1' |
@@ -294,7 +295,7 @@ cat .DAJIN_temp/consensus/temp/"${out_suffix}" |
 #? HTML file
 #===========================================================
 
-cat ".DAJIN_temp/fasta/${mapping_alleletype}.fa" |
+cat ".DAJIN_temp/fasta/${fasta_alleletype}.fa" |
   sed 1d |
   awk '{n=split($0,array,""); for(i=1;i<=n;i++) printf array[i]","; print ""}' |
   sed "s/,$//" |
@@ -328,7 +329,7 @@ cat <<EOF >.DAJIN_temp/consensus/"${output_filename}".html
 p {
   font-family: Consolas, monaco, "Courier New", Courier, monospace;
   color: #585858;
-  width: 50%;
+  width: 80%;
   word-wrap: break-word;
 }
 .Ins {
@@ -376,5 +377,3 @@ EOF
 mkdir -p .DAJIN_temp/consensus/FASTA .DAJIN_temp/consensus/HTML
 mv .DAJIN_temp/consensus/"${output_filename}".fa .DAJIN_temp/consensus/FASTA
 mv .DAJIN_temp/consensus/"${output_filename}".html .DAJIN_temp/consensus/HTML
-
-exit 0

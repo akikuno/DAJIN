@@ -355,12 +355,14 @@ mkdir -p .DAJIN_temp/consensus/temp .DAJIN_temp/consensus/sam
 cat .DAJIN_temp/clustering/allele_per/label* |
   cut -d " " -f 1,2 |
   sort -u |
-  grep -v abnormal |
+  grep barcode32 | #?------------------------------------------------------------------------------
+  # grep -v abnormal | #?------------------------------------------------------------------------------
   while read -r input; do
     barcode="${input%% *}"
-    mapping_alleletype="$(echo "${input##* }" | sed "s/abnormal/wt/g" | sed "s/normal/wt/g")"
+    alleletype="${input##* }"
+    mapping_alleletype="$(echo "$alleletype" | sed "s/abnormal/wt/g" | sed "s/normal/wt/g")"
 
-    cat .DAJIN_temp/clustering/allele_per/readid_cl_mids_"${barcode}"_"${mapping_alleletype}" |
+    cat .DAJIN_temp/clustering/allele_per/readid_cl_mids_"${barcode}"_"${alleletype}" |
       awk '{print ">"$1}' |
       sort |
       cat >.DAJIN_temp/consensus/tmp_id
@@ -370,10 +372,10 @@ cat .DAJIN_temp/clustering/allele_per/label* |
       sed 1d |
       sort |
       join - .DAJIN_temp/consensus/tmp_id |
-      awk '{gsub(" ", "\n")}1' |
+      tr " " "\n" |
       minimap2 -ax map-ont -t "${threads}" ".DAJIN_temp/fasta/${mapping_alleletype}.fa" - --cs=long 2>/dev/null |
       sort |
-      cat >.DAJIN_temp/consensus/sam/"${barcode}"_"${mapping_alleletype}".sam
+      cat >.DAJIN_temp/consensus/sam/"${barcode}"_"${alleletype}".sam
     rm .DAJIN_temp/consensus/tmp_id
   done
 
@@ -383,7 +385,8 @@ cat .DAJIN_temp/clustering/allele_per/label* |
 
 cat .DAJIN_temp/clustering/allele_per/label* |
   awk '{nr[$1]++; print $0, nr[$1]}' |
-  grep -v abnormal |
+  grep barcode32 | #?------------------------------------------------------------------------------
+  # grep -v abnormal | #?------------------------------------------------------------------------------
   awk '{print "./DAJIN/src/consensus.sh", $0, "&"}' |
   awk -v th="${threads:-1}" 'NR%th==0 {sub("&", "&\nwait")}1;END{print "wait"}' |
   sh -
