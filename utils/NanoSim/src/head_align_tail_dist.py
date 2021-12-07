@@ -4,8 +4,8 @@ from __future__ import with_statement
 import numpy
 import HTSeq
 from sklearn.neighbors import KernelDensity
-from sklearn.externals import joblib
-# import joblib
+# from sklearn.externals import joblib
+import joblib
 
 def kde2d(x, y):
     x = numpy.array(x)

@@ -9,13 +9,13 @@ threads=$2
 # NanoSim
 #===========================================================
 
-./DAJIN/utils/NanoSim/src/read_analysis.py genome \
+read_analysis.py genome \
   -i ".DAJIN_temp/fasta_ont/${control}.fa" \
   -rg .DAJIN_temp/fasta_conv/wt.fa \
   -t ${threads:-1} \
   -o .DAJIN_temp/NanoSim/training 1>&2
 
-wt_seqlen=$(awk '!/[>|@]/ {print length}' .DAJIN_temp/fasta_conv/wt.fa)
+wt_seqlen=$(awk '!/^>/ {print length}' .DAJIN_temp/fasta_conv/wt.fa)
 
 for input in .DAJIN_temp/fasta_conv/*; do
   echo "${input} is now simulating..." 1>&2

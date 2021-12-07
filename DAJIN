@@ -105,7 +105,7 @@ done
 # Check fasta file
 #===========================================================
 
-[ -e "$design" ] || error_exit "$design: No such file"
+[ -f "$design" ] || error_exit "$design: No such file"
 
 [ "$(grep -c -e '>wt' -e '>target' ${design})" -ne 2 ] &&
   error_exit "$design: design must include '>target' and '>wt'. "
@@ -196,6 +196,12 @@ fi
 # Setting Conda environment
 ################################################################################
 
+cat <<EOF >&2
+--------------------------------------------------------------------------------
+Creat Conda environment
+--------------------------------------------------------------------------------
+EOF
+
 . DAJIN/src/conda_setting.sh
 
 ################################################################################
@@ -215,7 +221,7 @@ echo "${dirs}" |
 ./DAJIN/src/format_fasta.sh "$design" "$input_dir" "$grna"
 
 ################################################################################
-#! NanoSim (v2.5.0)
+# NanoSim
 ################################################################################
 
 cat <<EOF >&2
@@ -228,12 +234,12 @@ set +u
 conda activate DAJIN_nanosim
 set -u
 
-if [ "$(find .DAJIN_temp/fasta_ont | grep -c simulated)" -eq 0 ]; then
+if ! find .DAJIN_temp/fasta_ont/*simulated* >/dev/null 2>&1; then
   ./DAJIN/src/nanosim.sh "${control}" "${threads}"
 fi
 
 ################################################################################
-#! MIDS conversion
+# MIDS conversion
 ################################################################################
 
 cat <<EOF >&2

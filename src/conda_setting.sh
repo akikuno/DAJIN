@@ -7,6 +7,12 @@ error_exit() {
     exit 1
 }
 
+###############################################################################
+# Update conda
+###############################################################################
+
+echo "Update Conda..." >&2
+
 CONDA_BASE=$(conda info --base)
 . "${CONDA_BASE}/etc/profile.d/conda.sh"
 
@@ -25,16 +31,19 @@ conda list | grep -q mamba || conda install -y -c conda-forge mamba >/dev/null 2
 
 if [ "$(conda info -e | grep -c DAJIN_nanosim)" -eq 0 ]; then
     echo Create "DAJIN_nanosim" environment... >&2
-    conda create -y -n DAJIN_nanosim python=3.6 >/dev/null 2>&1
-    mamba install -y -n DAJIN_nanosim --file ./DAJIN/utils/NanoSim/requirements.txt >/dev/null 2>&1
-    mamba install -y -n DAJIN_nanosim minimap2 >/dev/null 2>&1
+    conda create -y -n DAJIN_nanosim python=3.8 >/dev/null 2>&1
+    mamba install -y -n DAJIN_nanosim nanosim minimap2 >/dev/null 2>&1
 fi
 
 conda activate DAJIN_nanosim
 
 if ! python ./DAJIN/utils/NanoSim/src/simulator.py --version >/dev/null 2>&1; then
     CONDA_ENV=$(conda info -e | awk '$2=="*"{print $NF}')
-    (cd "${CONDA_ENV}"/lib/ && ln -s libcrypto.so.1.1 libcrypto.so.1.0.0 >/dev/null 2>&1)
+    (
+        cd "${CONDA_ENV}"/lib/
+        libcrypto=$(ls -l libcrypto.so | awk '{print $NF}')
+        ln -sf "$libcrypto" libcrypto.so.1.0.0 >/dev/null 2>&1
+    )
 fi
 
 python ./DAJIN/utils/NanoSim/src/simulator.py --version >/dev/null 2>&1 ||
@@ -49,13 +58,13 @@ conda deactivate
 # Setup DAJIN
 ###############################################################################
 
-if [ "$(conda info -e | cut -d " " -f 1 | grep -c DAJIN$)" -eq 0 ]; then
+if ! conda info -e | cut -d " " -f 1 | grep -q "^DAJIN$"; then
     echo Create "DAJIN" environment... >&2
     conda create -y -n DAJIN python=3.8 >/dev/null 2>&1
     mamba install -y -n DAJIN \
         numpy pandas scikit-learn joblib hdbscan \
         wget emboss samtools minimap2 >/dev/null 2>&1
-    mamba install -y -n DAJIN -c conda-forge r-essentials r-base r-reticulate r-vroom r-furrr >/dev/null 2>&1
+    mamba install -y -n DAJIN -c conda-forge r-essentials r-base r-reticulate >/dev/null 2>&1
     # tensorflow setting (CPU, GPU w/ RTX, and GPU w/ GTX)
     conda activate DAJIN
     if ! type nvidia-smi >/dev/null 2>&1; then
@@ -70,7 +79,10 @@ fi
 
 conda activate DAJIN
 
-Rscript -e 'install.packages(c("pacman", "tidyfast"), repos="https://cloud.r-project.org/")' >/dev/null 2>&1
+# Install R packages
+
+Rscript -e 'install.packages("pacman", repos="https://cloud.r-project.org/")' >/dev/null 2>&1
+Rscript -e 'pacman::p_load("RColorBrewer", "vroom", "furrr", "tidyfast")' >/dev/null 2>&1
 
 ###############################################################################
 # Check prerequisites
@@ -91,6 +103,10 @@ tf_ver="$(conda list -n DAJIN | awk '$1~/tensorflow/ && $2>1.99')"
 
 if ! samtools --version >/dev/null 2>&1; then
     CONDA_ENV=$(conda info -e | awk '$2=="*"{print $NF}')
-    (cd "${CONDA_ENV}"/lib/ && ln -s libcrypto.so.1.1 libcrypto.so.1.0.0 >/dev/null 2>&1)
+    (
+        cd "${CONDA_ENV}"/lib/
+        libcrypto=$(ls -l libcrypto.so | awk '{print $NF}')
+        ln -sf "$libcrypto" libcrypto.so.1.0.0 >/dev/null 2>&1
+    )
 fi
 samtools --version >/dev/null 2>&1 || error_exit 'Command "samtools" installation has failed'
