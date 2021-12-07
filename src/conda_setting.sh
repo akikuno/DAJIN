@@ -9,7 +9,9 @@ error_exit() {
 
 CONDA_BASE=$(conda info --base)
 . "${CONDA_BASE}/etc/profile.d/conda.sh"
+
 conda --version >/dev/null 2>&1 || error_exit 'Command "conda" not found'
+
 conda update -y -n base conda >/dev/null 2>&1
 conda config --add channels defaults 2>/dev/null
 conda config --add channels bioconda 2>/dev/null
@@ -17,9 +19,9 @@ conda config --add channels conda-forge 2>/dev/null
 
 conda list | grep -q mamba || conda install -y -c conda-forge mamba >/dev/null 2>&1
 
-#===========================================================
-#? DAJIN_nanosim
-#===========================================================
+###############################################################################
+# Setup DAJIN nanosim
+###############################################################################
 
 if [ "$(conda info -e | grep -c DAJIN_nanosim)" -eq 0 ]; then
     echo Create "DAJIN_nanosim" environment... >&2
@@ -43,9 +45,9 @@ rm -rf DAJIN/utils/NanoSim/src/__pycache__
 
 conda deactivate
 
-#===========================================================
-#? DAJIN
-#===========================================================
+###############################################################################
+# Setup DAJIN
+###############################################################################
 
 if [ "$(conda info -e | cut -d " " -f 1 | grep -c DAJIN$)" -eq 0 ]; then
     echo Create "DAJIN" environment... >&2
@@ -70,9 +72,9 @@ conda activate DAJIN
 
 Rscript -e 'install.packages(c("pacman", "tidyfast"), repos="https://cloud.r-project.org/")' >/dev/null 2>&1
 
-#===========================================================
-#? Required software
-#===========================================================
+###############################################################################
+# Check prerequisites
+###############################################################################
 
 gzip --version >/dev/null 2>&1 || error_exit 'Command "gzip" installation has failed'
 wget --version >/dev/null 2>&1 || error_exit 'Command "wget" installation has failed'

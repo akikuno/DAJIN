@@ -1,17 +1,17 @@
 #!/bin/sh
+
 # ======================================
 # Initialize shell environment
 # ======================================
 set -u
 umask 0022
 export LC_ALL=C
-export UNIX_STD=2003  # to make HP-UX conform to POSIX
 
 # ======================================
 
 cat "$1" |
-# Complement
-awk 'BEGIN{FS=""}
+    # Complement
+    awk 'BEGIN{FS=""}
     {if($1 !~ "^>" && $1 !~ "^@"){
         nuc=""; seq=""
         for(i=1; i<=NF; i++){
@@ -25,8 +25,8 @@ awk 'BEGIN{FS=""}
         }
         print seq
     } else print $0}' |
-# Reverse
-awk 'BEGIN{FS=""}
+    # Reverse
+    awk 'BEGIN{FS=""}
     {if($1!=">" && $1!="@"){
         seq=""
         for(i=NF; i>0; i--){
