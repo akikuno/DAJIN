@@ -1,27 +1,26 @@
 #!/bin/sh
 
 ################################################################################
-#! Initialize shell environment
+# Initialize shell environment
 ################################################################################
 
 set -u
 umask 0022
 export LC_ALL=C
-export UNIX_STD=2003 # to make HP-UX conform to POSIX
 
 ################################################################################
-#! I/O naming
+# I/O naming
 ################################################################################
 
 #===========================================================
-#? Auguments
+# Auguments
 #===========================================================
 
 barcode=${1}
 alleletype=${2}
 
 #===========================================================
-#? Input
+# Input
 #===========================================================
 
 suffix="${barcode}_${alleletype}"
@@ -33,11 +32,11 @@ ref_fa=".DAJIN_temp/fasta/${mapping_alleletype}.fa"
 que_fa=".DAJIN_temp/fasta_ont/${barcode}.fa"
 
 #===========================================================
-#? Output
+# Output
 #===========================================================
 
 #===========================================================
-#? Temporal
+# Temporal
 #===========================================================
 
 tmp_que_fa=".DAJIN_temp/clustering/tmp_que_fa_${suffix}"_$$
@@ -48,7 +47,7 @@ tmp_primary=".DAJIN_temp/clustering/tmp_primary_${suffix}"_$$
 tmp_secondary=".DAJIN_temp/clustering/tmp_secondary_${suffix}"_$$
 
 ################################################################################
-#! Function definitions
+# Function definitions
 ################################################################################
 
 mids_compressed() {
@@ -99,7 +98,7 @@ mids_compressed() {
 }
 
 ################################################################################
-#! Extract fasta file including "mapping_alleletype"
+# Extract fasta file including "mapping_alleletype"
 ################################################################################
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
@@ -120,7 +119,7 @@ cat "${que_fa}" |
     cat >"${tmp_que_fa}"
 
 ################################################################################
-#! Mapping
+# Mapping
 ################################################################################
 
 ref_len=$(cat "${ref_fa}" | grep -v "^>" | awk '{print length}')
@@ -143,7 +142,7 @@ minimap2 -ax splice "${ref_fa}" "${tmp_que_fa}" --cs=long 2>/dev/null |
     cat >"${tmp_all}"
 
 ################################################################################
-#! MIDS conversion
+# MIDS conversion
 ################################################################################
 
 cat "${tmp_all}" |
@@ -157,7 +156,7 @@ cat "${tmp_all}" |
     cat >"${tmp_secondary}"
 
 #===========================================================
-#? Concatenate "primary" and "secondary"
+# Concatenate "primary" and "secondary"
 #===========================================================
 
 cat "${tmp_primary}" "${tmp_secondary}" |

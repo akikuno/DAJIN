@@ -1,33 +1,32 @@
 #!/bin/sh
 
 ################################################################################
-#! Initialize shell environment
+# Initialize shell environment
 ################################################################################
 
 set -eu
 umask 0022
 export LC_ALL=C
-export UNIX_STD=2003 # to make HP-UX conform to POSIX
 
 ################################################################################
-#! I/O naming
+# I/O naming
 ################################################################################
 
 #===========================================================
-#? Auguments
+# Auguments
 #===========================================================
 
 barcode="${1}"
 filter="${2}"
 
 #===========================================================
-#? Input
+# Input
 #===========================================================
 # query_seq
 # hdbscan_id
 
 #===========================================================
-#? Output
+# Output
 #===========================================================
 mkdir -p ".DAJIN_temp/clustering/allele_per/"
 
@@ -35,7 +34,7 @@ mkdir -p ".DAJIN_temp/clustering/allele_per/"
 allele_percentage=.DAJIN_temp/clustering/allele_per/label_cl_percentage_"${barcode}"
 
 #===========================================================
-#? Temporal
+# Temporal
 #===========================================================
 
 tmp_clusterid=.DAJIN_temp/clustering/temp/clusterid_"${barcode}"
@@ -43,11 +42,11 @@ tmp_alleleper_before=.DAJIN_temp/clustering/temp/alleleper_before_"${barcode}"
 tmp_alleleper_after=.DAJIN_temp/clustering/temp/alleleper_after_"${barcode}"
 
 ################################################################################
-#! Filter minor alleles (if filter=on)
+# Filter minor alleles (if filter=on)
 ################################################################################
 
 #===========================================================
-#? Count total read numbers
+# Count total read numbers
 #===========================================================
 
 true >"${tmp_clusterid}"
@@ -71,7 +70,7 @@ total_reads=$(
 )
 
 #===========================================================
-#? Filter alleles (if filter=on)
+# Filter alleles (if filter=on)
 #===========================================================
 
 cat "${tmp_clusterid}" |
@@ -90,7 +89,7 @@ cat "${tmp_clusterid}" |
     cat >"${tmp_alleleper_before}"
 
 #===========================================================
-#? Adjust to total 100%
+# Adjust to total 100%
 #===========================================================
 
 total_percentage=$(
@@ -109,7 +108,7 @@ cat "${tmp_alleleper_before}" |
     cat >"${tmp_alleleper_after}"
 
 ################################################################################
-#! Extract reads
+# Extract reads
 ################################################################################
 
 rm .DAJIN_temp/clustering/readid_cl_mids_"${barcode}"* 2>/dev/null || true
@@ -138,7 +137,7 @@ cat "${tmp_alleleper_after}" |
     done
 
 ################################################################################
-#! Report cluster number and percentage after filtration
+# Report cluster number and percentage after filtration
 ################################################################################
 
 cat "${tmp_alleleper_after}" |
@@ -147,7 +146,7 @@ cat "${tmp_alleleper_after}" |
     cat >"${allele_percentage}"
 
 ################################################################################
-#! remove temporal files
+# remove temporal files
 ################################################################################
 
 rm "${tmp_clusterid}" "${tmp_alleleper_before}" "${tmp_alleleper_after}"

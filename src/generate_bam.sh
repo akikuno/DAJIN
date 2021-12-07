@@ -1,27 +1,26 @@
 #!/bin/sh
 
 ################################################################################
-#! Initialize shell environment
+# Initialize shell environment
 ################################################################################
 
 set -u
 umask 0022
 export LC_ALL=C
-export UNIX_STD=2003 # to make HP-UX conform to POSIX
 
 ################################################################################
-#! I/O naming
+# I/O naming
 ################################################################################
 
 #===========================================================
-#? Arguments
+# Arguments
 #===========================================================
 
 genome="${1}"
 threads="${2}"
 
 #===========================================================
-#? Variable
+# Variable
 #===========================================================
 
 target_mutation_type=$(
@@ -39,14 +38,14 @@ target_mutation_type=$(
 )
 
 #===========================================================
-#? Setting directory
+# Setting directory
 #===========================================================
 
 rm -rf .DAJIN_temp/bam/ 2>/dev/null
 mkdir -p .DAJIN_temp/bam/temp .DAJIN_temp/bam/reads100
 
 ################################################################################
-#! Generate BAM files
+# Generate BAM files
 ################################################################################
 
 if [ "_$target_mutation_type" = "_S" ]; then
@@ -62,7 +61,7 @@ if [ "_$target_mutation_type" = "_S" ]; then
 fi
 
 #===========================================================
-#? Generate BAM files on each cluster
+# Generate BAM files on each cluster
 #===========================================================
 
 cat .DAJIN_temp/clustering/allele_per/label* |
@@ -95,7 +94,7 @@ cat .DAJIN_temp/clustering/allele_per/label* |
     done
 
 #===========================================================
-#? Generate BAM files with 100 reads
+# Generate BAM files with 100 reads
 #===========================================================
 
 find .DAJIN_temp/bam/ -name "*bam" -type f |

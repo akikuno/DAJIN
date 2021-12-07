@@ -1,17 +1,16 @@
 #!/bin/sh
 
 ################################################################################
-#! Initialize shell environment
+# Initialize shell environment
 ################################################################################
 
 set -u
 umask 0022
 export LC_ALL=C
-export UNIX_STD=2003  # to make HP-UX conform to POSIX
-
+export UNIX_STD=2003 # to make HP-UX conform to POSIX
 
 ################################################################################
-#! Define the functions for printing usage and error message
+# Define the functions for printing usage and error message
 ################################################################################
 
 error_exit() {
@@ -20,21 +19,21 @@ error_exit() {
 }
 
 ################################################################################
-#! I/O naming
+# I/O naming
 ################################################################################
 
 #===============================================================================
-#? Aurguments
+# Aurguments
 #===============================================================================
 genome=${1}
 threads=${2}
 
 #===============================================================================
-#? Input
+# Input
 #===============================================================================
 
 #===============================================================================
-#? Output
+# Output
 #===============================================================================
 ref_fa=.DAJIN_temp/data/ref.fa
 
@@ -42,17 +41,17 @@ bam_all=.DAJIN_temp/bam/
 mkdir -p "${bam_all}"
 
 #===============================================================================
-#? Temporal
+# Temporal
 #===============================================================================
 
 tmp_genome_location=.DAJIN_temp/data/tmp_genome_location
 
 ################################################################################
-#! Server response
+# Server response
 ################################################################################
 
 #===============================================================================
-#? DAS server of UCSC Genome Browser
+# DAS server of UCSC Genome Browser
 #===============================================================================
 url_ucsc_usa="http://genome.ucsc.edu/cgi-bin/das/"
 url_ucsc_asia="http://genome-asia.ucsc.edu/cgi-bin/das/"
@@ -69,7 +68,7 @@ else
 fi
 
 #===============================================================================
-#? GoldenPath of UCSC Genome Browser
+# GoldenPath of UCSC Genome Browser
 #===============================================================================
 
 url_golden_usa="http://hgdownload.cse.ucsc.edu/goldenPath"
@@ -87,11 +86,11 @@ else
 fi
 
 ################################################################################
-#! Obtain Genome coodinate from GGGnome
+# Obtain Genome coodinate from GGGnome
 ################################################################################
 
 #===============================================================================
-#? Left flank
+# Left flank
 #===============================================================================
 
 cat .DAJIN_temp/fasta/wt.fa |
@@ -103,10 +102,10 @@ cat .DAJIN_temp/fasta/wt.fa |
     grep "100.0%" | grep chr | awk '$6==100' |
     sed "s/.*chr/chr/g" |
     awk 'BEGIN{OFS="\t"}{print $1,$2,$3,$4}' |
-cat > "${tmp_genome_location}"
+    cat >"${tmp_genome_location}"
 
 #===============================================================================
-#? Right flank
+# Right flank
 #===============================================================================
 
 cat .DAJIN_temp/fasta/wt.fa |
@@ -118,14 +117,14 @@ cat .DAJIN_temp/fasta/wt.fa |
     grep "100.0%" | grep chr | awk '$6==100' |
     sed "s/.*chr/chr/g" |
     awk 'BEGIN{OFS="\t"}{print $1,$2,$3,$4}' |
-cat >> "${tmp_genome_location}"
+    cat >>"${tmp_genome_location}"
 
 #===============================================================================
-#? Assign genome location to variables
+# Assign genome location to variables
 #===============================================================================
 
 [ $(cat "${tmp_genome_location}" | wc -l) -ne 2 ] &&
-error_exit 1 '
+    error_exit 1 '
 No matched sequence found in reference genome:
 Check FASTA sequence and reference genome.'
 
@@ -134,7 +133,7 @@ start=$(cat "${tmp_genome_location}" | sort -k 3,3n | head -n 1 | cut -f 3)
 end=$(cat "${tmp_genome_location}" | sort -k 3,3nr | head -n 1 | cut -f 4)
 
 ################################################################################
-#! Obtain Reference fasta file from UCSC Genome browser
+# Obtain Reference fasta file from UCSC Genome browser
 ################################################################################
 
 url_ucsc_genome="${url_ucsc}/${genome}/dna?segment=${chromosome}:${start},${end}"
@@ -143,29 +142,29 @@ wget -qO - "${url_ucsc_genome}" |
     grep -v "^<" |
     awk '{print toupper($0)}' |
     sed -e "1i >${genome}:${chromosome}:${start}-${end}" |
-cat > "${ref_fa}"
+    cat >"${ref_fa}"
 
 [ $(cat "${ref_fa}" | wc -l) -eq 0 ] &&
-error_exit 1 'Invalid reference genome.'
-
+    error_exit 1 'Invalid reference genome.'
 
 ################################################################################
-#! Mapping for IGV
+# Mapping for IGV
 ################################################################################
 
 #===============================================================================
-#? Rerefence Chromosome length
+# Rerefence Chromosome length
 #===============================================================================
 chrom_len=$(
     wget -q -O - "${url_golden}/${genome}/bigZips/${genome}.chrom.sizes" |
-    awk -v chrom=${chromosome} '$1 == chrom' |
-    cut -f 2)
+        awk -v chrom=${chromosome} '$1 == chrom' |
+        cut -f 2
+)
 
 [ $(echo ${chrom_len} | wc -l) -eq 0 ] &&
-error_exit 1 'Invalid reference genome.'
+    error_exit 1 'Invalid reference genome.'
 
 #===============================================================================
-#? Mapping all reads
+# Mapping all reads
 #===============================================================================
 
 reference="${ref_fa}"
@@ -177,11 +176,11 @@ for input in .DAJIN_temp/fasta_ont/*; do
     ####
     minimap2 -t ${threads:-1} -ax map-ont --cs=long ${reference} ${input} 2>/dev/null |
         awk -v chrom="${chromosome}" -v chrom_len="${chrom_len}" -v start="${start}" \
-        'BEGIN{OFS="\t"}
+            'BEGIN{OFS="\t"}
         $1~/@SQ/ {$0="@SQ\tSN:"chrom"\tLN:"chrom_len; print}
         $1!~/^@/ {$3=chrom; $4=start+$4-1; print}' |
         samtools sort -@ ${threads:-1} - 2>/dev/null |
-    cat > "${output}"
+        cat >"${output}"
     samtools index -@ ${threads:-1} "${output}"
 done
 

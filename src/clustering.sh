@@ -1,7 +1,7 @@
 #!/bin/sh
 
 ################################################################################
-#! Initialize shell environment
+# Initialize shell environment
 ################################################################################
 
 set -eu
@@ -10,11 +10,11 @@ export LC_ALL=C
 export UNIX_STD=2003 # to make HP-UX conform to POSIX
 
 ################################################################################
-#! I/O naming
+# I/O naming
 ################################################################################
 
 #===========================================================
-#? Auguments
+# Auguments
 #===========================================================
 
 barcode="${1}"
@@ -22,7 +22,7 @@ alleletype="${2}"
 threads="${3}"
 
 #===========================================================
-#? Input
+# Input
 #===========================================================
 
 suffix="${barcode}"_"${alleletype}"
@@ -33,14 +33,14 @@ mapping_alleletype="${alleletype}"
 control_RDS=".DAJIN_temp/clustering/temp/df_control_freq_${mapping_alleletype}.RDS"
 
 #===========================================================
-#? Output
+# Output
 #===========================================================
 
 mkdir -p ".DAJIN_temp/clustering/temp/"
 # hdbscan_id=".DAJIN_temp/clustering/temp/hdbscan_${suffix}"
 
 #===========================================================
-#? Temporal
+# Temporal
 #===========================================================
 
 MIDS_que=".DAJIN_temp/clustering/temp/MIDS_${suffix}"
@@ -49,13 +49,13 @@ query_seq=".DAJIN_temp/clustering/temp/query_seq_${suffix}"
 query_label=".DAJIN_temp/clustering/temp/query_labels_${suffix}"
 
 ################################################################################
-#! MIDS conversion
+# MIDS conversion
 ################################################################################
 
 ./DAJIN/src/mids_clustering.sh "${barcode}" "${alleletype}" >"${MIDS_que}"
 
 ################################################################################
-#! Filter abnormal reads
+# Filter abnormal reads
 ################################################################################
 
 if [ _"$alleletype" = "_abnormal" ]; then
@@ -66,11 +66,11 @@ if [ _"$alleletype" = "_abnormal" ]; then
 fi
 
 ################################################################################
-#! Query seq (compressed MIDS) and Query score (comma-sep MIDS)
+# Query seq (compressed MIDS) and Query score (comma-sep MIDS)
 ################################################################################
 
 #===========================================================
-#? Output query seq for `clustering_allele_percentage.sh`
+# Output query seq for `clustering_allele_percentage.sh`
 #===========================================================
 
 cat "${MIDS_que}" |
@@ -82,7 +82,7 @@ cat "${MIDS_que}" |
     cat >"${query_seq}"
 
 #===========================================================
-#? Output query score
+# Output query score
 #===========================================================
 
 cat "${query_seq}" |
@@ -94,7 +94,7 @@ cat "${query_seq}" |
     cat >"${query_score}"
 
 ################################################################################
-#! Query label (seqID,barcodeID)
+# Query label (seqID,barcodeID)
 ################################################################################
 
 cat "${MIDS_que}" |
@@ -107,7 +107,7 @@ cat "${MIDS_que}" |
     cat >"${query_label}"
 
 ################################################################################
-#! Clustering
+# Clustering
 ################################################################################
 
 echo "Clustering ${barcode} ${alleletype}..." >&2

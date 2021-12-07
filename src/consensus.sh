@@ -1,7 +1,7 @@
 #!/bin/sh
 
 ################################################################################
-#! Initialize shell environment
+# Initialize shell environment
 ################################################################################
 
 set -u
@@ -10,11 +10,11 @@ export LC_ALL=C
 export UNIX_STD=2003 # to make HP-UX conform to POSIX
 
 ################################################################################
-#! I/O naming
+# I/O naming
 ################################################################################
 
 #===========================================================
-#? Auguments
+# Auguments
 #===========================================================
 
 barcode="${1}"
@@ -24,7 +24,7 @@ percentage="${4}"
 alleleid="${5}"
 
 #===========================================================
-#? Input
+# Input
 #===========================================================
 
 in_suffix="${barcode}"_"${alleletype}"
@@ -37,7 +37,7 @@ control_score=".DAJIN_temp/clustering/temp/possible_true_mut_${in_suffix}"
 allele_id=".DAJIN_temp/clustering/allele_per/readid_cl_mids_${in_suffix}"
 
 #===========================================================
-#? Output
+# Output
 #===========================================================
 
 mkdir -p .DAJIN_temp/consensus/temp
@@ -45,7 +45,7 @@ mkdir -p .DAJIN_temp/consensus/temp
 # .DAJIN_temp/consensus/"${output_filename}".html
 
 #===========================================================
-#? Temporal
+# Temporal
 #===========================================================
 
 tmp_allele_id=".DAJIN_temp/consensus/temp/allele_id_${out_suffix}"
@@ -66,11 +66,11 @@ target_mutation_type=$(
 )
 
 ################################################################################
-#! Get consensus sequence
+# Get consensus sequence
 ################################################################################
 
 #===========================================================
-#? Detecting mutation sites
+# Detecting mutation sites
 #===========================================================
 
 cat "${allele_id}" |
@@ -87,7 +87,7 @@ else
   true >".DAJIN_temp/consensus/temp/mutation_${out_suffix}"
 fi
 #===========================================================
-#? Report (1) Cluster ID, (2) Base loc (3) Mutation type (4) Ins num
+# Report (1) Cluster ID, (2) Base loc (3) Mutation type (4) Ins num
 #===========================================================
 
 if [ -s ".DAJIN_temp/consensus/temp/mutation_${out_suffix}" ]; then
@@ -112,7 +112,7 @@ else
 fi
 
 ################################################################################
-#! Variant call
+# Variant call
 ################################################################################
 
 if ! grep -qc intact "${mutation_id_loc_type_insnum}"; then
@@ -196,7 +196,7 @@ else
 fi
 
 ################################################################################
-#! Report consensus sequence
+# Report consensus sequence
 ################################################################################
 
 mutation_type=$(cut -d " " -f 1 "${mutation_type_site_nuc}" | xargs echo)
@@ -204,7 +204,7 @@ mutation_site=$(cut -d " " -f 2 "${mutation_type_site_nuc}" | xargs echo)
 mutation_nuc=$(cut -d " " -f 3 "${mutation_type_site_nuc}" | xargs echo)
 
 #===========================================================
-#? FASTA file
+# FASTA file
 #===========================================================
 
 cat .DAJIN_temp/fasta/${mapping_alleletype}.fa |
@@ -234,7 +234,7 @@ cat .DAJIN_temp/fasta/${mapping_alleletype}.fa |
   cat >.DAJIN_temp/consensus/temp/"${out_suffix}"
 
 #===========================================================
-#? Format output file name
+# Format output file name
 #===========================================================
 
 output_filename="${barcode}_allele${alleleid}"
@@ -291,7 +291,7 @@ cat .DAJIN_temp/consensus/temp/"${out_suffix}" |
   cat >.DAJIN_temp/consensus/"${output_filename}".fa
 
 #===========================================================
-#? HTML file
+# HTML file
 #===========================================================
 
 cat ".DAJIN_temp/fasta/${mapping_alleletype}.fa" |
@@ -370,7 +370,7 @@ cat <<EOF >>.DAJIN_temp/consensus/"${output_filename}".html
 EOF
 
 ################################################################################
-#! Move directory
+# Move directory
 ################################################################################
 
 mkdir -p .DAJIN_temp/consensus/FASTA .DAJIN_temp/consensus/HTML

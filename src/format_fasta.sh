@@ -1,20 +1,19 @@
 #!/bin/sh
 
 ################################################################################
-#! Initialize shell environment
+# Initialize shell environment
 ################################################################################
 
 set -u
 umask 0022
 export LC_ALL=C
-export UNIX_STD=2003 # to make HP-UX conform to POSIX
 
 ################################################################################
-#! I/O naming
+# I/O naming
 ################################################################################
 
 #===========================================================
-#? Auguments
+# Auguments
 #===========================================================
 
 design=${1}
@@ -22,7 +21,7 @@ input_dir=${2}
 grna=${3}
 
 ################################################################################
-#! Format FASTA file
+# Format FASTA file
 ################################################################################
 
 cat "${design}" |
@@ -36,7 +35,7 @@ cat "${design}" |
 design_LF=".DAJIN_temp/fasta/fasta.fa"
 
 #===========================================================
-#? Separate multiple-FASTA into FASTA files
+# Separate multiple-FASTA into FASTA files
 #===========================================================
 
 cat "${design_LF}" |
@@ -48,8 +47,8 @@ cat "${design_LF}" |
     }'
 
 ################################################################################
-#! Reverse complement if the mutation sites are closer
-#! to right flanking than left flanking
+# Reverse complement if the mutation sites are closer
+# to right flanking than left flanking
 ################################################################################
 
 wt_len=$(awk '!/[>|@]/ {print length}' .DAJIN_temp/fasta/wt.fa)
@@ -72,7 +71,7 @@ if [ "$convert_revcomp" -eq 1 ]; then
 fi
 
 #===========================================================
-#? Separate multiple-FASTA into FASTA files
+# Separate multiple-FASTA into FASTA files
 #===========================================================
 
 cat ${design_LF} |
@@ -84,13 +83,13 @@ cat ${design_LF} |
     }'
 
 ################################################################################
-#! In the case of Point mutation:
-#! Generate randome insertion and deletion at gRNA sites as abnormal alleles
+# In the case of Point mutation:
+# Generate randome insertion and deletion at gRNA sites as abnormal alleles
 ################################################################################
 
 #===========================================================
-#? Define mutation type
-#? Insertion = I; Deletion = D; Substitution = S
+# Define mutation type
+# Insertion = I; Deletion = D; Substitution = S
 #===========================================================
 
 target_mutation_type=$(
@@ -108,7 +107,7 @@ target_mutation_type=$(
 )
 
 #===========================================================
-#? Generate randome insertion and deletion at gRNA sites
+# Generate randome insertion and deletion at gRNA sites
 #===========================================================
 
 if [ "_${target_mutation_type}" = "_S" ]; then
@@ -139,7 +138,7 @@ if [ "_${target_mutation_type}" = "_S" ]; then
 fi
 
 ################################################################################
-#! Format ONT reads into FASTA file
+# Format ONT reads into FASTA file
 ################################################################################
 
 find ${input_dir}/* -type f |

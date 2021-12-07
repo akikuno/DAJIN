@@ -1,31 +1,30 @@
-
 #!/bin/sh
 
 ################################################################################
-#! Initialize shell environment
+# Initialize shell environment
 ################################################################################
 
 set -u
 umask 0022
 export LC_ALL=C
-export UNIX_STD=2003  # to make HP-UX conform to POSIX
+export UNIX_STD=2003 # to make HP-UX conform to POSIX
 
 ################################################################################
-#! I/O naming
+# I/O naming
 ################################################################################
 
 #===========================================================
-#? Input
+# Input
 #===========================================================
 
 #===========================================================
-#? Output
+# Output
 #===========================================================
 
 mkdir -p .DAJIN_temp/details
 
 ################################################################################
-#! Generate Details.csv
+# Generate Details.csv
 ################################################################################
 
 find .DAJIN_temp/consensus/* -type f |
@@ -36,7 +35,7 @@ find .DAJIN_temp/consensus/* -type f |
     sed "s/_/ /g" |
     awk '{print $1"_"$2,$3,$4}' |
     sort |
-cat > .DAJIN_temp/details/tmp_nameid
+    cat >.DAJIN_temp/details/tmp_nameid
 
 cat .DAJIN_temp/clustering/allele_per/label* |
     awk '{nr[$1]++; print $0, nr[$1]}' |
@@ -56,12 +55,12 @@ cat .DAJIN_temp/clustering/allele_per/label* |
         else $7 = "-"
         }1' |
     sed -e "1i Sample, Allele ID, % of reads, Allele type, Indel, Large indel, Design" |
-cat > .DAJIN_temp/details/Details.csv
+    cat >.DAJIN_temp/details/Details.csv
 
 rm .DAJIN_temp/details/tmp_nameid
 
 ################################################################################
-#! Plot details.csv
+# Plot details.csv
 ################################################################################
 
 Rscript DAJIN/src/details_plot.R

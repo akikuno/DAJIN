@@ -1,20 +1,19 @@
 #!/bin/sh
 
 ################################################################################
-#! Initialize shell environment
+# Initialize shell environment
 ################################################################################
 
 set -eu
 umask 0022
 export LC_ALL=C
-export UNIX_STD=2003 # to make HP-UX conform to POSIX
 
 ################################################################################
-#! I/O naming
+# I/O naming
 ################################################################################
 
 #===========================================================
-#? Auguments
+# Auguments
 #===========================================================
 
 que_fa=${1}
@@ -26,16 +25,16 @@ label=${label%.fa*}
 suffix="${label}_${genotype}"
 
 #===========================================================
-#? Input
+# Input
 #===========================================================
 
 #===========================================================
-#? Output
+# Output
 #===========================================================
 output_MIDS=".DAJIN_temp/data/MIDS_${suffix}"
 
 #===========================================================
-#? Temporal
+# Temporal
 #===========================================================
 tmp_mapping=".DAJIN_temp/data/tmp_mapping_${suffix}"
 tmp_seqID=".DAJIN_temp/data/tmp_seqID_${suffix}"
@@ -45,7 +44,7 @@ tmp_primary=".DAJIN_temp/data/tmp_primary_${suffix}"
 tmp_secondary=".DAJIN_temp/data/tmp_secondary_${suffix}"
 
 ################################################################################
-#! Function
+# Function
 ################################################################################
 
 mids_conv() {
@@ -93,11 +92,11 @@ mids_conv() {
 }
 
 ################################################################################
-#! Extract reads containing ±100 bases from the mutation
+# Extract reads containing ±100 bases from the mutation
 ################################################################################
 
 #===========================================================
-#? Define variables
+# Define variables
 #===========================================================
 
 ref_fa=".DAJIN_temp/fasta_conv/wt.fa"
@@ -112,7 +111,7 @@ second_flank=$(awk -v ext=${ext} '{if(NF==2) $0=$2+ext; else $0=$1+ext}1' .DAJIN
 [ "${second_flank}" -gt "${ref_len}" ] && second_flank="${ref_len}"
 
 #===========================================================
-#? Extract reads
+# Extract reads
 #===========================================================
 
 max_len=$(awk '$1!~/^>/ {if(max<length) max=length} END{print max}' .DAJIN_temp/fasta/fasta.fa)
@@ -144,11 +143,11 @@ minimap2 -ax splice "${ref_fa}" "${que_fa}" --cs=long 2>/dev/null |
     cat >"${tmp_seqID}"
 
 ################################################################################
-#! MIDS conversion
+# MIDS conversion
 ################################################################################
 
 #===========================================================
-#? Separate primary and secondary reads
+# Separate primary and secondary reads
 #===========================================================
 
 cat "${tmp_mapping}" |
@@ -173,7 +172,7 @@ cat "${tmp_all}" |
     cat >"${tmp_secondary}"
 
 #===========================================================
-#? Concat primary secondary
+# Concat primary secondary
 #===========================================================
 
 cat "${tmp_primary}" "${tmp_secondary}" |

@@ -1,38 +1,37 @@
 #!/bin/sh
 
 ################################################################################
-#! Initialize shell environment
+# Initialize shell environment
 ################################################################################
 
 set -eu
 umask 0022
 export LC_ALL=C
-export UNIX_STD=2003 # to make HP-UX conform to POSIX
 
 ################################################################################
-#! I/O naming
+# I/O naming
 ################################################################################
 
 #===========================================================
-#? Auguments
+# Auguments
 #===========================================================
 
 control="${1}"
 threads="${2}"
 
 #===========================================================
-#? Input
+# Input
 #===========================================================
 
 alleletype="wt"
 
 #===========================================================
-#? Output
+# Output
 #===========================================================
 mkdir -p ".DAJIN_temp/clustering/temp/"
 
 #===========================================================
-#? Temporal
+# Temporal
 #===========================================================
 
 MIDS_ref=".DAJIN_temp/clustering/temp/MIDS_${control}_${alleletype}"
@@ -43,17 +42,17 @@ tmp_strecher_wt=".DAJIN_temp/clustering/temp/tmp_strecher_wt_${control}_${allele
 tmp_strecher_label=".DAJIN_temp/clustering/temp/tmp_strecher_label${control}_${alleletype}"
 
 ################################################################################
-#! Generate mutation scores of WT alleles
+# Generate mutation scores of WT alleles
 ################################################################################
 
 #===========================================================
-#? MIDS conversion for clustering
+# MIDS conversion for clustering
 #===========================================================
 
 ./DAJIN/src/mids_clustering.sh "${control}" "${alleletype}" >"${MIDS_ref}"
 
 #===========================================================
-#? Select WT allele
+# Select WT allele
 #===========================================================
 
 cat "${MIDS_ref}" |
@@ -67,18 +66,18 @@ cat "${MIDS_ref}" |
     cat >"${tmp_MIDS}"
 
 #===========================================================
-#? Generate mutation scoring of wt alleles
+# Generate mutation scoring of wt alleles
 #===========================================================
 
 Rscript DAJIN/src/clustering_control_scoring_wt.R "${tmp_MIDS}" "${threads}"
 
 ################################################################################
-#! Generate mutation scores of other alleles
+# Generate mutation scores of other alleles
 ################################################################################
 
 #===========================================================
-#? Annotate mutation loci of other possible alleles
-#? (mutation loci = 1)
+# Annotate mutation loci of other possible alleles
+# (mutation loci = 1)
 #===========================================================
 
 cat ".DAJIN_temp/fasta/${alleletype}.fa" |
@@ -150,7 +149,7 @@ find .DAJIN_temp/fasta/ -type f |
     done
 
 #===========================================================
-#? Generate mutation scoring of other alleles
+# Generate mutation scoring of other alleles
 #===========================================================
 
 find .DAJIN_temp/fasta/ -type f |

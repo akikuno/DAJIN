@@ -70,6 +70,7 @@ merged_clusters <- int_hdbscan_clusters
 
 sequence_error <-
   df_control_score %>%
+  filter(mut == 0) %>%
   unnest(control_freq) %>%
   filter(MIDS != "M" & freq > 10) %>%
   pull(loc) %>%
