@@ -7,7 +7,6 @@
 set -u
 umask 0022
 export LC_ALL=C
-export UNIX_STD=2003 # to make HP-UX conform to POSIX
 
 ################################################################################
 # I/O naming
