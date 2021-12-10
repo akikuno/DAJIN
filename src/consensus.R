@@ -42,7 +42,11 @@ output_suffix <- file_que_mids %>% str_remove(".*allele_id_")
 ################################################################################
 
 max_count <- function(x) {
-    x %>% table() %>% which.max() %>% names()
+    y = table(x)
+    if (names(which.max(y)) != "S") {
+        y["M"] = y["M"] + y["S"]
+    }
+    y %>% which.max() %>% names()
 }
 
 df_que_max <-
