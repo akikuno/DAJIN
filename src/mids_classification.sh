@@ -16,6 +16,7 @@ export LC_ALL=C
 # Auguments
 #===========================================================
 
+ref_fa=".DAJIN_temp/fasta_conv/wt.fa"
 que_fa=${1}
 genotype=${2}
 
@@ -99,7 +100,6 @@ mids_conv() {
 # Define variables
 #===========================================================
 
-ref_fa=".DAJIN_temp/fasta_conv/wt.fa"
 ref_len=$(awk '$1!~/^>/ {print length}' "${ref_fa}")
 ref_label="${ref_fa##*/}" && ref_label="${ref_label%.*}"
 

@@ -10,3 +10,4 @@ DAJIN text eol=lf
 *.svg text eol=lf
 *.fa text eol=lf
 *.fasta text eol=lf
+*.gz -text
