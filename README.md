@@ -150,18 +150,22 @@ This project is under the MIT License - see the [LICENSE](https://github.com/aki
 
 ## Citation
 
-[bioRxiv link](https://www.biorxiv.org/content/early/2020/12/14/2020.12.14.422641)
+[PLOS BIOLOGY](https://doi.org/10.1371/journal.pbio.3001507)
 
 ```
-@article {Kuno2020.12.14.422641,
-	author = {Kuno, Akihiro and Ikeda, Yoshihisa and Ayabe, Shinya and Kato, Kanako and Sakamoto, Kotaro and Suzuki, Sayaka and Morimoto, Kento and Wakimoto, Arata and Mikami, Natsuki and Ishida, Miyuki and Iki, Natsumi and Hamada, Yuko and Takemura, Megumi and Daitoku, Yoko and Tanimoto, Yoko and Huong Dinh, Tra Thi and Murata, Kazuya and Hamada, Michito and Yoshiki, Atsushi and Sugiyama, Fumihiro and Takahashi, Satoru and Mizuno, Seiya},
-	title = {DAJIN-assisted multiplex genotyping to validate the outcomes of CRISPR-Cas-based genome editing},
-	elocation-id = {2020.12.14.422641},
-	year = {2020},
-	doi = {10.1101/2020.12.14.422641},
-	publisher = {Cold Spring Harbor Laboratory},
-	URL = {https://www.biorxiv.org/content/early/2020/12/14/2020.12.14.422641},
-	eprint = {https://www.biorxiv.org/content/early/2020/12/14/2020.12.14.422641.full.pdf},
-	journal = {bioRxiv}
+@article{Kuno_2022,
+	title={DAJIN enables multiplex genotyping to simultaneously validate intended and unintended target genome editing outcomes},
+	volume={20},
+	url={https://journals.plos.org/plosbiology/article?id=10.1371/journal.pbio.3001507},
+	DOI={10.1371/journal.pbio.3001507},
+	number={1},
+	journal={PLOS Biology},
+	author={Kuno, Akihiro and Ikeda, Yoshihisa and Ayabe, Shinya and Kato, Kanako and Sakamoto, Kotaro and Suzuki, Sayaka R. and Morimoto, Kento and Wakimoto, Arata and Mikami, Natsuki and Ishida, Miyuki and et al.},
+	year={2022},
+	month={Jan},
+	pages={e3001507}
 }
 ```
+
+
+‌
