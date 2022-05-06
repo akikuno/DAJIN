@@ -32,7 +32,7 @@ conda list | grep -q mamba || conda install -y -c conda-forge mamba >/dev/null 2
 if [ "$(conda info -e | grep -c DAJIN_nanosim)" -eq 0 ]; then
     echo Create "DAJIN_nanosim" environment... >&2
     conda create -y -n DAJIN_nanosim python=3.8 >/dev/null 2>&1
-    mamba install -y -n DAJIN_nanosim nanosim minimap2 >/dev/null 2>&1
+    mamba install -y -n DAJIN_nanosim nanosim samtools==1.10 minimap2 >/dev/null 2>&1
 fi
 
 conda activate DAJIN_nanosim
@@ -63,7 +63,7 @@ if ! conda info -e | cut -d " " -f 1 | grep -q "^DAJIN$"; then
     conda create -y -n DAJIN python=3.8 >/dev/null 2>&1
     mamba install -y -n DAJIN \
         numpy pandas scikit-learn joblib hdbscan \
-        wget emboss samtools minimap2 >/dev/null 2>&1
+        wget emboss samtools==1.10 minimap2 >/dev/null 2>&1
     mamba install -y -n DAJIN -c conda-forge r-essentials r-base r-reticulate >/dev/null 2>&1
     # tensorflow setting (CPU, GPU w/ RTX, and GPU w/ GTX)
     conda activate DAJIN
@@ -80,8 +80,9 @@ fi
 conda activate DAJIN
 
 # Install R packages
-
-Rscript -e 'install.packages("pacman", repos="https://cloud.r-project.org/")' >/dev/null 2>&1
+if ! Rscript -e "installed.packages()" >/dev/null 2>&1 | grep -q pacman; then
+    Rscript -e 'install.packages("pacman", repos="https://cloud.r-project.org/")' >/dev/null 2>&1
+fi
 Rscript -e 'pacman::p_load("RColorBrewer", "vroom", "furrr", "tidyfast")' >/dev/null 2>&1
 
 ###############################################################################
