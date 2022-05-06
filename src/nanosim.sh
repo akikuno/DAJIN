@@ -5,15 +5,25 @@ set -eu
 control=$1
 threads=$2
 
+error_exit() {
+  echo "$@" 1>&2
+  exit 1
+}
+
 #===========================================================
 # NanoSim
 #===========================================================
+
+if ! read_analysis.py -v 2>/dev/null | grep -q "NanoSim 3.0.0"; then
+  mamba install -y nanosim=3.0.0 >/dev/null 2>&1
+fi
 
 read_analysis.py genome \
   -i ".DAJIN_temp/fasta_ont/${control}.fa" \
   -rg .DAJIN_temp/fasta_conv/wt.fa \
   -t ${threads:-1} \
-  -o .DAJIN_temp/NanoSim/training 1>&2
+  -o .DAJIN_temp/NanoSim/training 1>&2 ||
+  error_exit 'nanosim error...'
 
 wt_seqlen=$(awk '!/^>/ {print length}' .DAJIN_temp/fasta_conv/wt.fa)
 
@@ -28,10 +38,10 @@ for input in .DAJIN_temp/fasta_conv/*; do
     len="${wt_seqlen}"
   fi
   ##
-  ./DAJIN/utils/NanoSim/src/simulator.py genome \
+  simulator.py genome \
     -dna_type linear \
     -c .DAJIN_temp/NanoSim/training \
-    -rg "${input}" \
+    -r "${input}" \
     -n 10000 \
     -t "${threads:-1}" \
     -min "${len}" \
@@ -39,4 +49,5 @@ for input in .DAJIN_temp/fasta_conv/*; do
   ##
   rm .DAJIN_temp/fasta_ont/*_error_* .DAJIN_temp/fasta_ont/*_unaligned_* 2>/dev/null || true
 done
+
 rm -rf DAJIN/utils/NanoSim/src/__pycache__ || true
