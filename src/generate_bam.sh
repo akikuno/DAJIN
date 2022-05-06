@@ -107,7 +107,7 @@ find .DAJIN_temp/bam/ -name "*bam" -type f |
         )
 
         header_num=$(samtools view -H "${input_bam}" | wc -l)
-        bam_num=$((100 + "${header_num}"))
+        bam_num=$((100 + header_num))
 
         samtools view -h "${input_bam}" |
             awk '$1 ~ /^@/ || $6 != "*"' |
