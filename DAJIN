@@ -183,7 +183,7 @@ fi
   [ -z "$max_threads" ] && max_threads=$(getconf NPROCESSORS_ONLN)
   [ -z "$max_threads" ] && max_threads=$(ksh -c 'getconf NPROCESSORS_ONLN')
   [ -z "$max_threads" ] && max_threads=1
-  tmp_threads=$(("${threads}" + 0))
+  tmp_threads=$(("${threads:-1}" + 0))
 } 2>/dev/null || true
 
 if [ "${tmp_threads:-0}" -gt 1 ] && [ "${tmp_threads}" -lt "${max_threads}" ]; then
@@ -235,7 +235,7 @@ conda activate DAJIN_nanosim
 set -u
 
 if ! find .DAJIN_temp/fasta_ont/*simulated* >/dev/null 2>&1; then
-  ./DAJIN/src/nanosim.sh "${control}" "${threads}"
+  ./DAJIN/src/nanosim.sh "${control}" "${threads:-1}"
 fi
 
 ################################################################################
@@ -283,7 +283,7 @@ Predict allele types
 --------------------------------------------------------------------------------
 EOF
 
-./DAJIN/src/ml_prediction.sh "${control}" "${threads}" >.DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt ||
+./DAJIN/src/ml_prediction.sh "${control}" "${threads:-1}" >.DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt ||
   exit 1
 
 ###############################################################################
@@ -303,7 +303,7 @@ mkdir -p .DAJIN_temp/clustering/temp
 # Prepare control's score to define sequencing error
 #===========================================================
 
-./DAJIN/src/clustering_control_scoring.sh "${control}" "${threads}"
+./DAJIN/src/clustering_control_scoring.sh "${control}" "${threads:-1}"
 
 #===========================================================
 # Clustering
@@ -376,7 +376,7 @@ cat .DAJIN_temp/clustering/allele_per/label* |
       sort |
       join - .DAJIN_temp/consensus/tmp_id |
       awk '{gsub(" ", "\n")}1' |
-      minimap2 -ax map-ont -t "${threads}" ".DAJIN_temp/fasta/${mapping_alleletype}.fa" - --cs=long 2>/dev/null |
+      minimap2 -ax map-ont -t "${threads:-1}" ".DAJIN_temp/fasta/${mapping_alleletype}.fa" - --cs=long 2>/dev/null |
       sort |
       cat >.DAJIN_temp/consensus/sam/"${barcode}"_"${mapping_alleletype}".sam
     rm .DAJIN_temp/consensus/tmp_id
@@ -409,7 +409,7 @@ Generate BAM files
 --------------------------------------------------------------------------------
 EOF
 
-./DAJIN/src/generate_bam.sh "${genome}" "${threads}"
+./DAJIN/src/generate_bam.sh "${genome}" "${threads:-1}"
 
 ################################################################################
 # Move output files
