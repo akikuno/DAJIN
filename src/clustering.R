@@ -32,7 +32,7 @@ query_score <- args[1]
 query_label <- args[2]
 control_RDS <- args[3]
 threads <- as.integer(args[4])
-plan(multiprocess, workers = threads)
+plan(multicore, workers = threads)
 
 #===========================================================
 # Inputs
