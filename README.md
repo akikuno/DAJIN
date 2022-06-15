@@ -27,7 +27,7 @@ If you use a Windows PC with NVIDIA GPU, please follow [this instruction](https:
 # Install miniconda
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 chmod +x Miniconda3-latest-Linux-x86_64.sh
-./Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh -b -f -p /usr/local/
 ```
 
 ### 2. Clone this repository
@@ -128,15 +128,15 @@ This is an example result of three samples.
 
 <img src="https://github.com/akikuno/DAJIN/blob/master/misc/images/Details.png" width="75%">  
 
-The barcode01 is a wild-type mice as a control, whereas the barcode02 and barcode03 are genome-edited founder mice with a flox knock-in design.
+The barcode01 is a wild-type mouse as a control, whereas the barcode02 and barcode03 are genome-edited founder mice with a flox knock-in design.
 
-This result shows the most of Nanopore reads of barcode02 are labeled as "intact target" (flox), and indicates the barcode02 is a candidate of the desired homozygous mice.
+This result shows that most Nanopore reads of barcode02 are labeled as "intact target" (flox), and indicates that barcode02 is a candidate for the desired homozygous mice.
 
 ### Consensus
 
-The `Conseusus` folder includes FASTA and HTML files which display consensus sequence in each allele.
+The `Conseusus` folder includes FASTA and HTML files that display the consensus sequence in each allele.
 
-Here is <a href="https://htmlpreview.github.io/?https://github.com/akikuno/DAJIN/blob/master/misc/images/tyr_c140cg.html" target= _blank rel= noopener> an example of DAJIN consensus sequence</a> using the point mutation.
+Here is <a href="https://htmlpreview.github.io/?https://github.com/akikuno/DAJIN/blob/master/misc/images/tyr_c140cg.html" target= _blank rel= noopener> an example of DAJIN's consensus sequence</a> using the point mutation.
 
 ### BAM
 
