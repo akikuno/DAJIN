@@ -23,19 +23,7 @@ threads="${2}"
 # Variable
 #===========================================================
 
-target_mutation_type=$(
-    minimap2 -ax splice \
-        .DAJIN_temp/fasta/wt.fa \
-        .DAJIN_temp/fasta/target.fa \
-        --cs 2>/dev/null |
-        grep -v "^@" |
-        awk '{
-        cstag=$(NF-1)
-        if(cstag ~ "~") print "D"
-        else if(cstag ~ /\+/) print "I"
-        else if(cstag ~ /\*/) print "S"
-        }' 2>/dev/null
-)
+target_mutation_type=$(cat .DAJIN_temp/target_mutation_type)
 
 #===========================================================
 # Setting directory

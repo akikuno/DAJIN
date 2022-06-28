@@ -53,17 +53,7 @@ mutation_id_loc_type_insnum=".DAJIN_temp/consensus/temp/consensus_${out_suffix}"
 mutation_type_site_nuc=".DAJIN_temp/consensus/temp/mutation_type_site_nuc_${out_suffix}"
 tmp_html=.DAJIN_temp/consensus/temp/tmp_html_"${out_suffix}"
 
-target_mutation_type=$(
-  ref=".DAJIN_temp/fasta/wt.fa"
-  que=".DAJIN_temp/fasta/target.fa"
-  minimap2 -ax splice "$ref" "$que" --cs 2>/dev/null |
-    awk '!/@/ {
-  cstag=$(NF-1)
-  if(cstag ~ "~") print "D"
-  else if(cstag ~ /\+/) print "I"
-  else if(cstag ~ /\*/) print "S"
-  }' 2>/dev/null
-)
+target_mutation_type=$(cat .DAJIN_temp/target_mutation_type)
 
 ################################################################################
 # Get consensus sequence
