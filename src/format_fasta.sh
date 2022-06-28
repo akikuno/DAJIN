@@ -92,7 +92,18 @@ cat ${design_LF} |
 # Insertion = I; Deletion = D; Substitution = S
 #===========================================================
 
-target_mutation_type=$(cat .DAJIN_temp/target_mutation_type)
+target_mutation_type=$(
+    minimap2 -ax splice .DAJIN_temp/fasta/wt.fa .DAJIN_temp/fasta/target.fa --cs 2>/dev/null |
+        grep -v "^@" |
+        awk '{
+    cstag=$(NF-1)
+    if(cstag ~ "~") print "D"
+    else if(cstag ~ /\+/) print "I"
+    else if(cstag ~ /\*/) print "S"
+    else if(cstag ~ /\-/) print "D"
+    else print "D"
+    }'
+)
 
 #===========================================================
 # Generate randome insertion and deletion at gRNA sites
