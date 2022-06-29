@@ -20,11 +20,7 @@ CPUでも実行可能ですが, リード数によってはかなり長時間（
 
 以下の環境で動作確認をしています.  
 
-- Ubuntu 18.04, RTX2080ti
-- Linux Mint 20.04, GTX1080ti
-- Windows10 WSL2 (Ubuntu 18.04) * CPUでの実行
-
-より詳細は計算環境は[こちら](https://github.com/akikuno/DAJIN/blob/master/misc/TESTED_SYSTEMS.md)です.  
+- Windows11 WSL2 (Ubuntu 20.04), Nvidia RTX3080
 
 ＊macOSは未検証です.  
 
@@ -33,22 +29,21 @@ CPUでも実行可能ですが, リード数によってはかなり長時間（
 ### 1. [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)と[conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)をインストールします
 
 ```bash
-# Instal git
-sudo apt install git
 # Install miniconda
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 chmod +x Miniconda3-latest-Linux-x86_64.sh
-./Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh -b -f -p /usr/local/
 ```
-### 2. DAJINをダウンロードします
+### 2. DAJINのダウンロード
 
 ```
+conda install git
 git clone https://github.com/akikuno/DAJIN.git
 ```
 
 ## 推奨のディレクトリ構成について
 
-下記のようなディレクトリ構成を推奨しています.  
+下記のようなディレクトリ構成を推奨します.  
 
 ```
 ├── DAJIN # <- git cloneでダウンロードしたディレクトリです
@@ -73,8 +68,8 @@ git clone https://github.com/akikuno/DAJIN.git
 design=DAJIN/example/design.txt
 input_dir=DAJIN/example/demultiplex
 control=barcode01
-genome=mm10
 grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
+genome=mm10
 output_dir=DAJIN_cables2
 threads=10
 filter=on
@@ -82,16 +77,16 @@ filter=on
 
 各項目の内容は以下のとおりです。
 
-- **desing**: 考えられる遺伝型の配列を記載したFASTA形式のテキストファイルです。 ">wt"と">target"の2つは含まれている必要があります。
-- **input_dir**: demultiplex済みのFASTA/FASTQファイルを含むディレクトリです。
-- **control**: 野生型コントロールのバーコード番号です。
+- **desing**（必須）: 考えられる遺伝型の配列を記載したFASTA形式のテキストファイルです。 ">wt"と">target"の2つは含まれている必要があります。
+- **input_dir**（必須）: demultiplex済みのFASTA/FASTQファイルを含むディレクトリです。
+- **control**（必須）: 野生型コントロールのバーコード番号です。
+- **grna**（必須）: gRNA配列です。2つ以上の配列はコンマ（,）で区切ります。
 - **genome**: `mm10`, `hg38`等の参照ゲノムです。
-- **grna**: gRNA配列です。2つ以上の配列はコンマ（,）で区切ります。
-- **output_dir（オプショナル）**: 結果を保存するディレクトリの名前です。デフォルトは`DAJIN_results`です。
-- **threads（オプショナル）**: DAJINに使用するCPUスレッド数です。デフォルトでは`3分の2`を使用します。
-- **filter（オプショナル**: on/off）: マイナーアレル（Targetアレルが1%以下、その他のアレルが3%以下）を解析から除きます。デフォルトは"on"です。
+- **output_dir**: 結果を保存するディレクトリの名前です。デフォルトは`DAJIN_results`です。
+- **threads**: DAJINに使用するCPUスレッド数です。デフォルトでは`3分の2`を使用します。
+- **filter**（on/off）: マイナーアレル（Targetアレルが1%以下、その他のアレルが3%以下）を解析から除きます。デフォルトは"on"です。
 
-> `design`, `input_dir`, `control`, `genome`,`grna` は必須項目です.
+> `design`, `input_dir`, `control`,`grna` は必須項目です.
 > 各項目は順不同です。
 
 ### 2. `design.fasta`
@@ -104,9 +99,7 @@ floxノックインの場合は副産物アレルを含めて6つのアレルタ
 
 ### 3. `fastq` directory
 
-現状, DAJINは[qcat](https://github.com/nanoporetech/qcat)によりDemultiplexされたfastqをあつかいます.  
-そのためGuppyの場合には出力のディレクトリ構成が異なるため, 変換する必要があります.  
-Guppyの出力を扱えるようにアップデートする予定です.  
+1つのサンプルにつき1つのfastq（gzip圧縮可）のあるディレクトリのパスを記載してください。
 
 ## DAJINの実行
 
@@ -165,18 +158,21 @@ barcode01は野生型コントロールで, barcode02および03がfloxノック
 
 DAJINはMITライセンスです. 詳細は[LICENSE](https://github.com/akikuno/DAJIN/blob/master/LICENSE)をご覧ください.
 
-## 論文
+## 引用論文
+
+[PLOS BIOLOGY](https://doi.org/10.1371/journal.pbio.3001507)
 
 ```
-@article {DAJIN,
-	author = {Kuno, Akihiro and Ikeda, Yoshihisa and Ayabe, Shinya and Kato, Kanako and Sakamoto, Kotaro and Suzuki, Sayaka and Morimoto, Kento and Wakimoto, Arata and Mikami, Natsuki and Ishida, Miyuki and Iki, Natsumi and Hamada, Yuko and Takemura, Megumi and Daitoku, Yoko and Tanimoto, Yoko and Huong Dinh, Tra Thi and Murata, Kazuya and Hamada, Michito and Muratani, Masafumi and Yoshiki, Atsushi and Sugiyama, Fumihiro and Takahashi, Satoru and Mizuno, Seiya},
-	title = {Multiplex genotyping method to validate the multiallelic genome editing outcomes using machine learning-assisted long-read sequencing},
-	elocation-id = {2020.12.14.422641},
-	year = {2021},
-	doi = {10.1101/2020.12.14.422641},
-	publisher = {Cold Spring Harbor Laboratory},
-	URL = {https://www.biorxiv.org/content/early/2021/07/09/2020.12.14.422641},
-	eprint = {https://www.biorxiv.org/content/early/2021/07/09/2020.12.14.422641.full.pdf},
-	journal = {bioRxiv}
+@article{Kuno_2022,
+	title={DAJIN enables multiplex genotyping to simultaneously validate intended and unintended target genome editing outcomes},
+	volume={20},
+	url={https://journals.plos.org/plosbiology/article?id=10.1371/journal.pbio.3001507},
+	DOI={10.1371/journal.pbio.3001507},
+	number={1},
+	journal={PLOS Biology},
+	author={Kuno, Akihiro and Ikeda, Yoshihisa and Ayabe, Shinya and Kato, Kanako and Sakamoto, Kotaro and Suzuki, Sayaka R. and Morimoto, Kento and Wakimoto, Arata and Mikami, Natsuki and Ishida, Miyuki and et al.},
+	year={2022},
+	month={Jan},
+	pages={e3001507}
 }
 ```

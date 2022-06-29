@@ -1,5 +1,5 @@
 ################################################################################
-#! Install required packages
+# ! Install required packages
 ################################################################################
 
 options(repos = "https://cloud.r-project.org/")
@@ -8,37 +8,40 @@ if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
 pacman::p_load(tidyverse)
 
 ################################################################################
-#! I/O naming
+# ! I/O naming
 ################################################################################
 
-#===========================================================
-#? Auguments
-#===========================================================
+# ===========================================================
+# ? Auguments
+# ===========================================================
 
 args <- commandArgs(trailingOnly = TRUE)
 file_name <- args[1]
 threads <- as.integer(args[2])
 
-#===========================================================
-#? Inputs
-#===========================================================
+# ===========================================================
+# ? Inputs
+# ===========================================================
 
 df_wt <- readRDS(".DAJIN_temp/clustering/temp/df_control_freq_wt.RDS")
 
 df_label <- read_csv(
     file_name,
     col_names = c("loc", "mut"),
-    col_types = cols())
+    col_types = cols()
+)
 
-#===========================================================
-#? Outputs
-#===========================================================
+# ===========================================================
+# ? Outputs
+# ===========================================================
 
 output_label <-
-    file_name %>% str_remove_all(".*control_score_")
+    file_name %>%
+    str_remove_all(".*control_score_") %>%
+    str_remove(".csv$")
 
 ################################################################################
-#! Detect allele type
+# ! Detect allele type
 ################################################################################
 
 logic_point_mutation <- FALSE
@@ -56,9 +59,9 @@ if (sum(df_label$mut) == 1) {
     logic_deletion <- TRUE
 }
 
-#===========================================================
-#? Point mutation
-#===========================================================
+# ===========================================================
+# ? Point mutation
+# ===========================================================
 
 if (logic_point_mutation) {
     output_label <- "wt"
@@ -69,7 +72,7 @@ if (logic_point_mutation) {
 
     df_control_freq_label <- df_label
 
-    for(num_label_loc in df_label$loc){
+    for (num_label_loc in df_label$loc) {
         if (num_label_loc != mut_loc) {
             df_control_freq_label$mut[num_label_loc] <- df_wt$control_freq[num_label_loc]
         }
@@ -81,9 +84,9 @@ if (logic_point_mutation) {
         mutate(mut = df_label$mut)
 }
 
-#===========================================================
-#? Inversion
-#===========================================================
+# ===========================================================
+# ? Inversion
+# ===========================================================
 
 if (logic_inversion) {
     invert_loc <-
@@ -100,15 +103,15 @@ if (logic_inversion) {
         arrange(loc)
 }
 
-#===========================================================
-#? Insertion
-#===========================================================
+# ===========================================================
+# ? Insertion
+# ===========================================================
 
 if (logic_insertion) {
     df_control_freq_label <- df_label
 
     num_ref_loc <- 1
-    for(num_label_loc in df_label$loc){
+    for (num_label_loc in df_label$loc) {
         if (df_label$mut[num_label_loc] == 0) {
             df_control_freq_label$mut[num_label_loc] <- df_wt$control_freq[num_ref_loc]
             num_ref_loc <- num_ref_loc + 1
@@ -120,9 +123,9 @@ if (logic_insertion) {
         mutate(mut = df_label$mut)
 }
 
-#===========================================================
-#? Deletion
-#===========================================================
+# ===========================================================
+# ? Deletion
+# ===========================================================
 
 if (logic_deletion) {
     df_control_freq_label <-
@@ -131,8 +134,10 @@ if (logic_deletion) {
 }
 
 ################################################################################
-#! Save results
+# ! Save results
 ################################################################################
 
-saveRDS(df_control_freq_label,
-    sprintf(".DAJIN_temp/clustering/temp/df_control_freq_%s.RDS", output_label))
+saveRDS(
+    df_control_freq_label,
+    sprintf(".DAJIN_temp/clustering/temp/df_control_freq_%s.RDS", output_label)
+)

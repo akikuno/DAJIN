@@ -63,8 +63,8 @@ You can rename `design.txt`, `design.fasta` and `fastq`.
 design=DAJIN/example/example.fa
 input_dir=DAJIN/example/fastq
 control=barcode01
-genome=mm10
 grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
+genome=mm10
 output_dir=DAJIN_example
 threads=10
 ```
@@ -72,8 +72,8 @@ threads=10
 - **design**: PATH to a FASTA file including sequences of each genotype. **">wt" and ">target" must be included.**
 - **input_dir**: PATH to a directory containing demultiplexed FASTQ files
 - **control**: control barcode ID
-- **genome**: reference genome. e.g. hg38,mm10 (**not GRCh38,GRCm38**)
 - **grna**: gRNA sequence(s) **with PAM**. multiple gRNA sequences must be delimitated by comma.
+- **genome**(optional): reference genome. e.g. hg38,mm10 (**not GRCh38,GRCm38**)
 - **output_dir** (optional): output directory name. Default is `DAJIN_results`
 - **threads** (optional: integer): Default is `2/3` of available CPU threads.
 - **filter**  (optional: `on` or `off`): set filter to remove very minor allele (less than 3%). Default is `on`.

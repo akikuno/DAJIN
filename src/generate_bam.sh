@@ -41,7 +41,21 @@ if [ "_$target_mutation_type" = "_S" ]; then
     mv .DAJIN_temp/fasta_ont/wt_del* .DAJIN_temp/
 fi
 
-./DAJIN/src/mapping.sh "${genome:-mm10}" "${threads:-1}" || exit 1
+if [ "${genome}" = "no_ref" ]; then
+    for input in .DAJIN_temp/fasta_ont/*; do
+        output=$(
+            basename "${input}" |
+                sed -e "s|^|.DAJIN_temp/bam/|" -e "s|\.f.*$|.bam|g"
+        )
+        minimap2 -t "${threads:-1}" -ax map-ont --cs=long .DAJIN_temp/fasta/wt.fa "${input}" 2>/dev/null |
+            samtools sort -@ "${threads:-1}" - 2>/dev/null |
+            cat >"${output}"
+        samtools index -@ "${threads:-1}" "${output}"
+    done
+    cp .DAJIN_temp/fasta/wt.fa .DAJIN_temp/bam/reference.fa
+else
+    ./DAJIN/src/mapping.sh "${genome:-mm10}" "${threads:-1}" || exit 1
+fi
 
 if [ "_$target_mutation_type" = "_S" ]; then
     mv .DAJIN_temp/wt_ins* .DAJIN_temp/fasta_ont/

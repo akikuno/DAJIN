@@ -8,11 +8,13 @@ set -u
 umask 0022
 export LC_ALL=C
 
+mkdir -p .DAJIN_temp
+
 ################################################################################
 # Define the functions for printing usage and error message
 ################################################################################
 
-VERSION=0.5
+VERSION=0.6.0
 
 usage() {
   cat <<-USAGE
@@ -35,8 +37,8 @@ Input     : Input file should be formatted as below:
             - design: a multi-FASTA file contains sequences of each genotype. ">wt" and ">target" must be included.
             - input_dir: a directory contains FASTA or FASTQ files of long-read sequencing
             - control: control barcode ID
-            - genome: reference genome. e.g. mm10, hg38
             - grna: gRNA sequence(s) including PAM. multiple gRNA sequences must be deliminated by comma.
+            - genome (optional): reference genome. e.g. mm10, hg38
             - output_dir (optional): output directory name. optional. Default is "DAJIN_results"
             - threads (optional; integer): Default is two-thirds of available CPU threads.
             - filter (optional; "on" or "off"): set filter to remove very minor allele (less than 3%). Default is "on"
@@ -58,6 +60,12 @@ error_exit() {
 ################################################################################
 [ $# -eq 0 ] && usage_and_exit
 
+if ! [ -r "$2" ]; then
+  error_exit "$2: No such file"
+fi
+
+cat "$2" | tr -d "\r" >.DAJIN_temp/design.txt
+
 while [ $# -gt 0 ]; do
   case "$1" in
   --help | --hel | --he | --h | '--?' | -help | -hel | -he | -h | '-?')
@@ -68,18 +76,15 @@ while [ $# -gt 0 ]; do
     echo "DAJIN version: $VERSION" && exit 0
     ;;
   --input | --in | --i | -i)
-    if ! [ -r "$2" ]; then
-      error_exit "$2: No such file"
-    fi
-    design=$(cat "$2" | grep "^design" | sed -e "s/ //g" -e "s/.*=//g")
-    input_dir=$(cat "$2" | grep "^input_dir" | sed -e "s/ //g" -e "s/.*=//g")
-    control=$(cat "$2" | grep "^control" | sed -e "s/ //g" -e "s/.*=//g")
-    genome=$(cat "$2" | grep "^genome" | sed -e "s/ //g" -e "s/.*=//g")
-    grna=$(cat "$2" | grep "^grna" | sed -e "s/ //g" -e "s/.*=//g")
-    output_dir=$(cat "$2" | grep "^output_dir" | sed -e "s/ //g" -e "s/.*=//g")
-    threads=$(cat "$2" | grep "^threads" | sed -e "s/ //g" -e "s/.*=//g")
-    filter=$(cat "$2" | grep "^filter" | sed -e "s/ //g" -e "s/.*=//g")
-    TEST=$(cat "$2" | grep "^TEST" | sed -e "s/ //g" -e "s/.*=//g")
+    design=$(cat .DAJIN_temp/design.txt | grep "^design" | sed -e "s/ //g" -e "s/.*=//g")
+    input_dir=$(cat .DAJIN_temp/design.txt | grep "^input_dir" | sed -e "s/ //g" -e "s/.*=//g")
+    control=$(cat .DAJIN_temp/design.txt | grep "^control" | sed -e "s/ //g" -e "s/.*=//g")
+    genome=$(cat .DAJIN_temp/design.txt | grep "^genome" | sed -e "s/ //g" -e "s/.*=//g")
+    grna=$(cat .DAJIN_temp/design.txt | grep "^grna" | sed -e "s/ //g" -e "s/.*=//g")
+    output_dir=$(cat .DAJIN_temp/design.txt | grep "^output_dir" | sed -e "s/ //g" -e "s/.*=//g")
+    threads=$(cat .DAJIN_temp/design.txt | grep "^threads" | sed -e "s/ //g" -e "s/.*=//g")
+    filter=$(cat .DAJIN_temp/design.txt | grep "^filter" | sed -e "s/ //g" -e "s/.*=//g")
+    TEST=$(cat .DAJIN_temp/design.txt | grep "^TEST" | sed -e "s/ //g" -e "s/.*=//g")
     ;;
   -*)
     error_exit "Unrecognized option : $1"
@@ -98,7 +103,6 @@ done
 [ -z "$design" ] && error_exit "design argument is not specified"
 [ -z "$input_dir" ] && error_exit "input_dir argument is not specified"
 [ -z "$control" ] && error_exit "control argument is not specified"
-[ -z "$genome" ] && error_exit "genome argument is not specified"
 [ -z "$grna" ] && error_exit "grna argument is not specified"
 
 #===========================================================
@@ -140,8 +144,6 @@ genome_check=$(
     grep -c "${genome:-XXX}"
 )
 
-[ "$genome_check" -eq 0 ] && error_exit "$genome: No such reference genome"
-
 #===========================================================
 # Check grna
 #===========================================================
@@ -159,7 +161,6 @@ done
 
 mkdir -p .DAJIN_temp/"$output_dir" 2>/dev/null ||
   error_exit "$output_dir: invalid directory name"
-rm -rf .DAJIN_temp/"$output_dir" 2>/dev/null || true
 
 #===========================================================
 # Check "filter"
@@ -334,9 +335,9 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
 
 cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
   awk -v ctrl="$control" '$2 $3 == ctrl "wt" {print $1"\t"1}' |
-  cat >".DAJIN_temp/clustering/temp/hdbscan_${control}_wt"
-cat ".DAJIN_temp/clustering/temp/hdbscan_${control}_wt" >.DAJIN_temp/clustering/temp/query_seq_${control}_wt
-true >".DAJIN_temp/clustering/temp/possible_true_mut_${control}_wt"
+  cat >".DAJIN_temp/clustering/temp/hdbscan_${control}_wt".csv
+cat ".DAJIN_temp/clustering/temp/hdbscan_${control}_wt".csv >.DAJIN_temp/clustering/temp/query_seq_${control}_wt.csv
+true >".DAJIN_temp/clustering/temp/possible_true_mut_${control}_wt".csv
 
 #===========================================================
 # Allele percentage
@@ -349,7 +350,7 @@ cat .DAJIN_temp/data/DAJIN_MIDS_prediction_result.txt |
   cut -f 2 |
   sort -u |
   awk -v filter="${filter:-on}" '{print "./DAJIN/src/clustering_allele_percentage.sh", $1, filter, "&"}' |
-  awk -v th="${threads:-1}" 'NR%th==0 {sub("&", "&\nwait")}1;END{print "wait"}' |
+  awk -v th="${threads:-1}" 'NR%th==0 {sub("&", "&\nwait")}1;END{if(NR!=th) print "wait"}' |
   sh -
 
 ################################################################################
@@ -377,11 +378,10 @@ cat .DAJIN_temp/clustering/allele_per/label* |
   cut -d " " -f 1,2 |
   sort -u |
   grep -v abnormal |
-  while read -r input; do
-    barcode="${input%% *}"
-    mapping_alleletype="$(echo "${input##* }" | sed "s/abnormal/wt/g" | sed "s/normal/wt/g")"
+  while read -r barcode mapping_alleletype; do
+    mapping_alleletype="${mapping_alleletype%.csv}"
 
-    cat .DAJIN_temp/clustering/allele_per/readid_cl_mids_"${barcode}"_"${mapping_alleletype}" |
+    cat .DAJIN_temp/clustering/allele_per/readid_cl_mids_"${barcode}"_"${mapping_alleletype}".csv |
       awk '{print ">"$1}' |
       sort |
       cat >.DAJIN_temp/consensus/tmp_id
@@ -402,11 +402,14 @@ cat .DAJIN_temp/clustering/allele_per/label* |
 # Execute consensus.sh
 #===========================================================
 
+rm -rf .DAJIN_temp/consensus/FASTA .DAJIN_temp/consensus/HTML 2>/dev/null || true
+mkdir -p .DAJIN_temp/consensus/FASTA .DAJIN_temp/consensus/HTML
+
 cat .DAJIN_temp/clustering/allele_per/label* |
   awk '{nr[$1]++; print $0, nr[$1]}' |
   grep -v abnormal |
   awk '{print "./DAJIN/src/consensus.sh", $0, "&"}' |
-  awk -v th="${threads:-1}" 'NR%th==0 {sub("&", "&\nwait")}1;END{print "wait"}' |
+  awk -v th="${threads:-1}" 'NR%th==0 {sub("&", "&\nwait")}1;END{if(NR!=th) print "wait"}' |
   sh -
 
 ################################################################################
@@ -425,7 +428,11 @@ Generate BAM files
 --------------------------------------------------------------------------------
 EOF
 
-./DAJIN/src/generate_bam.sh "${genome}" "${threads:-1}"
+if [ "$genome_check" -eq 0 ]; then
+  ./DAJIN/src/generate_bam.sh "no_ref" "${threads:-1}"
+else
+  ./DAJIN/src/generate_bam.sh "${genome}" "${threads:-1}"
+fi
 
 ################################################################################
 # Move output files

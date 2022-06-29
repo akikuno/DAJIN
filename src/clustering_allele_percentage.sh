@@ -31,15 +31,15 @@ filter="${2}"
 mkdir -p ".DAJIN_temp/clustering/allele_per/"
 
 # allele_id=.DAJIN_temp/clustering/allele_per/readid_cl_mids_
-allele_percentage=.DAJIN_temp/clustering/allele_per/label_cl_percentage_"${barcode}"
+allele_percentage=.DAJIN_temp/clustering/allele_per/label_cl_percentage_"${barcode}".csv
 
 #===========================================================
 # Temporal
 #===========================================================
 
-tmp_clusterid=.DAJIN_temp/clustering/temp/clusterid_"${barcode}"
-tmp_alleleper_before=.DAJIN_temp/clustering/temp/alleleper_before_"${barcode}"
-tmp_alleleper_after=.DAJIN_temp/clustering/temp/alleleper_after_"${barcode}"
+tmp_clusterid=.DAJIN_temp/clustering/temp/clusterid_"${barcode}".csv
+tmp_alleleper_before=.DAJIN_temp/clustering/temp/alleleper_before_"${barcode}".csv
+tmp_alleleper_after=.DAJIN_temp/clustering/temp/alleleper_after_"${barcode}".csv
 
 ################################################################################
 # Filter minor alleles (if filter=on)
@@ -54,7 +54,7 @@ true >"${tmp_clusterid}"
 find .DAJIN_temp/clustering/temp/hdbscan_* |
     grep "${barcode}" |
     while read -r input; do
-        label=$(echo $input | sed "s/.*hdbscan_//g")
+        label=$(echo ${input%.csv} | sed "s/.*hdbscan_//g")
         #
         cat "${input}" |
             sed "s/^/${label}\t/g" |
@@ -120,9 +120,9 @@ cat "${tmp_alleleper_after}" |
         before=$(echo "${input}" | cut -d " " -f 2 | xargs echo)
         after=$(echo "${input}" | cut -d " " -f 3 | xargs echo)
 
-        hdbscan_id=.DAJIN_temp/clustering/temp/hdbscan_"${id}"
-        query_seq=.DAJIN_temp/clustering/temp/query_seq_"${id}"
-        allele_id=.DAJIN_temp/clustering/allele_per/readid_cl_mids_"${id}"
+        hdbscan_id=.DAJIN_temp/clustering/temp/hdbscan_"${id}".csv
+        query_seq=.DAJIN_temp/clustering/temp/query_seq_"${id}".csv
+        allele_id=.DAJIN_temp/clustering/allele_per/readid_cl_mids_"${id}".csv
 
         join "${hdbscan_id}" "${query_seq}" |
             awk -v bf="${before}" -v af="${after}" \

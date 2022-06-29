@@ -43,10 +43,10 @@ mkdir -p ".DAJIN_temp/clustering/temp/"
 # Temporal
 #===========================================================
 
-MIDS_que=".DAJIN_temp/clustering/temp/MIDS_${suffix}"
-query_score=".DAJIN_temp/clustering/temp/query_score_${suffix}"
-query_seq=".DAJIN_temp/clustering/temp/query_seq_${suffix}"
-query_label=".DAJIN_temp/clustering/temp/query_labels_${suffix}"
+MIDS_que=".DAJIN_temp/clustering/temp/MIDS_${suffix}".csv
+query_score=".DAJIN_temp/clustering/temp/query_score_${suffix}".csv
+query_seq=".DAJIN_temp/clustering/temp/query_seq_${suffix}".csv
+query_label=".DAJIN_temp/clustering/temp/query_labels_${suffix}".csv
 
 ################################################################################
 # MIDS conversion

@@ -34,12 +34,12 @@ mkdir -p ".DAJIN_temp/clustering/temp/"
 # Temporal
 #===========================================================
 
-MIDS_ref=".DAJIN_temp/clustering/temp/MIDS_${control}_${alleletype}"
-tmp_MIDS=".DAJIN_temp/clustering/temp/tmp_MIDS_${control}_${alleletype}"
-tmp_control=".DAJIN_temp/clustering/temp/tmp_control_${control}_${alleletype}"
-tmp_strecher=".DAJIN_temp/clustering/temp/tmp_strecher_${control}_${alleletype}"
-tmp_strecher_wt=".DAJIN_temp/clustering/temp/tmp_strecher_wt_${control}_${alleletype}"
-tmp_strecher_label=".DAJIN_temp/clustering/temp/tmp_strecher_label${control}_${alleletype}"
+MIDS_ref=".DAJIN_temp/clustering/temp/MIDS_${control}_${alleletype}".csv
+tmp_MIDS=".DAJIN_temp/clustering/temp/tmp_MIDS_${control}_${alleletype}".csv
+tmp_control=".DAJIN_temp/clustering/temp/tmp_control_${control}_${alleletype}".csv
+tmp_strecher=".DAJIN_temp/clustering/temp/tmp_strecher_${control}_${alleletype}".csv
+tmp_strecher_wt=".DAJIN_temp/clustering/temp/tmp_strecher_wt_${control}_${alleletype}".csv
+tmp_strecher_label=".DAJIN_temp/clustering/temp/tmp_strecher_label${control}_${alleletype}".csv
 
 ################################################################################
 # Generate mutation scores of WT alleles
@@ -69,7 +69,7 @@ cat "${MIDS_ref}" |
 # Generate mutation scoring of wt alleles
 #===========================================================
 
-Rscript DAJIN/src/clustering_control_scoring_wt.R "${tmp_MIDS}" "${threads}"
+Rscript DAJIN/src/clustering_control_scoring_wt.R "${tmp_MIDS}" "${threads}" 2>/dev/null
 
 ################################################################################
 # Generate mutation scores of other alleles
@@ -145,7 +145,7 @@ find .DAJIN_temp/fasta/ -type f |
                 sort -t " " -k 3,3n |
                 awk '{print $3","$4}'
         fi |
-            cat >".DAJIN_temp/clustering/temp/control_score_${label}"
+            cat >".DAJIN_temp/clustering/temp/control_score_${label}".csv
     done
 
 #===========================================================
@@ -159,7 +159,9 @@ find .DAJIN_temp/fasta/ -type f |
     sed "s/.fa.*$//g" |
     while read -r label; do
         Rscript DAJIN/src/clustering_control_scoring_others.R \
-            ".DAJIN_temp/clustering/temp/control_score_${label}" "${threads}"
+            ".DAJIN_temp/clustering/temp/control_score_${label}".csv "${threads}" 2>/dev/null
     done
+
+rm .DAJIN_temp/clustering/temp/tmp_*
 
 exit 0

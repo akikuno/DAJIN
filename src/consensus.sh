@@ -33,14 +33,13 @@ mapping_alleletype="${alleletype}"
 [ "$alleletype" = "normal" ] && mapping_alleletype="wt"
 [ "$alleletype" = "abnormal" ] && mapping_alleletype="wt"
 
-control_score=".DAJIN_temp/clustering/temp/possible_true_mut_${in_suffix}"
-allele_id=".DAJIN_temp/clustering/allele_per/readid_cl_mids_${in_suffix}"
+control_score=".DAJIN_temp/clustering/temp/possible_true_mut_${in_suffix}".csv
+allele_id=".DAJIN_temp/clustering/allele_per/readid_cl_mids_${in_suffix}".csv
 
 #===========================================================
 # Output
 #===========================================================
 
-mkdir -p .DAJIN_temp/consensus/temp
 # .DAJIN_temp/consensus/"${output_filename}".fa
 # .DAJIN_temp/consensus/"${output_filename}".html
 
@@ -48,10 +47,10 @@ mkdir -p .DAJIN_temp/consensus/temp
 # Temporal
 #===========================================================
 
-tmp_allele_id=".DAJIN_temp/consensus/temp/allele_id_${out_suffix}"
-mutation_id_loc_type_insnum=".DAJIN_temp/consensus/temp/consensus_${out_suffix}"
-mutation_type_site_nuc=".DAJIN_temp/consensus/temp/mutation_type_site_nuc_${out_suffix}"
-tmp_html=.DAJIN_temp/consensus/temp/tmp_html_"${out_suffix}"
+tmp_allele_id=".DAJIN_temp/consensus/temp/allele_id_${out_suffix}".csv
+mutation_id_loc_type_insnum=".DAJIN_temp/consensus/temp/consensus_${out_suffix}".csv
+mutation_type_site_nuc=".DAJIN_temp/consensus/temp/mutation_type_site_nuc_${out_suffix}".csv
+tmp_html=.DAJIN_temp/consensus/temp/tmp_html_"${out_suffix}".csv
 
 target_mutation_type=$(cat .DAJIN_temp/target_mutation_type)
 
@@ -74,14 +73,14 @@ cat "${allele_id}" |
 if [ -s "${control_score}" ]; then
   Rscript DAJIN/src/consensus.R "${tmp_allele_id}" "${control_score}" 2>/dev/null
 else
-  true >".DAJIN_temp/consensus/temp/mutation_${out_suffix}"
+  true >".DAJIN_temp/consensus/temp/mutation_${out_suffix}".csv
 fi
 #===========================================================
 # Report (1) Cluster ID, (2) Base loc (3) Mutation type (4) Ins num
 #===========================================================
 
-if [ -s ".DAJIN_temp/consensus/temp/mutation_${out_suffix}" ]; then
-  cat ".DAJIN_temp/consensus/temp/mutation_${out_suffix}" |
+if [ -s ".DAJIN_temp/consensus/temp/mutation_${out_suffix}".csv ]; then
+  cat ".DAJIN_temp/consensus/temp/mutation_${out_suffix}".csv |
     sed "s/^/${cluster} /g" |
     #----------------------------------------------------------
     #* Converte Insertion character to number
@@ -218,8 +217,7 @@ cat .DAJIN_temp/fasta/${mapping_alleletype}.fa |
       else if(type_[i] == "D") {
         $(site_[i]) = ""
       }
-    print $(site_[i])
-    }}' |
+    }}1' |
   sed -e "s/,//g" -e "s/ //g" -e "s/_/ /g" |
   cat >.DAJIN_temp/consensus/temp/"${out_suffix}"
 
@@ -272,8 +270,6 @@ elif [ "$(grep -c intact ${mutation_type_site_nuc})" -eq 1 ]; then
 else
   output_filename="${output_filename}_mutation_${alleletype}"
 fi
-
-# echo "$output_filename"
 
 cat .DAJIN_temp/consensus/temp/"${out_suffix}" |
   fold |
@@ -363,7 +359,6 @@ EOF
 # Move directory
 ################################################################################
 
-mkdir -p .DAJIN_temp/consensus/FASTA .DAJIN_temp/consensus/HTML
 mv .DAJIN_temp/consensus/"${output_filename}".fa .DAJIN_temp/consensus/FASTA
 mv .DAJIN_temp/consensus/"${output_filename}".html .DAJIN_temp/consensus/HTML
 
