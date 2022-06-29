@@ -86,7 +86,7 @@ else
 fi
 
 ################################################################################
-# Obtain Genome coodinate from GGGnome
+# Obtain Genome coodinate from UCSC Genome Browser
 ################################################################################
 
 #===============================================================================
@@ -174,14 +174,14 @@ for input in .DAJIN_temp/fasta_ont/*; do
             -e "s/\.f.*$/.bam/g")
     # echo "${output} is now generating..."
     ####
-    minimap2 -t ${threads:-1} -ax map-ont --cs=long ${reference} ${input} 2>/dev/null |
+    minimap2 -t "${threads:-1}" -ax map-ont --cs=long ${reference} "${input}" 2>/dev/null |
         awk -v chrom="${chromosome}" -v chrom_len="${chrom_len}" -v start="${start}" \
             'BEGIN{OFS="\t"}
         $1~/@SQ/ {$0="@SQ\tSN:"chrom"\tLN:"chrom_len; print}
         $1!~/^@/ {$3=chrom; $4=start+$4-1; print}' |
-        samtools sort -@ ${threads:-1} - 2>/dev/null |
+        samtools sort -@ "${threads:-1}" - 2>/dev/null |
         cat >"${output}"
-    samtools index -@ ${threads:-1} "${output}"
+    samtools index -@ "${threads:-1}" "${output}"
 done
 
 rm ${tmp_genome_location}
