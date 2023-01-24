@@ -5,7 +5,7 @@
 options(repos = "https://cloud.r-project.org/")
 options(readr.show_progress = FALSE)
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
-pacman::p_load(tidyverse)
+pacman::p_load(readr, stringr, tibble, dplyr, tidyr, purrr)
 
 ################################################################################
 # I/O naming

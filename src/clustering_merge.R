@@ -9,7 +9,7 @@ options(future.globals.maxSize = Inf)
 options(warn = -1)
 
 if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
-pacman::p_load(tidyverse, furrr, vroom)
+pacman::p_load(readr, stringr, tibble, dplyr, tidyr, purrr, furrr)
 
 ################################################################################
 # ! I/O naming
@@ -30,7 +30,7 @@ plan(multicore, workers = threads)
 # ? Inputs
 # ===========================================================
 
-df_que_mids <- vroom(query_score,
+df_que_mids <- read_csv(query_score,
   col_names = FALSE,
   col_types = cols(),
   num_threads = threads
