@@ -82,11 +82,11 @@ df_que_score <-
 # MIDS subtraction
 ################################################################################
 
-tmp <- inner_join(df_que_score, df_control_score, by = "loc")
+df_tmp <- inner_join(df_que_score, df_control_score, by = "loc")
 
 list_mids_score <-
-  future_map2(tmp$que_freq, tmp$control_freq, function(x, y) {
-    if (y == 1) {
+  future_map2(df_tmp$que_freq, df_tmp$control_freq, function(x, y) {
+    if (all(class(y) == "numeric")) {
       x %>%
         rename(score = freq) %>%
         mutate(score = replace_na(score, 0))
@@ -97,7 +97,8 @@ list_mids_score <-
         mutate(score = replace_na(score, 0))
     }
   })
-rm(tmp)
+
+rm(df_tmp)
 
 ################################################################################
 # Score each reads
@@ -144,7 +145,6 @@ rm(prcomp_result)
 
 input_hdbscan <- output_pca
 
-
 min_cluster_sizes <-
   seq(nrow(input_hdbscan) * 0.1, nrow(input_hdbscan) * 0.4, length = 50) %>%
   as.integer() %>%
@@ -154,7 +154,7 @@ min_cluster_sizes <-
 hd <- function(x) {
   cl <- h$HDBSCAN(
     min_samples = 1L, min_cluster_size = as.integer(x),
-    memory = joblib$Memory(cachedir = ".DAJIN_temp/clustering/temp", verbose = 0)
+    memory = joblib$Memory(location = ".DAJIN_temp/clustering/temp", verbose = 0)
   )
   cl$fit_predict(input_hdbscan) %>%
     table() %>%
@@ -196,7 +196,7 @@ if (length(int_cluster_nums_opt) == 0) {
 cl <- h$HDBSCAN(
   min_samples = 1L,
   min_cluster_size = as.integer(min_cluster_sizes[int_cluster_nums_opt]),
-  memory = joblib$Memory(cachedir = ".DAJIN_temp/clustering/temp", verbose = 0)
+  memory = joblib$Memory(location = ".DAJIN_temp/clustering/temp", verbose = 0)
 )
 
 int_hdbscan_clusters <- cl$fit_predict(input_hdbscan) + 2
@@ -208,7 +208,7 @@ for (i in unique(int_hdbscan_clusters)) {
   cl <- h$HDBSCAN(
     min_samples = 1L,
     min_cluster_size = as.integer(sum(int_hdbscan_clusters == i) * 0.4),
-    memory = joblib$Memory(cachedir = ".DAJIN_temp/clustering/temp", verbose = 0)
+    memory = joblib$Memory(location = ".DAJIN_temp/clustering/temp", verbose = 0)
   )
   tmp_cls[tmp_cls == i] <- cl$fit_predict(input_hdbscan[int_hdbscan_clusters == i, ]) + (10 * i)
 }
@@ -221,7 +221,7 @@ int_hdbscan_clusters <- as.factor(tmp_cls) %>% as.integer()
 
 write_csv(tibble(cl = int_hdbscan_clusters),
   sprintf(".DAJIN_temp/clustering/temp/int_hdbscan_clusters_%s", output_suffix),
-  col_names = F
+  col_names = FALSE
 )
 
 saveRDS(

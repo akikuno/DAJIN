@@ -1,5 +1,5 @@
 ################################################################################
-# ! Install required packages
+# Install required packages
 ################################################################################
 
 options(repos = "https://cloud.r-project.org/")
@@ -12,11 +12,11 @@ if (!requireNamespace("pacman", quietly = T)) install.packages("pacman")
 pacman::p_load(readr, stringr, tibble, dplyr, tidyr, purrr, furrr)
 
 ################################################################################
-# ! I/O naming
+# I/O naming
 ################################################################################
 
 # ===========================================================
-# ? Auguments
+# Auguments
 # ===========================================================
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -27,7 +27,7 @@ threads <- as.integer(args[4])
 plan(multicore, workers = threads)
 
 # ===========================================================
-# ? Inputs
+# Inputs
 # ===========================================================
 
 df_que_mids <- read_csv(query_score,
@@ -45,7 +45,7 @@ df_que_label <- read_csv(query_label,
 df_control_score <- readRDS(control_RDS)
 
 # ===========================================================
-# ? Outputs
+# Outputs
 # ===========================================================
 
 output_suffix <-
@@ -62,13 +62,13 @@ int_hdbscan_clusters <-
 df_score <- readRDS(sprintf(".DAJIN_temp/clustering/temp/df_score_%s.RDS", output_suffix))
 
 ################################################################################
-# ! Extract mutations by Hotelling's T2 statistics
+# Extract mutations by Hotelling's T2 statistics
 ################################################################################
 
 merged_clusters <- int_hdbscan_clusters
 
 # ===========================================================
-# ? Replace sequence error
+# Replace sequence error
 # ===========================================================
 
 sequence_error <-
@@ -82,7 +82,7 @@ sequence_error <-
 df_score[, sequence_error] <- 10^-10000
 
 # ===========================================================
-# ? Extract mutations
+# Extract mutations at each clusters
 # ===========================================================
 
 hotelling <-
@@ -118,7 +118,7 @@ hotelling <-
   })
 
 # ===========================================================
-# ? Exclude fuzzy mutations
+# Exclude fuzzy mutations
 # ===========================================================
 
 tmp_possible_true_mut <- hotelling$loc %>%
@@ -152,7 +152,7 @@ if (sum(df_control_score$mut) == 1) {
 }
 
 # ===========================================================
-# ? Divide mutation into common and uncommon
+# Divide mutation into common and uncommon
 # ===========================================================
 
 hotelling_common <-
@@ -168,11 +168,11 @@ hotelling_common <-
   distinct()
 
 ################################################################################
-# ! Merge clusters
+# Merge clusters
 ################################################################################
 
 # ===========================================================
-# ? Merge clusters with the same mutation profiles
+# Merge clusters with the same mutation profiles
 # ===========================================================
 
 if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 0) {
@@ -226,7 +226,7 @@ if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 0) {
           filter(loc == y) %>%
           unnest(control_freq)
         control <-
-          if (str_detect(colnames(control), "MIDS")) {
+          if (any(str_detect(colnames(control), "MIDS"))) {
             control %>%
               mutate(MIDS = case_when(mut == 1 ~ "M", TRUE ~ MIDS)) %>%
               mutate(freq = case_when(mut == 1 ~ 100, TRUE ~ freq))
@@ -287,7 +287,7 @@ if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 0) {
 }
 
 # ===========================================================
-# ? Merge clusters with Cosine similarity
+# Merge clusters with Cosine similarity
 # ===========================================================
 
 if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 1) {
@@ -331,7 +331,7 @@ if (length(unique(merged_clusters)) > 1 & length(possible_true_mut) > 1) {
 }
 
 # ===========================================================
-# ? Merge clusters with strand specific mutation into a major cluster
+# Merge clusters with strand specific mutation into a major cluster
 # ===========================================================
 
 tmp_tb_strand <-
@@ -367,7 +367,7 @@ if (nrow(tmp_dual_adaptor) > 0) {
 }
 
 ################################################################################
-# ! Output results
+# Output results
 ################################################################################
 
 merged_clusters <- as.factor(merged_clusters) %>% as.integer()

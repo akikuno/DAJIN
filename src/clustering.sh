@@ -7,7 +7,6 @@
 set -eu
 umask 0022
 export LC_ALL=C
-export UNIX_STD=2003 # to make HP-UX conform to POSIX
 
 ################################################################################
 # I/O naming
@@ -112,7 +111,8 @@ cat "${MIDS_que}" |
 
 echo "Clustering ${barcode} ${alleletype}..." >&2
 if [ "$(cat ${query_label} | wc -l)" -gt 50 ]; then
-    Rscript DAJIN/src/clustering.R "${query_score}" "${query_label}" "${control_RDS}" "${threads}" 2>/dev/null
-    Rscript DAJIN/src/clustering_merge.R "${query_score}" "${query_label}" "${control_RDS}" "${threads}" 2>/dev/null
+    echo "$barcode" "$alleletype" --------------------- >>.DAJIN_temp/log.txt
+    Rscript DAJIN/src/clustering.R "${query_score}" "${query_label}" "${control_RDS}" "${threads}" 2>>.DAJIN_temp/log.txt
+    Rscript DAJIN/src/clustering_merge.R "${query_score}" "${query_label}" "${control_RDS}" "${threads}" 2>>.DAJIN_temp/log.txt
     ps -au | grep -e "clustering.R" -e "joblib" | awk '{print $2}' | xargs kill 2>/dev/null || :
 fi
