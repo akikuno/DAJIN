@@ -14,7 +14,7 @@ mkdir -p .DAJIN_temp
 # Define the functions for printing usage and error message
 ################################################################################
 
-VERSION=0.6.0
+VERSION=0.7.0
 
 usage() {
   cat <<-USAGE
