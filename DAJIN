@@ -197,6 +197,8 @@ fi
 # Setting Conda environment
 ################################################################################
 
+: >.DAJIN_temp/log.txt
+
 cat <<EOF >&2
 --------------------------------------------------------------------------------
 Creat Conda environment
@@ -268,9 +270,9 @@ set +u
 conda activate DAJIN
 set -u
 
-# #===========================================================
-# #? Get mutation loci
-# #===========================================================
+#===========================================================
+# Get mutation loci
+#===========================================================
 
 minimap2 -ax splice .DAJIN_temp/fasta_conv/wt.fa .DAJIN_temp/fasta_conv/target.fa --cs 2>/dev/null |
   awk '{for(i=1; i<=NF;i++) if($i ~ /cs:Z/) print $i}' |
@@ -280,7 +282,7 @@ minimap2 -ax splice .DAJIN_temp/fasta_conv/wt.fa .DAJIN_temp/fasta_conv/target.f
   cat >.DAJIN_temp/data/mutation_points
 
 #===========================================================
-#? MIDS conversion
+# MIDS conversion
 #===========================================================
 
 find .DAJIN_temp/fasta_ont -type f |
