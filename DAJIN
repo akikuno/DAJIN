@@ -140,8 +140,7 @@ fi
 
 genome_check=$(
   wget -q -O - "http://hgdownload.soe.ucsc.edu/downloads.html" |
-    grep hgTracks |
-    grep -c "${genome:-XXX}"
+    grep -c /goldenPath/"${genome:-XXX}/"
 )
 
 #===========================================================
