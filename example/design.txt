@@ -4,4 +4,3 @@ control=barcode01
 output_dir=DAJIN_example
 genome=mm10
 grna=CCTGTCCAGAGTGGGAGATAGCC,CCACTGCTAGCTGTGGGTAACCC
-TEST=ON
