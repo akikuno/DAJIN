@@ -100,14 +100,20 @@ outliers = np.where(outliers == 1, "normal", "abnormal")
 
 df["outliers"] = outliers
 
-df.groupby("barcodeID").outliers.value_counts() #!<<<<<
-
 
 ################################################################################
 #! Prediction
 ################################################################################
 
-predict = model.predict(X_real.astype("float16"), verbose=0, batch_size=32)
+batch_sizes = [128, 64, 32, 16, 8, 4, 2, 1]
+for batch_size in batch_sizes:
+    try:
+        predict = model.predict(X_real.astype(np.uint8), verbose=0, batch_size=batch_size)
+    except tf.errors.InternalError:
+        continue
+    else:
+        break
+
 predict = np.argmax(predict, axis=1)
 
 # del X_real  # <<<
@@ -130,8 +136,6 @@ if target_mutation_type == "S":
     df["prediction"].mask(
         df["prediction"].str.contains("wt_"), "abnormal", inplace=True
     )
-
-df.groupby("barcodeID").prediction.value_counts() #!<<<<<
 
 ################################################################################
 #! Save file
