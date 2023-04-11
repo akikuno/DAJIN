@@ -14,7 +14,7 @@ pacman::p_load(readr, stringr, tibble, dplyr, tidyr, purrr, parallel, furrr, tid
 
 DAJIN_PY <- system("which python", intern = TRUE)
 Sys.setenv(RETICULATE_PYTHON = DAJIN_PY)
-reticulate::use_condaenv("DAJIN")
+# reticulate::use_condaenv("DAJIN")
 
 joblib <- reticulate::import("joblib")
 h <- reticulate::import("hdbscan")
