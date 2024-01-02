@@ -5,6 +5,10 @@
 
 [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
 
+> [!CAUTION]
+> ### DAJINは非推奨です。後継の[DAJIN2](https://github.com/akikuno/DAJIN2)をご利用ください。
+
+
 DAJINはNanoporeロングリードシークエンサーを用いた, ゲノム編集生物の遺伝型解析ソフトウェアです.  
 他の遺伝型解析ツールに比べて, 以下の特徴があります.  
 
