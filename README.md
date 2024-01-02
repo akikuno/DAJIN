@@ -5,8 +5,7 @@
 ****
 
 > [!CAUTION]
-> ### DAJIN is deprecated.
-> Please use [DAJIN2](https://github.com/akikuno/DAJIN2), which has become the successor to DAJIN.
+> ### DAJIN is deprecated. Please use [DAJIN2](https://github.com/akikuno/DAJIN2), which has become the successor to DAJIN.
 
 [日本語はこちら](https://github.com/akikuno/DAJIN/blob/master/misc/README_JP.md)
 
